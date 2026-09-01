@@ -1,16 +1,24 @@
 {
-  "extends": "@ecommerce/tsconfig/nest.json",
   "compilerOptions": {
+    "module": "commonjs",
+    "declaration": false,
+    "removeComments": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "target": "ES2022",
+    "sourceMap": true,
     "outDir": "./dist",
     "baseUrl": "./",
+    "incremental": true,
+    "skipLibCheck": true,
+    "strictNullChecks": false,
+    "noImplicitAny": false,
+    "strictBindCallApply": false,
+    "forceConsistentCasingInFileNames": false,
+    "noFallthroughCasesInSwitch": false,
     "paths": {
-      "@/*": ["src/*"],
-      "@ecommerce/types": ["../../packages/types/src"],
-      "@ecommerce/types/*": ["../../packages/types/src/*"],
-      "@ecommerce/config": ["../../packages/config/src"],
-      "@ecommerce/config/*": ["../../packages/config/src/*"],
-      "@ecommerce/database": ["../../packages/database/src"],
-      "@ecommerce/database/*": ["../../packages/database/src/*"]
+      "@/*": ["src/*"]
     }
   },
   "include": ["src/**/*"],
