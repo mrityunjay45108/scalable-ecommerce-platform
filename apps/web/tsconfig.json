@@ -21,11 +21,11 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
-      "@ecommerce/types": ["../../packages/types/src"],
+      "@ecommerce/types": ["../../packages/types/src/index.ts"],
       "@ecommerce/types/*": ["../../packages/types/src/*"],
-      "@ecommerce/config": ["../../packages/config/src"],
+      "@ecommerce/config": ["../../packages/config/src/index.ts"],
       "@ecommerce/config/*": ["../../packages/config/src/*"],
-      "@ecommerce/ui": ["../../packages/ui/src"],
+      "@ecommerce/ui": ["../../packages/ui/src/index.ts"],
       "@ecommerce/ui/*": ["../../packages/ui/src/*"]
     }
   },

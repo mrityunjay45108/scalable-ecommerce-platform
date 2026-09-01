@@ -7,8 +7,14 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { InventoryService } from '../inventory/inventory.service';
 import { CouponsService } from '../coupons/coupons.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CheckoutDto, CheckoutPreviewDto, UpdateOrderStatusDto, OrderQueryDto } from './orders.dto';
 import { OrderStatus, PaymentStatus, PaymentProvider } from '@ecommerce/types';
+import { NotificationType } from '@ecommerce/database';
+import {
+  validateOrderTransition,
+  getOrderNotificationType,
+} from './order-state-machine';
 
 @Injectable()
 export class OrdersService {
@@ -18,6 +24,7 @@ export class OrdersService {
     private prisma: PrismaService,
     private inventoryService: InventoryService,
     private couponsService: CouponsService,
+    private notificationsService: NotificationsService,
   ) {}
 
   async previewCheckout(userId: string, dto: CheckoutPreviewDto) {
@@ -188,89 +195,135 @@ export class OrdersService {
 
     const orderNumber = `ORD-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
 
-    return this.prisma.$transaction(async (tx) => {
-      // 5. Reserve Inventory
-      await this.inventoryService.reserveStock(orderNumber, reservationItems);
+    // 5. Reserve Inventory before order transaction (concurrency safe)
+    await this.inventoryService.reserveStock(orderNumber, reservationItems);
 
-      // 6. Create Order with snapshot data in items
-      const order = await tx.order.create({
-        data: {
-          orderNumber,
-          userId,
-          addressId: address.id,
-          subtotal,
-          tax,
-          shippingCost,
-          discountAmount,
-          totalAmount,
-          couponId,
-          status:
-            dto.paymentProvider === PaymentProvider.COD
-              ? OrderStatus.PROCESSING
-              : OrderStatus.PENDING_PAYMENT,
-          notes: dto.notes,
-          items: {
-            create: cart.items.map((item) => ({
-              variantId: item.variantId,
-              quantity: item.quantity,
-              unitPrice: item.variant.price,
-              totalPrice: Number(item.variant.price) * item.quantity,
-              productTitle: item.variant.product.title,
-              variantTitle: item.variant.title,
-              sku: item.variant.sku,
-              imageUrl: item.variant.product.images?.[0]?.url || null,
-            })),
-          },
-          payment: {
-            create: {
-              provider: dto.paymentProvider,
-              amount: totalAmount,
-              currency: 'USD',
+    let order: any;
+    try {
+      // 6. Create Order inside Prisma transaction with extended timeout for cloud DBs
+      order = await this.prisma.$transaction(
+        async (tx) => {
+          const createdOrder = await tx.order.create({
+            data: {
+              orderNumber,
+              userId,
+              addressId: address.id,
+              subtotal,
+              tax,
+              shippingCost,
+              discountAmount,
+              totalAmount,
+              couponId,
               status:
                 dto.paymentProvider === PaymentProvider.COD
-                  ? PaymentStatus.PENDING
-                  : PaymentStatus.PENDING,
+                  ? OrderStatus.CONFIRMED
+                  : OrderStatus.PENDING_PAYMENT,
+              notes: dto.notes,
+              items: {
+                create: cart.items.map((item) => ({
+                  variantId: item.variantId,
+                  quantity: item.quantity,
+                  unitPrice: item.variant.price,
+                  totalPrice: Number(item.variant.price) * item.quantity,
+                  productTitle: item.variant.product.title,
+                  variantTitle: item.variant.title,
+                  sku: item.variant.sku,
+                  imageUrl: item.variant.product.images?.[0]?.url || null,
+                })),
+              },
+              payment: {
+                create: {
+                  provider: dto.paymentProvider,
+                  amount: totalAmount,
+                  currency: 'INR',
+                  status:
+                    dto.paymentProvider === PaymentProvider.COD
+                      ? PaymentStatus.COD_PENDING
+                      : PaymentStatus.PENDING,
+                },
+              },
+              codTransaction:
+                dto.paymentProvider === PaymentProvider.COD
+                  ? {
+                      create: {
+                        amount: totalAmount,
+                        currency: 'INR',
+                        status: 'COD_PENDING',
+                      },
+                    }
+                  : undefined,
             },
-          },
-        },
-        include: {
-          items: {
             include: {
-              variant: {
-                include: { product: { include: { images: true } } },
+              items: {
+                include: {
+                  variant: {
+                    include: { product: { include: { images: true } } },
+                  },
+                },
+              },
+              shippingAddress: true,
+              payment: true,
+              codTransaction: true,
+            },
+          });
+
+          // If coupon used, record coupon usage
+          if (couponId) {
+            await tx.couponUsage.create({
+              data: {
+                couponId,
+                userId,
+                orderId: createdOrder.id,
+              },
+            });
+            await tx.coupon.update({
+              where: { id: couponId },
+              data: { usedCount: { increment: 1 } },
+            });
+          }
+
+          // Clear user's cart
+          await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
+
+          // Audit Log
+          await tx.auditLog.create({
+            data: {
+              userId,
+              action: 'ORDER_CREATED',
+              entity: 'Order',
+              entityId: createdOrder.id,
+              details: {
+                orderNumber,
+                paymentProvider: dto.paymentProvider,
+                isCod: dto.paymentProvider === PaymentProvider.COD,
+                totalAmount,
               },
             },
-          },
-          shippingAddress: true,
-          payment: true,
+          });
+
+          return createdOrder;
         },
-      });
+        {
+          maxWait: 10000,
+          timeout: 25000,
+        },
+      );
+    } catch (txError) {
+      // Release reserved stock if order creation failed
+      await this.inventoryService.releaseStock(orderNumber, reservationItems);
+      throw txError;
+    }
 
-      // If coupon used, record coupon usage
-      if (couponId) {
-        await tx.couponUsage.create({
-          data: {
-            couponId,
-            userId,
-            orderId: order.id,
-          },
-        });
-        await tx.coupon.update({
-          where: { id: couponId },
-          data: { usedCount: { increment: 1 } },
-        });
-      }
-
-      // If COD, commit stock immediately
-      if (dto.paymentProvider === PaymentProvider.COD) {
+    // If COD, commit stock immediately
+    if (dto.paymentProvider === PaymentProvider.COD) {
+      try {
         await this.inventoryService.commitStock(orderNumber, reservationItems);
+      } catch (err) {
+        this.logger.error(`Error committing stock for COD order ${orderNumber}: ${err}`);
       }
+    }
 
-      // Clear user's cart
-      await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
-
-      return this.formatOrder(order);
-    });
+    return this.formatOrder(order);
   }
 
   // =========================================================================
@@ -352,19 +405,13 @@ export class OrdersService {
   async cancelOrder(orderId: string, userId?: string) {
     const order = await this.prisma.order.findFirst({
       where: userId ? { id: orderId, userId } : { id: orderId },
-      include: { items: true, payment: true },
+      include: { items: true, payment: true, codTransaction: true },
     });
 
     if (!order) throw new NotFoundException('Order not found');
 
-    if (
-      order.status === OrderStatus.SHIPPED ||
-      order.status === OrderStatus.DELIVERED ||
-      order.status === OrderStatus.CANCELLED ||
-      order.status === OrderStatus.REFUNDED
-    ) {
-      throw new BadRequestException(`Cannot cancel order in '${order.status}' status`);
-    }
+    // Centralized State Machine Validation
+    validateOrderTransition(order.status, OrderStatus.CANCELLED);
 
     // Release stock reservation
     const reservationItems = order.items.map((i) => ({
@@ -374,18 +421,59 @@ export class OrdersService {
 
     await this.inventoryService.releaseStock(order.orderNumber, reservationItems);
 
-    const updated = await this.prisma.order.update({
-      where: { id: orderId },
-      data: { status: OrderStatus.CANCELLED },
-      include: {
-        items: {
-          include: {
-            variant: { include: { product: { include: { images: true } } } },
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const orderUpdated = await tx.order.update({
+        where: { id: orderId },
+        data: { status: OrderStatus.CANCELLED },
+        include: {
+          items: {
+            include: {
+              variant: { include: { product: { include: { images: true } } } },
+            },
+          },
+          shippingAddress: true,
+          payment: true,
+        },
+      });
+
+      if (order.payment?.provider === PaymentProvider.COD) {
+        await tx.payment.update({
+          where: { orderId },
+          data: { status: PaymentStatus.FAILED },
+        });
+
+        if (order.codTransaction) {
+          await tx.cODTransaction.update({
+            where: { orderId },
+            data: { status: 'COD_FAILED' as any },
+          });
+        }
+      }
+
+      await tx.auditLog.create({
+        data: {
+          userId: userId || order.userId,
+          action: 'ORDER_CANCELLED',
+          entity: 'Order',
+          entityId: order.id,
+          details: {
+            orderNumber: order.orderNumber,
+            fromStatus: order.status,
+            toStatus: OrderStatus.CANCELLED,
           },
         },
-        shippingAddress: true,
-        payment: true,
-      },
+      });
+
+      return orderUpdated;
+    });
+
+    // Customer Notification
+    await this.notificationsService.sendNotification({
+      userId: order.userId,
+      type: NotificationType.ORDER_CANCELLED,
+      title: 'Order Cancelled',
+      message: `Your order #${order.orderNumber} has been successfully cancelled.`,
+      link: `/orders/${order.id}`,
     });
 
     return this.formatOrder(updated);
@@ -398,41 +486,75 @@ export class OrdersService {
   async updateOrderStatus(orderId: string, dto: UpdateOrderStatusDto, adminUserId?: string) {
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
-      include: { items: true, payment: true },
+      include: { items: true, payment: true, shipment: true, codTransaction: true },
     });
 
     if (!order) throw new NotFoundException('Order not found');
 
-    const updated = await this.prisma.order.update({
-      where: { id: orderId },
-      data: {
-        status: dto.status,
-        trackingNumber: dto.trackingNumber ?? order.trackingNumber,
-      },
-      include: {
-        items: {
-          include: {
-            variant: { include: { product: { include: { images: true } } } },
-          },
+    // Centralized State Machine Validation
+    validateOrderTransition(order.status, dto.status);
+
+    // Idempotent no-op
+    if (order.status === dto.status && (!dto.trackingNumber || dto.trackingNumber === order.trackingNumber)) {
+      return this.formatOrder(order);
+    }
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      // If cancelled, release stock
+      if (dto.status === OrderStatus.CANCELLED) {
+        const reservationItems = order.items.map((i) => ({
+          variantId: i.variantId,
+          quantity: i.quantity,
+        }));
+        await this.inventoryService.releaseStock(order.orderNumber, reservationItems);
+      }
+
+      const orderUpdated = await tx.order.update({
+        where: { id: orderId },
+        data: {
+          status: dto.status,
+          trackingNumber: dto.trackingNumber ?? order.trackingNumber,
         },
-        shippingAddress: true,
-        payment: true,
-      },
+        include: {
+          items: {
+            include: {
+              variant: { include: { product: { include: { images: true } } } },
+            },
+          },
+          shippingAddress: true,
+          payment: true,
+        },
+      });
+
+      if (adminUserId) {
+        await tx.auditLog.create({
+          data: {
+            userId: adminUserId,
+            action: 'ORDER_STATUS_UPDATED',
+            entity: 'Order',
+            entityId: orderId,
+            details: {
+              orderNumber: order.orderNumber,
+              fromStatus: order.status,
+              toStatus: dto.status,
+              trackingNumber: dto.trackingNumber,
+            },
+          },
+        });
+      }
+
+      return orderUpdated;
     });
 
-    if (adminUserId) {
-      await this.prisma.auditLog.create({
-        data: {
-          userId: adminUserId,
-          action: 'ORDER_STATUS_UPDATED',
-          entity: 'Order',
-          entityId: orderId,
-          details: {
-            fromStatus: order.status,
-            toStatus: dto.status,
-            trackingNumber: dto.trackingNumber,
-          },
-        },
+    // Notify customer on status progression
+    const notificationType = getOrderNotificationType(dto.status);
+    if (notificationType) {
+      await this.notificationsService.sendNotification({
+        userId: order.userId,
+        type: notificationType,
+        title: `Order ${dto.status}`,
+        message: `Your order #${order.orderNumber} status is now ${dto.status}.`,
+        link: `/orders/${order.id}`,
       });
     }
 
@@ -534,6 +656,25 @@ export class OrdersService {
             amount: Number(order.payment.amount),
           }
         : null,
+      returnRequests: order.returnRequests?.map((r: any) => {
+        if (!r.bankDetails || typeof r.bankDetails !== 'object') return r;
+        const sanitized = { ...r.bankDetails };
+        if (sanitized.accountNumber) {
+          const accStr = String(sanitized.accountNumber).trim();
+          sanitized.accountNumber =
+            accStr.length > 4 ? 'X'.repeat(accStr.length - 4) + accStr.slice(-4) : 'X'.repeat(accStr.length);
+        }
+        if (sanitized.ifscCode) {
+          const ifscStr = String(sanitized.ifscCode).trim();
+          if (ifscStr.length > 4) sanitized.ifscCode = 'X'.repeat(ifscStr.length - 3) + ifscStr.slice(-3);
+        }
+        if (sanitized.upiId) {
+          const upiStr = String(sanitized.upiId).trim();
+          const atIdx = upiStr.indexOf('@');
+          if (atIdx >= 1) sanitized.upiId = upiStr[0] + '***' + upiStr.slice(atIdx);
+        }
+        return { ...r, bankDetails: sanitized };
+      }),
     };
   }
 }

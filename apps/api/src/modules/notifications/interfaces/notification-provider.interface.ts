@@ -8,6 +8,7 @@ export interface NotificationPayload {
   title: string;
   message: string;
   link?: string;
+  deduplicationKey?: string;
   data?: Record<string, any>;
 }
 

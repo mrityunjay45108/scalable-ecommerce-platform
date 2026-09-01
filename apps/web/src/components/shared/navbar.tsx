@@ -16,7 +16,6 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { useCart } from '@/lib/cart-context';
-import { CartDrawer } from '@/components/shop/cart-drawer';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 
@@ -248,7 +247,6 @@ export function Navbar() {
           </nav>
         </div>
       )}
-      <CartDrawer />
     </header>
   );
 }

@@ -23,27 +23,109 @@ enum UserRole {
 enum OrderStatus {
   PENDING_PAYMENT
   PAID
-  PAYMENT_FAILED
+  CONFIRMED
   PROCESSING
+  PACKED
+  READY_TO_SHIP
   SHIPPED
   OUT_FOR_DELIVERY
   DELIVERED
   CANCELLED
+  RETURN_REQUESTED
+  RETURN_APPROVED
+  RETURN_PICKED_UP
+  RETURN_RECEIVED
+  REFUND_PENDING
   REFUNDED
+  RETURN_REJECTED
+  PAYMENT_FAILED
 }
 
 enum PaymentStatus {
   PENDING
   AUTHORIZED
   CAPTURED
+  PAID
   FAILED
+  COD_PENDING
+  COD_COLLECTED
+  COD_SETTLED
+  REFUND_PENDING
   REFUNDED
+  PARTIALLY_REFUNDED
 }
 
 enum PaymentProvider {
   STRIPE
   RAZORPAY
   COD
+}
+
+enum ShipmentStatus {
+  PENDING
+  LABEL_CREATED
+  READY_FOR_PICKUP
+  PICKED_UP
+  IN_TRANSIT
+  OUT_FOR_DELIVERY
+  DELIVERED
+  FAILED_DELIVERY
+  RTO_INITIATED
+  RTO_DELIVERED
+  CANCELLED
+}
+
+enum ReturnStatus {
+  REQUESTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  PICKUP_SCHEDULED
+  PICKED_UP
+  RECEIVED
+  QUALITY_CHECK
+  REFUND_PENDING
+  REFUNDED
+  REPLACEMENT_PENDING
+  REPLACED
+  COMPLETED
+  CANCELLED
+}
+
+enum ReturnReason {
+  DAMAGED
+  WRONG_PRODUCT
+  SIZE_ISSUE
+  DEFECTIVE
+  NOT_AS_DESCRIBED
+  OTHER
+}
+
+enum ReturnAction {
+  REFUND
+  REPLACEMENT
+}
+
+enum QualityCheckResult {
+  PENDING
+  PASSED_RESTOCKABLE
+  PASSED_DAMAGED_NO_RESTOCK
+  FAILED_FRAUD_OR_MISMATCH
+}
+
+enum RefundStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum CODStatus {
+  COD_PENDING
+  COD_COLLECTED
+  COD_SETTLED
+  COD_FAILED
 }
 
 enum DiscountType {
@@ -63,16 +145,16 @@ enum StockStatus {
 // ==========================================
 
 model User {
-  id               String         @id @default(uuid())
-  email            String         @unique
-  passwordHash     String
-  firstName        String
-  lastName         String
-  phone            String?
-  avatarUrl        String?
-  role             UserRole       @default(CUSTOMER)
-  roleId           String?
-  roleModel        Role?          @relation(fields: [roleId], references: [id], onDelete: SetNull)
+  id                      String         @id @default(uuid())
+  email                   String         @unique
+  passwordHash            String
+  firstName               String
+  lastName                String
+  phone                   String?
+  avatarUrl               String?
+  role                    UserRole       @default(CUSTOMER)
+  roleId                  String?
+  roleModel               Role?          @relation(fields: [roleId], references: [id], onDelete: SetNull)
   isActive                Boolean        @default(true)
   isEmailVerified         Boolean        @default(false)
   notificationPreferences Json?          @default("{\"email\":true,\"orderUpdates\":true,\"promotions\":false}")
@@ -81,6 +163,7 @@ model User {
   // Relations
   addresses        Address[]
   orders           Order[]
+  returnRequests   ReturnRequest[]
   reviews          Review[]
   cart             Cart?
   wishlist         Wishlist?
@@ -369,7 +452,7 @@ model WishlistItem {
 }
 
 // ==========================================
-// ORDERS & PAYMENTS
+// ORDERS, PAYMENTS, COD, SHIPPING & RETURNS
 // ==========================================
 
 model Order {
@@ -391,6 +474,10 @@ model Order {
   
   status          OrderStatus    @default(PENDING_PAYMENT)
   payment         Payment?
+  shipment        Shipment?
+  codTransaction  CODTransaction?
+  returnRequests  ReturnRequest[]
+  refunds         Refund[]
   items           OrderItem[]
   trackingNumber  String?
   notes           String?
@@ -422,6 +509,8 @@ model OrderItem {
   sku          String?
   imageUrl     String?
 
+  returnItems  ReturnItem[]
+
   createdAt    DateTime       @default(now())
 
   @@index([orderId])
@@ -436,9 +525,11 @@ model Payment {
   transactionId   String?         @unique
   paymentIntentId String?
   amount          Decimal         @db.Decimal(10, 2)
-  currency        String          @default("USD")
+  currency        String          @default("INR")
   status          PaymentStatus   @default(PENDING)
   rawResponse     Json?
+
+  refunds         Refund[]
 
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
@@ -446,6 +537,180 @@ model Payment {
   @@index([orderId])
   @@index([transactionId])
   @@index([status])
+}
+
+model CODTransaction {
+  id               String      @id @default(uuid())
+  orderId          String      @unique
+  order            Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  amount           Decimal     @db.Decimal(10, 2)
+  currency         String      @default("INR")
+  status           CODStatus   @default(COD_PENDING)
+  collectedAt      DateTime?
+  settledAt        DateTime?
+  collectedBy      String?     // Courier/Executive name
+  courierReference String?     // Run sheet / AWB reference
+  receiptNumber    String?     @unique
+  notes            String?
+
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  @@index([orderId])
+  @@index([status])
+  @@index([collectedAt])
+}
+
+model Shipment {
+  id                String                  @id @default(uuid())
+  orderId           String                  @unique
+  order             Order                   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  courierProvider   String                  @default("STANDARD_EXPRESS") // STANDARD_EXPRESS, SHIPROCKET, DELHIVERY
+  awbNumber         String?                 @unique
+  trackingUrl       String?
+  labelUrl          String?
+  status            ShipmentStatus          @default(PENDING)
+  pickupAddress     Json?
+  shippingAddress   Json?
+  weight            Decimal?                @db.Decimal(8, 2)
+  dimensions        Json?
+  codAmount         Decimal?                @db.Decimal(10, 2)
+  isCod             Boolean                 @default(false)
+  dispatchedAt      DateTime?
+  deliveredAt       DateTime?
+  estimatedDelivery DateTime?
+  failureReason     String?
+  metadata          Json?
+
+  trackingEvents    ShipmentTrackingEvent[]
+
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+
+  @@index([orderId])
+  @@index([awbNumber])
+  @@index([status])
+  @@index([courierProvider])
+  @@index([createdAt])
+}
+
+model ShipmentTrackingEvent {
+  id         String         @id @default(uuid())
+  shipmentId String
+  shipment   Shipment       @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  status     ShipmentStatus
+  location   String?
+  activity   String
+  timestamp  DateTime       @default(now())
+  rawPayload Json?
+  eventId    String?        @unique // Idempotency for webhooks
+
+  createdAt  DateTime       @default(now())
+
+  @@index([shipmentId])
+  @@index([status])
+  @@index([timestamp])
+  @@index([eventId])
+}
+
+model ReturnRequest {
+  id             String             @id @default(uuid())
+  returnNumber   String             @unique // e.g. RET-2026-XXXXX
+  orderId        String
+  order          Order              @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status         ReturnStatus       @default(REQUESTED)
+  reason         ReturnReason
+  action         ReturnAction       @default(REFUND)
+  customerNote   String?            @db.Text
+  adminNote      String?            @db.Text
+  evidenceImages String[]           @default([])
+  pickupAddress  Json?
+  pickupAwb      String?            @unique
+  qcResult       QualityCheckResult @default(PENDING)
+  qcNotes        String?            @db.Text
+  bankDetails    Json?              // For COD customer bank/UPI refunds
+
+  items          ReturnItem[]
+  refund         Refund?
+
+  requestedAt    DateTime           @default(now())
+  approvedAt     DateTime?
+  pickedUpAt     DateTime?
+  receivedAt     DateTime?
+  completedAt    DateTime?
+
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  @@index([orderId])
+  @@index([userId])
+  @@index([returnNumber])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model ReturnItem {
+  id              String        @id @default(uuid())
+  returnRequestId String
+  returnRequest   ReturnRequest @relation(fields: [returnRequestId], references: [id], onDelete: Cascade)
+  orderItemId     String
+  orderItem       OrderItem     @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  quantity        Int           @default(1)
+  reason          ReturnReason?
+  restocked       Boolean       @default(false)
+
+  createdAt       DateTime      @default(now())
+
+  @@index([returnRequestId])
+  @@index([orderItemId])
+}
+
+model Refund {
+  id              String              @id @default(uuid())
+  refundNumber    String              @unique // e.g. REF-2026-XXXXX
+  orderId         String
+  order           Order               @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  paymentId       String?
+  payment         Payment?            @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  returnRequestId String?             @unique
+  returnRequest   ReturnRequest?      @relation(fields: [returnRequestId], references: [id], onDelete: SetNull)
+  amount          Decimal             @db.Decimal(10, 2)
+  currency        String              @default("INR")
+  reason          String
+  status          RefundStatus        @default(PENDING)
+  gatewayRefundId String?             @unique
+  idempotencyKey  String              @unique
+  failureReason   String?
+  completedAt     DateTime?
+
+  transactions    RefundTransaction[]
+
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  @@index([orderId])
+  @@index([paymentId])
+  @@index([status])
+  @@index([idempotencyKey])
+  @@index([refundNumber])
+}
+
+model RefundTransaction {
+  id               String       @id @default(uuid())
+  refundId         String
+  refund           Refund       @relation(fields: [refundId], references: [id], onDelete: Cascade)
+  amount           Decimal      @db.Decimal(10, 2)
+  gateway          String       // STRIPE, RAZORPAY, COD_BANK_TRANSFER
+  gatewayReference String?
+  status           RefundStatus @default(PENDING)
+  rawResponse      Json?
+
+  createdAt        DateTime     @default(now())
+
+  @@index([refundId])
+  @@index([gatewayReference])
 }
 
 // ==========================================
@@ -525,11 +790,23 @@ enum NotificationType {
   EMAIL_VERIFICATION
   PASSWORD_RESET
   ORDER_CREATED
-  PAYMENT_SUCCESSFUL
-  PAYMENT_FAILED
+  ORDER_CONFIRMED
+  ORDER_PACKED
   ORDER_SHIPPED
+  OUT_FOR_DELIVERY
   ORDER_DELIVERED
   ORDER_CANCELLED
+  PAYMENT_SUCCESSFUL
+  PAYMENT_FAILED
+  COD_COLLECTED
+  RETURN_REQUESTED
+  RETURN_APPROVED
+  RETURN_REJECTED
+  RETURN_PICKED_UP
+  RETURN_RECEIVED
+  REFUND_INITIATED
+  REFUND_COMPLETED
+  REFUND_FAILED
   PROMOTION
 }
 
@@ -555,8 +832,8 @@ model AuditLog {
   id         String   @id @default(uuid())
   userId     String?
   user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  action     String   // e.g. "PRODUCT_UPDATED", "ORDER_STATUS_CHANGED"
-  entity     String   // e.g. "Order", "Product"
+  action     String   // e.g. "ORDER_STATUS_CHANGED", "SHIPMENT_CREATED", "RETURN_APPROVED"
+  entity     String   // e.g. "Order", "Shipment", "ReturnRequest", "Refund"
   entityId   String
   details    Json?
   ipAddress  String?

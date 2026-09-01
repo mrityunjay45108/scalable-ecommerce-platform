@@ -3,6 +3,7 @@ import { OrdersService } from './orders.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { InventoryService } from '../inventory/inventory.service';
 import { CouponsService } from '../coupons/coupons.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { PaymentProvider, OrderStatus, PaymentStatus } from '@ecommerce/types';
 
@@ -114,6 +115,10 @@ describe('OrdersService - Complete Order Lifecycle & Snapshot Integrity', () => 
     validateAndCalculate: jest.fn(),
   };
 
+  const mockNotificationsService = {
+    sendNotification: jest.fn().mockResolvedValue(undefined),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -121,6 +126,7 @@ describe('OrdersService - Complete Order Lifecycle & Snapshot Integrity', () => 
         { provide: PrismaService, useValue: mockPrismaService },
         { provide: InventoryService, useValue: mockInventoryService },
         { provide: CouponsService, useValue: mockCouponsService },
+        { provide: NotificationsService, useValue: mockNotificationsService },
       ],
     }).compile();
 
@@ -202,7 +208,10 @@ describe('OrdersService - Complete Order Lifecycle & Snapshot Integrity', () => 
 
   describe('updateOrderStatus (Admin Lifecycle)', () => {
     it('should update status to SHIPPED with tracking number and log audit event', async () => {
-      mockPrismaService.order.findUnique.mockResolvedValue(mockOrder);
+      mockPrismaService.order.findUnique.mockResolvedValue({
+        ...mockOrder,
+        status: OrderStatus.READY_TO_SHIP,
+      });
       mockPrismaService.order.update.mockResolvedValue({
         ...mockOrder,
         status: OrderStatus.SHIPPED,

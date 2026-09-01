@@ -5,6 +5,7 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD, APP_INTERCEPTOR, APP_FILTER } from '@nestjs/core';
 
 import configuration from './config/configuration';
+import { AppController } from './app.controller';
 import { PrismaModule } from './modules/prisma/prisma.module';
 import { RedisModule } from './modules/redis/redis.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -22,6 +23,9 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { StorageModule } from './modules/storage/storage.module';
 import { HealthModule } from './modules/health/health.module';
+import { ShippingModule } from './modules/shipping/shipping.module';
+import { ReturnsModule } from './modules/returns/returns.module';
+import { RefundsModule } from './modules/refunds/refunds.module';
 
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
@@ -55,11 +59,15 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
     CouponsModule,
     OrdersModule,
     PaymentsModule,
+    ShippingModule,
+    ReturnsModule,
+    RefundsModule,
     ReviewsModule,
     NotificationsModule,
     AnalyticsModule,
     StorageModule,
   ],
+  controllers: [AppController],
   providers: [
     {
       provide: APP_GUARD,

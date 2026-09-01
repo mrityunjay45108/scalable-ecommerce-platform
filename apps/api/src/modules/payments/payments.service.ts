@@ -4,10 +4,12 @@ import {
   BadRequestException,
   Logger,
   UnauthorizedException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { InventoryService } from '../inventory/inventory.service';
 import { RedisService } from '../redis/redis.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { PaymentProviderFactory } from './providers/payment-provider.factory';
 import {
   CreatePaymentIntentDto,
@@ -15,8 +17,18 @@ import {
   ConfirmPaymentDto,
   RefundPaymentDto,
   RetryPaymentDto,
+  ConfirmCodCollectionDto,
+  SettleCodDto,
+  CodLedgerQueryDto,
 } from './payments.dto';
-import { PaymentProvider, PaymentStatus, OrderStatus } from '@ecommerce/types';
+import {
+  PaymentProvider,
+  PaymentStatus,
+  OrderStatus,
+  CODStatus,
+  Role,
+} from '@ecommerce/types';
+import { NotificationType } from '@ecommerce/database';
 
 @Injectable()
 export class PaymentsService {
@@ -26,6 +38,7 @@ export class PaymentsService {
     private prisma: PrismaService,
     private inventoryService: InventoryService,
     private redisService: RedisService,
+    private notificationsService: NotificationsService,
     private providerFactory: PaymentProviderFactory,
   ) {}
 
@@ -43,26 +56,55 @@ export class PaymentsService {
       throw new NotFoundException('Order not found');
     }
 
-    if (order.status !== OrderStatus.PENDING_PAYMENT && order.status !== OrderStatus.PROCESSING) {
+    if (
+      order.status !== OrderStatus.PENDING_PAYMENT &&
+      order.status !== OrderStatus.CONFIRMED &&
+      order.status !== OrderStatus.PROCESSING
+    ) {
       throw new BadRequestException(`Order cannot be paid in current status: ${order.status}`);
     }
 
-    // Always recalculate amount directly from PostgreSQL order record
     const amount = Number(order.totalAmount);
 
+    // If COD, ensure COD_PENDING status and do not auto-confirm
     if (dto.provider === PaymentProvider.COD) {
-      await this.confirmPayment({
-        orderId: order.id,
-        transactionId: `COD-${order.orderNumber}`,
-        paymentData: { method: 'COD' },
+      await this.prisma.payment.upsert({
+        where: { orderId: order.id },
+        update: {
+          provider: PaymentProvider.COD,
+          status: PaymentStatus.COD_PENDING,
+          amount,
+        },
+        create: {
+          orderId: order.id,
+          provider: PaymentProvider.COD,
+          amount,
+          currency: 'INR',
+          status: PaymentStatus.COD_PENDING,
+        },
+      });
+
+      await this.prisma.cODTransaction.upsert({
+        where: { orderId: order.id },
+        update: {
+          status: CODStatus.COD_PENDING,
+          amount,
+        },
+        create: {
+          orderId: order.id,
+          amount,
+          currency: 'INR',
+          status: CODStatus.COD_PENDING,
+        },
       });
 
       return {
         provider: PaymentProvider.COD,
-        status: 'CONFIRMED',
+        status: PaymentStatus.COD_PENDING,
         orderId: order.id,
         orderNumber: order.orderNumber,
         amount,
+        isCod: true,
       };
     }
 
@@ -72,7 +114,7 @@ export class PaymentsService {
       orderId: order.id,
       orderNumber: order.orderNumber,
       amount,
-      currency: 'USD',
+      currency: 'INR',
       customerEmail: order.user?.email,
       customerPhone: order.user?.phone || undefined,
     });
@@ -90,7 +132,7 @@ export class PaymentsService {
         orderId: order.id,
         provider: dto.provider,
         amount,
-        currency: 'USD',
+        currency: 'INR',
         paymentIntentId: orderResult.providerOrderId,
         status: PaymentStatus.PENDING,
       },
@@ -117,11 +159,10 @@ export class PaymentsService {
       throw new NotFoundException('Order not found');
     }
 
-    if (dto.provider === PaymentProvider.COD) {
-      return this.confirmPayment({
-        orderId: order.id,
-        transactionId: `COD-${order.orderNumber}`,
-      });
+    if (dto.provider === PaymentProvider.COD || order.payment?.provider === PaymentProvider.COD) {
+      throw new BadRequestException(
+        'Cash On Delivery (COD) cannot be confirmed manually. It is collected upon delivery.',
+      );
     }
 
     const provider = this.providerFactory.getProvider(dto.provider);
@@ -133,7 +174,6 @@ export class PaymentsService {
     });
 
     if (!verification.isValid) {
-      // Mark payment failed in DB
       await this.markPaymentFailed(order.id, verification.error || 'Payment verification failed');
       throw new BadRequestException(verification.error || 'Payment cryptographic verification failed');
     }
@@ -146,7 +186,7 @@ export class PaymentsService {
   }
 
   // =========================================================================
-  // 3. CONFIRM PAYMENT & COMMIT INVENTORY
+  // 3. CONFIRM ONLINE PAYMENT & COMMIT INVENTORY
   // =========================================================================
 
   async confirmPayment(dto: ConfirmPaymentDto) {
@@ -159,7 +199,16 @@ export class PaymentsService {
       throw new NotFoundException('Order not found');
     }
 
-    if (order.status === OrderStatus.PROCESSING || order.status === OrderStatus.SHIPPED || order.status === OrderStatus.DELIVERED) {
+    if (order.payment?.provider === PaymentProvider.COD) {
+      throw new BadRequestException(
+        'COD orders cannot be confirmed via online payment confirmation endpoint.',
+      );
+    }
+
+    if (
+      order.payment?.status === PaymentStatus.CAPTURED ||
+      order.payment?.status === PaymentStatus.PAID
+    ) {
       return { success: true, message: 'Payment already processed', orderId: order.id };
     }
 
@@ -174,76 +223,339 @@ export class PaymentsService {
         },
         create: {
           orderId: order.id,
-          provider: PaymentProvider.STRIPE,
+          provider: PaymentProvider.RAZORPAY,
           amount: order.totalAmount,
-          currency: 'USD',
+          currency: 'INR',
           transactionId: dto.transactionId,
           status: PaymentStatus.CAPTURED,
           rawResponse: dto.paymentData || {},
         },
       });
 
-      // 2. Transition Order to PROCESSING
-      const updatedOrder = await tx.order.update({
+      // 2. Advance Order status to PROCESSING / CONFIRMED
+      await tx.order.update({
         where: { id: order.id },
         data: { status: OrderStatus.PROCESSING },
-        include: { items: true, payment: true },
       });
 
-      // 3. Commit inventory stock permanently
-      const reservationItems = order.items.map((item) => ({
-        variantId: item.variantId,
-        quantity: item.quantity,
-      }));
+      // 3. Commit reserved stock
+      await this.inventoryService.commitStock(
+        order.orderNumber,
+        order.items.map((i) => ({ variantId: i.variantId, quantity: i.quantity })),
+      );
 
-      await this.inventoryService.commitStock(order.orderNumber, reservationItems);
+      // 4. Audit Log
+      await tx.auditLog.create({
+        data: {
+          userId: order.userId,
+          action: 'PAYMENT_CAPTURED',
+          entity: 'Payment',
+          entityId: order.id,
+          details: {
+            orderNumber: order.orderNumber,
+            transactionId: dto.transactionId,
+            amount: Number(order.totalAmount),
+          },
+        },
+      });
 
-      this.logger.log(`Payment confirmed & captured for order ${order.orderNumber} (TX: ${dto.transactionId})`);
+      // 5. Dispatch notification
+      await this.notificationsService.sendNotification({
+        userId: order.userId,
+        type: NotificationType.PAYMENT_SUCCESSFUL,
+        title: 'Payment Successful',
+        message: `Your payment of INR ${order.totalAmount} for order ${order.orderNumber} was confirmed.`,
+        link: `/orders/${order.id}`,
+      });
+
+      this.logger.log(`Confirmed online payment for order ${order.orderNumber}: ${dto.transactionId}`);
+      return { success: true, orderId: order.id };
+    });
+  }
+
+  // =========================================================================
+  // 4. COD COLLECTION CONFIRMATION (ADMIN / DELIVERY AGENT / WEBHOOK)
+  // =========================================================================
+
+  async confirmCodCollection(orderId: string, adminUserId: string, dto?: ConfirmCodCollectionDto) {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: { payment: true, codTransaction: true, user: true, items: true },
+    });
+
+    if (!order) {
+      throw new NotFoundException(`Order not found: ${orderId}`);
+    }
+
+    if (order.payment?.provider !== PaymentProvider.COD) {
+      throw new BadRequestException(`Order ${order.orderNumber} is not a Cash On Delivery order`);
+    }
+
+    if (
+      order.payment?.status === PaymentStatus.COD_COLLECTED ||
+      order.payment?.status === PaymentStatus.COD_SETTLED
+    ) {
+      throw new BadRequestException(
+        `COD has already been collected for order ${order.orderNumber}`,
+      );
+    }
+
+    const receiptNumber = dto?.receiptNumber || `REC-COD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
+    return this.prisma.$transaction(async (tx) => {
+      // 1. Update Payment to COD_COLLECTED
+      await tx.payment.update({
+        where: { orderId: order.id },
+        data: {
+          status: PaymentStatus.COD_COLLECTED,
+          transactionId: receiptNumber,
+          rawResponse: {
+            collectedBy: dto?.collectedBy || 'Delivery Executive',
+            courierReference: dto?.courierReference,
+            notes: dto?.notes,
+            collectedAt: new Date(),
+          },
+        },
+      });
+
+      // 2. Update/Upsert COD Transaction
+      await tx.cODTransaction.upsert({
+        where: { orderId: order.id },
+        update: {
+          status: CODStatus.COD_COLLECTED,
+          collectedAt: new Date(),
+          collectedBy: dto?.collectedBy || 'Delivery Executive',
+          courierReference: dto?.courierReference,
+          receiptNumber,
+          notes: dto?.notes,
+        },
+        create: {
+          orderId: order.id,
+          amount: order.totalAmount,
+          currency: 'INR',
+          status: CODStatus.COD_COLLECTED,
+          collectedAt: new Date(),
+          collectedBy: dto?.collectedBy || 'Delivery Executive',
+          courierReference: dto?.courierReference,
+          receiptNumber,
+          notes: dto?.notes,
+        },
+      });
+
+      // 3. Mark Order as DELIVERED if not already
+      if (order.status !== OrderStatus.DELIVERED) {
+        await tx.order.update({
+          where: { id: order.id },
+          data: { status: OrderStatus.DELIVERED },
+        });
+      }
+
+      // 4. Audit Log
+      await tx.auditLog.create({
+        data: {
+          userId: adminUserId,
+          action: 'COD_COLLECTED',
+          entity: 'Order',
+          entityId: order.id,
+          details: {
+            orderNumber: order.orderNumber,
+            amount: Number(order.totalAmount),
+            receiptNumber,
+            collectedBy: dto?.collectedBy,
+          },
+        },
+      });
+
+      // 5. Customer Notification
+      await this.notificationsService.sendNotification({
+        userId: order.userId,
+        type: NotificationType.COD_COLLECTED,
+        title: 'Cash Collected Successfully',
+        message: `Cash on Delivery payment of INR ${order.totalAmount} for order ${order.orderNumber} has been received.`,
+        link: `/orders/${order.id}`,
+      });
+
+      this.logger.log(`COD collection confirmed for order ${order.orderNumber} [Receipt: ${receiptNumber}]`);
 
       return {
         success: true,
-        orderId: updatedOrder.id,
-        orderNumber: updatedOrder.orderNumber,
-        status: updatedOrder.status,
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        status: PaymentStatus.COD_COLLECTED,
+        receiptNumber,
+        amount: Number(order.totalAmount),
       };
     });
   }
 
   // =========================================================================
-  // 4. WEBHOOK PROCESSING WITH IDEMPOTENCY
+  // 5. COD SETTLEMENT (ADMIN / FINANCE RECONCILIATION)
   // =========================================================================
 
-  async handleWebhook(providerName: string, payload: any, signature?: string, rawBody?: string) {
-    this.logger.log(`Received webhook from provider: ${providerName}`);
+  async settleCodTransaction(orderId: string, adminUserId: string, dto?: SettleCodDto) {
+    const codTx = await this.prisma.cODTransaction.findUnique({
+      where: { orderId },
+      include: { order: { include: { payment: true } } },
+    });
 
-    const provider = this.providerFactory.getProvider(providerName);
-
-    // Verify signature
-    if (signature) {
-      const isValid = provider.verifyWebhookSignature(rawBody || payload, signature);
-      if (!isValid) {
-        this.logger.warn(`Webhook signature verification failed for ${providerName}`);
-        throw new UnauthorizedException('Invalid webhook signature');
-      }
+    if (!codTx) {
+      throw new NotFoundException(`COD transaction not found for order: ${orderId}`);
     }
 
-    // Idempotency check using Event ID
-    const eventId =
-      payload?.id ||
-      payload?.event_id ||
-      payload?.payload?.payment?.entity?.id ||
-      `evt_${Date.now()}`;
-
-    const alreadyProcessed = await this.redisService.get(`webhook_idempotency:${eventId}`);
-    if (alreadyProcessed) {
-      this.logger.log(`Webhook event ${eventId} already processed (idempotent skip)`);
-      return { received: true, idempotent: true };
+    if (codTx.status === CODStatus.COD_SETTLED) {
+      throw new BadRequestException('COD transaction is already settled');
     }
 
-    // Process provider events
-    const normalized = providerName.toUpperCase();
+    if (codTx.status !== CODStatus.COD_COLLECTED) {
+      throw new BadRequestException(
+        `Cannot settle COD transaction in status '${codTx.status}'. Must be COD_COLLECTED first.`,
+      );
+    }
 
-    if (normalized === 'RAZORPAY') {
+    return this.prisma.$transaction(async (tx) => {
+      // 1. Update COD Transaction
+      const updatedCod = await tx.cODTransaction.update({
+        where: { id: codTx.id },
+        data: {
+          status: CODStatus.COD_SETTLED,
+          settledAt: new Date(),
+          notes: dto?.notes || codTx.notes,
+        },
+      });
+
+      // 2. Update Payment status to COD_SETTLED
+      await tx.payment.update({
+        where: { orderId },
+        data: { status: PaymentStatus.COD_SETTLED },
+      });
+
+      // 3. Audit Log
+      await tx.auditLog.create({
+        data: {
+          userId: adminUserId,
+          action: 'COD_SETTLED',
+          entity: 'CODTransaction',
+          entityId: codTx.id,
+          details: {
+            orderNumber: codTx.order.orderNumber,
+            amount: Number(codTx.amount),
+            settlementReference: dto?.settlementReference,
+          },
+        },
+      });
+
+      this.logger.log(`COD transaction settled for order ${codTx.order.orderNumber}`);
+
+      return updatedCod;
+    });
+  }
+
+  // =========================================================================
+  // 6. ADMIN: COD LEDGER QUERY WITH SUMMARY METRICS
+  // =========================================================================
+
+  async findAllCodTransactions(query: CodLedgerQueryDto) {
+    const { page = 1, limit = 10, status, search } = query;
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+    if (status) where.status = status;
+
+    if (search) {
+      where.OR = [
+        { receiptNumber: { contains: search, mode: 'insensitive' } },
+        { courierReference: { contains: search, mode: 'insensitive' } },
+        { order: { orderNumber: { contains: search, mode: 'insensitive' } } },
+      ];
+    }
+
+    const [transactions, total, pendingAggregate, collectedAggregate, settledAggregate] =
+      await Promise.all([
+        this.prisma.cODTransaction.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: { createdAt: 'desc' },
+          include: {
+            order: {
+              select: {
+                id: true,
+                orderNumber: true,
+                totalAmount: true,
+                status: true,
+                user: { select: { firstName: true, lastName: true, email: true } },
+              },
+            },
+          },
+        }),
+        this.prisma.cODTransaction.count({ where }),
+        this.prisma.cODTransaction.aggregate({
+          where: { status: CODStatus.COD_PENDING },
+          _sum: { amount: true },
+          _count: true,
+        }),
+        this.prisma.cODTransaction.aggregate({
+          where: { status: CODStatus.COD_COLLECTED },
+          _sum: { amount: true },
+          _count: true,
+        }),
+        this.prisma.cODTransaction.aggregate({
+          where: { status: CODStatus.COD_SETTLED },
+          _sum: { amount: true },
+          _count: true,
+        }),
+      ]);
+
+    return {
+      data: transactions,
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+      summary: {
+        pendingAmount: Number(pendingAggregate._sum.amount || 0),
+        pendingCount: pendingAggregate._count,
+        collectedAmount: Number(collectedAggregate._sum.amount || 0),
+        collectedCount: collectedAggregate._count,
+        settledAmount: Number(settledAggregate._sum.amount || 0),
+        settledCount: settledAggregate._count,
+      },
+    };
+  }
+
+  // =========================================================================
+  // 7. WEBHOOK HANDLING & IDEMPOTENCY
+  // =========================================================================
+
+  async handleWebhook(providerName: string, payload: any, signature?: string) {
+    const normalized = providerName.toUpperCase() as PaymentProvider;
+    const eventId = payload?.id || payload?.event_id || `wh_${Date.now()}`;
+
+    // 1. Verify cryptographic signature with constant-time equality
+    const provider = this.providerFactory.getProvider(normalized);
+    if (!provider) {
+      throw new BadRequestException(`Unsupported payment provider: ${providerName}`);
+    }
+
+    const isValidSignature = provider.verifyWebhookSignature(payload, signature || '');
+    if (!isValidSignature) {
+      this.logger.warn(`Invalid cryptographic signature received for ${providerName} webhook [Event: ${eventId}]`);
+      throw new ForbiddenException(`Invalid ${providerName} webhook cryptographic signature`);
+    }
+
+    // 2. Redis Idempotency Check (7-day replay protection)
+    const cacheKey = `webhook_payment:${eventId}`;
+    const cached = await this.redisService.get(cacheKey);
+    if (cached) {
+      this.logger.log(`[PaymentWebhook] Duplicate webhook event detected: ${eventId}. Returning idempotent response.`);
+      return { received: true, idempotent: true, eventId };
+    }
+
+    this.logger.log(`[PaymentWebhook] Processing verified event '${eventId}' from ${providerName}`);
+
+    if (normalized === PaymentProvider.RAZORPAY) {
       const event = payload?.event;
       if (event === 'payment.captured' || event === 'order.paid') {
         const paymentEntity = payload?.payload?.payment?.entity;
@@ -270,11 +582,14 @@ export class PaymentsService {
             where: { paymentIntentId: razorpayOrderId },
           });
           if (payment) {
-            await this.markPaymentFailed(payment.orderId, paymentEntity?.error_description || 'Payment failed');
+            await this.markPaymentFailed(
+              payment.orderId,
+              paymentEntity?.error_description || 'Payment failed',
+            );
           }
         }
       }
-    } else if (normalized === 'STRIPE') {
+    } else if (normalized === PaymentProvider.STRIPE) {
       const eventType = payload?.type;
       if (eventType === 'payment_intent.succeeded' || eventType === 'checkout.session.completed') {
         const object = payload?.data?.object;
@@ -286,14 +601,13 @@ export class PaymentsService {
       }
     }
 
-    // Mark event processed in Redis for 7 days
-    await this.redisService.set(`webhook_idempotency:${eventId}`, '1', 604800);
-
+    // 3. Cache processed event ID in Redis for 7 days
+    await this.redisService.set(cacheKey, '1', 604800);
     return { received: true, eventId };
   }
 
   // =========================================================================
-  // 5. REFUND ARCHITECTURE
+  // 8. REFUND PROCESSING
   // =========================================================================
 
   async processRefund(orderId: string, dto: RefundPaymentDto) {
@@ -306,8 +620,14 @@ export class PaymentsService {
       throw new NotFoundException('Order or payment record not found');
     }
 
-    if (order.payment.status !== PaymentStatus.CAPTURED) {
-      throw new BadRequestException('Only captured payments can be refunded');
+    if (
+      order.payment.status !== PaymentStatus.CAPTURED &&
+      order.payment.status !== PaymentStatus.PAID &&
+      order.payment.status !== PaymentStatus.COD_COLLECTED
+    ) {
+      throw new BadRequestException(
+        `Only captured or collected payments can be refunded. Current status: ${order.payment.status}`,
+      );
     }
 
     const refundAmount = dto.amount || Number(order.totalAmount);
@@ -315,13 +635,18 @@ export class PaymentsService {
       throw new BadRequestException('Refund amount cannot exceed total order amount');
     }
 
-    const provider = this.providerFactory.getProvider(order.payment.provider);
-    const refundResult = await provider.processRefund({
-      paymentId: order.payment.id,
-      transactionId: order.payment.transactionId || '',
-      amount: refundAmount,
-      reason: dto.reason,
-    });
+    let refundResult = { refundId: `REF-${Date.now()}` };
+
+    // If online gateway, invoke provider
+    if (order.payment.provider !== PaymentProvider.COD) {
+      const provider = this.providerFactory.getProvider(order.payment.provider);
+      refundResult = await provider.processRefund({
+        paymentId: order.payment.id,
+        transactionId: order.payment.transactionId || '',
+        amount: refundAmount,
+        reason: dto.reason,
+      });
+    }
 
     return this.prisma.$transaction(async (tx) => {
       // Update Payment Status
@@ -338,14 +663,12 @@ export class PaymentsService {
         },
       });
 
-      // Update Order Status to CANCELLED if full refund
       if (refundAmount >= Number(order.totalAmount)) {
         await tx.order.update({
           where: { id: order.id },
           data: { status: OrderStatus.CANCELLED },
         });
 
-        // Release inventory back to stock
         for (const item of order.items) {
           await tx.productVariant.update({
             where: { id: item.variantId },
@@ -366,7 +689,7 @@ export class PaymentsService {
   }
 
   // =========================================================================
-  // 6. FAILED PAYMENTS & PAYMENT RETRY
+  // 9. FAILED PAYMENTS & PAYMENT RETRY
   // =========================================================================
 
   async markPaymentFailed(orderId: string, reason: string) {
@@ -393,11 +716,15 @@ export class PaymentsService {
       throw new NotFoundException('Order not found');
     }
 
-    if (order.status !== OrderStatus.PENDING_PAYMENT) {
+    if (
+      order.status !== OrderStatus.PENDING_PAYMENT &&
+      order.status !== OrderStatus.PAYMENT_FAILED
+    ) {
       throw new BadRequestException('Order is not in pending payment state');
     }
 
-    const providerToUse = dto.provider || (order.payment?.provider as PaymentProvider) || PaymentProvider.RAZORPAY;
+    const providerToUse =
+      dto.provider || (order.payment?.provider as PaymentProvider) || PaymentProvider.RAZORPAY;
 
     return this.createPaymentIntent(userId, {
       orderId: order.id,

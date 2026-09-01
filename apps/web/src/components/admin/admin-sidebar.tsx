@@ -10,6 +10,10 @@ import {
   Layers,
   Boxes,
   ShoppingCart,
+  Truck,
+  RotateCcw,
+  Receipt,
+  Banknote,
   Tag,
   MessageSquare,
   Users,
@@ -25,13 +29,17 @@ export function AdminSidebar() {
   const links = [
     { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/admin/analytics', label: 'Analytics & Sales', icon: BarChart3 },
+    { href: '/admin/orders', label: 'Orders & Timeline', icon: ShoppingCart },
+    { href: '/admin/shipments', label: 'Shipments & Logistics', icon: Truck },
+    { href: '/admin/returns', label: 'Returns & QC', icon: RotateCcw },
+    { href: '/admin/refunds', label: 'Refunds & Payouts', icon: Receipt },
+    { href: '/admin/cod', label: 'COD Reconciliation', icon: Banknote },
     { href: '/admin/products', label: 'Products', icon: Package },
     { href: '/admin/categories', label: 'Categories', icon: Layers },
-    { href: '/admin/orders', label: 'Orders', icon: ShoppingCart },
-    { href: '/admin/users', label: 'Users & Staff', icon: Users },
     { href: '/admin/inventory', label: 'Stock & Inventory', icon: Boxes },
     { href: '/admin/coupons', label: 'Coupons & Promos', icon: Tag },
     { href: '/admin/reviews', label: 'Review Moderation', icon: MessageSquare },
+    { href: '/admin/users', label: 'Users & Staff', icon: Users },
   ];
 
   return (

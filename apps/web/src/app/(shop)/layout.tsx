@@ -1,6 +1,7 @@
 import React from 'react';
 import { Navbar } from '@/components/shared/navbar';
 import { Footer } from '@/components/shared/footer';
+import { CartDrawer } from '@/components/shop/cart-drawer';
 
 export default function ShopLayout({
   children,
@@ -12,6 +13,7 @@ export default function ShopLayout({
       <Navbar />
       <main className="flex-1">{children}</main>
       <Footer />
+      <CartDrawer />
     </div>
   );
 }

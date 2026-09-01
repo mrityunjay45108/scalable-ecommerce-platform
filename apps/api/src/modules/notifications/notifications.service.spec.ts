@@ -3,6 +3,7 @@ import { NotificationsService } from './notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailNotificationProvider } from './providers/email.provider';
 import { InAppNotificationProvider } from './providers/in-app.provider';
+import { RedisService } from '../redis/redis.service';
 import { NotificationType } from '@ecommerce/database';
 
 describe('NotificationsService - Notification Provider Abstraction & Resilient Delivery', () => {
@@ -10,6 +11,7 @@ describe('NotificationsService - Notification Provider Abstraction & Resilient D
   let prisma: PrismaService;
   let emailProvider: EmailNotificationProvider;
   let inAppProvider: InAppNotificationProvider;
+  let redisService: RedisService;
 
   const mockUser = {
     id: 'user-1',
@@ -52,6 +54,11 @@ describe('NotificationsService - Notification Provider Abstraction & Resilient D
     send: jest.fn().mockResolvedValue(true),
   };
 
+  const mockRedisService = {
+    get: jest.fn().mockResolvedValue(null),
+    set: jest.fn().mockResolvedValue(true),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -59,6 +66,7 @@ describe('NotificationsService - Notification Provider Abstraction & Resilient D
         { provide: PrismaService, useValue: mockPrismaService },
         { provide: EmailNotificationProvider, useValue: mockEmailProvider },
         { provide: InAppNotificationProvider, useValue: mockInAppProvider },
+        { provide: RedisService, useValue: mockRedisService },
       ],
     }).compile();
 
@@ -66,6 +74,7 @@ describe('NotificationsService - Notification Provider Abstraction & Resilient D
     prisma = module.get<PrismaService>(PrismaService);
     emailProvider = module.get<EmailNotificationProvider>(EmailNotificationProvider);
     inAppProvider = module.get<InAppNotificationProvider>(InAppNotificationProvider);
+    redisService = module.get<RedisService>(RedisService);
     jest.clearAllMocks();
   });
 
@@ -122,6 +131,82 @@ describe('NotificationsService - Notification Provider Abstraction & Resilient D
           message: 'Order created.',
         }),
       ).resolves.not.toThrow();
+    });
+  });
+
+  describe('Order & Return Lifecycle Notification Events', () => {
+    const lifecycleEvents: NotificationType[] = [
+      NotificationType.ORDER_CONFIRMED,
+      NotificationType.ORDER_PACKED,
+      NotificationType.ORDER_SHIPPED,
+      NotificationType.OUT_FOR_DELIVERY,
+      NotificationType.ORDER_DELIVERED,
+      NotificationType.COD_COLLECTED,
+      NotificationType.RETURN_REQUESTED,
+      NotificationType.RETURN_APPROVED,
+      NotificationType.RETURN_REJECTED,
+      NotificationType.RETURN_PICKED_UP,
+      NotificationType.RETURN_RECEIVED,
+      NotificationType.REFUND_INITIATED,
+      NotificationType.REFUND_COMPLETED,
+      NotificationType.REFUND_FAILED,
+    ];
+
+    it.each(lifecycleEvents)('should successfully dispatch notification for event %s', async (eventType) => {
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+
+      await service.sendNotification({
+        userId: 'user-1',
+        type: eventType,
+        title: `Notification for ${eventType}`,
+        message: `Event ${eventType} occurred successfully.`,
+      });
+
+      expect(inAppProvider.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: eventType,
+        }),
+      );
+      expect(emailProvider.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: eventType,
+        }),
+      );
+    });
+
+    it('should skip duplicate notification when deduplicationKey is already cached in Redis', async () => {
+      mockRedisService.get.mockResolvedValue('1'); // already sent
+
+      await service.sendNotification({
+        userId: 'user-1',
+        type: NotificationType.ORDER_DELIVERED,
+        title: 'Delivered',
+        message: 'Order delivered',
+        deduplicationKey: 'order_delivered_ord_100',
+      });
+
+      expect(inAppProvider.send).not.toHaveBeenCalled();
+      expect(emailProvider.send).not.toHaveBeenCalled();
+    });
+
+    it('should set deduplicationKey in Redis on first notification dispatch', async () => {
+      mockRedisService.get.mockResolvedValue(null);
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+
+      await service.sendNotification({
+        userId: 'user-1',
+        type: NotificationType.ORDER_DELIVERED,
+        title: 'Delivered',
+        message: 'Order delivered',
+        deduplicationKey: 'order_delivered_ord_200',
+      });
+
+      expect(mockRedisService.set).toHaveBeenCalledWith(
+        'notif_dedup:order_delivered_ord_200',
+        '1',
+        86400,
+      );
+      expect(inAppProvider.send).toHaveBeenCalled();
     });
   });
 

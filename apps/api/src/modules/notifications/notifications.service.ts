@@ -1,10 +1,11 @@
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger, Optional } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailNotificationProvider } from './providers/email.provider';
 import { InAppNotificationProvider } from './providers/in-app.provider';
 import { NotificationPayload } from './interfaces/notification-provider.interface';
 import { UpdatePreferencesDto } from './notifications.dto';
 import { NotificationType } from '@ecommerce/database';
+import { RedisService } from '../redis/redis.service';
 
 @Injectable()
 export class NotificationsService {
@@ -14,14 +15,31 @@ export class NotificationsService {
     private prisma: PrismaService,
     private emailProvider: EmailNotificationProvider,
     private inAppProvider: InAppNotificationProvider,
+    @Optional() private redisService?: RedisService,
   ) {}
 
   // =========================================================================
-  // 1. DISPATCH NOTIFICATION (NON-BLOCKING & RESILIENT)
+  // 1. DISPATCH NOTIFICATION (NON-BLOCKING, IDEMPOTENT & RESILIENT)
   // =========================================================================
 
   async sendNotification(payload: NotificationPayload): Promise<void> {
-    // 1. In-app notification if userId is present
+    // 1. Idempotency / Deduplication check via Redis (24-hour window)
+    if (payload.deduplicationKey && this.redisService) {
+      try {
+        const isDuplicate = await this.redisService.get(`notif_dedup:${payload.deduplicationKey}`);
+        if (isDuplicate) {
+          this.logger.log(
+            `[NotificationsService] Skipping duplicate notification for deduplication key: ${payload.deduplicationKey}`,
+          );
+          return;
+        }
+        await this.redisService.set(`notif_dedup:${payload.deduplicationKey}`, '1', 86400);
+      } catch (err: any) {
+        this.logger.warn(`Redis deduplication check failed: ${err.message}`);
+      }
+    }
+
+    // 2. In-app notification if userId is present
     if (payload.userId) {
       try {
         await this.inAppProvider.send(payload);
@@ -30,7 +48,7 @@ export class NotificationsService {
       }
     }
 
-    // 2. Email notification (safely wrapped - will NEVER block caller)
+    // 3. Email notification (safely wrapped - will NEVER block caller)
     try {
       let shouldSendEmail = true;
 
@@ -48,22 +66,37 @@ export class NotificationsService {
             payload.recipientName = user.firstName;
           }
 
-          const prefs = (user.notificationPreferences as any) || { email: true, orderUpdates: true, promotions: false };
+          const prefs = (user.notificationPreferences as any) || {
+            email: true,
+            orderUpdates: true,
+            promotions: false,
+          };
+
+          const orderLifecycleTypes: NotificationType[] = [
+            NotificationType.ORDER_CREATED,
+            NotificationType.ORDER_CONFIRMED,
+            NotificationType.ORDER_PACKED,
+            NotificationType.ORDER_SHIPPED,
+            NotificationType.OUT_FOR_DELIVERY,
+            NotificationType.ORDER_DELIVERED,
+            NotificationType.ORDER_CANCELLED,
+            NotificationType.PAYMENT_SUCCESSFUL,
+            NotificationType.PAYMENT_FAILED,
+            NotificationType.COD_COLLECTED,
+            NotificationType.RETURN_REQUESTED,
+            NotificationType.RETURN_APPROVED,
+            NotificationType.RETURN_REJECTED,
+            NotificationType.RETURN_PICKED_UP,
+            NotificationType.RETURN_RECEIVED,
+            NotificationType.REFUND_INITIATED,
+            NotificationType.REFUND_COMPLETED,
+            NotificationType.REFUND_FAILED,
+          ];
 
           // Check preferences
           if (prefs.email === false) {
             shouldSendEmail = false;
-          } else if (
-            ([
-              NotificationType.ORDER_CREATED,
-              NotificationType.ORDER_SHIPPED,
-              NotificationType.ORDER_DELIVERED,
-              NotificationType.ORDER_CANCELLED,
-              NotificationType.PAYMENT_SUCCESSFUL,
-              NotificationType.PAYMENT_FAILED,
-            ] as NotificationType[]).includes(payload.type) &&
-            prefs.orderUpdates === false
-          ) {
+          } else if (orderLifecycleTypes.includes(payload.type) && prefs.orderUpdates === false) {
             shouldSendEmail = false;
           } else if (payload.type === NotificationType.PROMOTION && prefs.promotions === false) {
             shouldSendEmail = false;
@@ -154,31 +187,14 @@ export class NotificationsService {
   }
 
   async updatePreferences(userId: string, dto: UpdatePreferencesDto) {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { notificationPreferences: true },
-    });
-
-    if (!user) throw new NotFoundException('User not found');
-
-    const current = (user.notificationPreferences as any) || {
-      email: true,
-      orderUpdates: true,
-      promotions: false,
-    };
-
-    const updatedPreferences = {
-      ...current,
-      ...(dto.email !== undefined && { email: dto.email }),
-      ...(dto.orderUpdates !== undefined && { orderUpdates: dto.orderUpdates }),
-      ...(dto.promotions !== undefined && { promotions: dto.promotions }),
-    };
+    const current = await this.getPreferences(userId);
+    const updated = { ...current, ...dto };
 
     await this.prisma.user.update({
       where: { id: userId },
-      data: { notificationPreferences: updatedPreferences },
+      data: { notificationPreferences: updated },
     });
 
-    return updatedPreferences;
+    return updated;
   }
 }

@@ -7,19 +7,29 @@ export const Role = {
   ADMIN: 'ADMIN',
   STAFF: 'STAFF',
   MODERATOR: 'MODERATOR',
+  SELLER: 'SELLER',
 } as const;
 export type Role = (typeof Role)[keyof typeof Role];
 
 export const OrderStatus = {
   PENDING_PAYMENT: 'PENDING_PAYMENT',
   PAID: 'PAID',
-  PAYMENT_FAILED: 'PAYMENT_FAILED',
+  CONFIRMED: 'CONFIRMED',
   PROCESSING: 'PROCESSING',
+  PACKED: 'PACKED',
+  READY_TO_SHIP: 'READY_TO_SHIP',
   SHIPPED: 'SHIPPED',
   OUT_FOR_DELIVERY: 'OUT_FOR_DELIVERY',
   DELIVERED: 'DELIVERED',
   CANCELLED: 'CANCELLED',
+  RETURN_REQUESTED: 'RETURN_REQUESTED',
+  RETURN_APPROVED: 'RETURN_APPROVED',
+  RETURN_PICKED_UP: 'RETURN_PICKED_UP',
+  RETURN_RECEIVED: 'RETURN_RECEIVED',
+  REFUND_PENDING: 'REFUND_PENDING',
   REFUNDED: 'REFUNDED',
+  RETURN_REJECTED: 'RETURN_REJECTED',
+  PAYMENT_FAILED: 'PAYMENT_FAILED',
 } as const;
 export type OrderStatus = (typeof OrderStatus)[keyof typeof OrderStatus];
 
@@ -27,8 +37,14 @@ export const PaymentStatus = {
   PENDING: 'PENDING',
   AUTHORIZED: 'AUTHORIZED',
   CAPTURED: 'CAPTURED',
+  PAID: 'PAID',
   FAILED: 'FAILED',
+  COD_PENDING: 'COD_PENDING',
+  COD_COLLECTED: 'COD_COLLECTED',
+  COD_SETTLED: 'COD_SETTLED',
+  REFUND_PENDING: 'REFUND_PENDING',
   REFUNDED: 'REFUNDED',
+  PARTIALLY_REFUNDED: 'PARTIALLY_REFUNDED',
 } as const;
 export type PaymentStatus = (typeof PaymentStatus)[keyof typeof PaymentStatus];
 
@@ -38,6 +54,80 @@ export const PaymentProvider = {
   COD: 'COD',
 } as const;
 export type PaymentProvider = (typeof PaymentProvider)[keyof typeof PaymentProvider];
+
+export const ShipmentStatus = {
+  PENDING: 'PENDING',
+  LABEL_CREATED: 'LABEL_CREATED',
+  READY_FOR_PICKUP: 'READY_FOR_PICKUP',
+  PICKED_UP: 'PICKED_UP',
+  IN_TRANSIT: 'IN_TRANSIT',
+  OUT_FOR_DELIVERY: 'OUT_FOR_DELIVERY',
+  DELIVERED: 'DELIVERED',
+  FAILED_DELIVERY: 'FAILED_DELIVERY',
+  RTO_INITIATED: 'RTO_INITIATED',
+  RTO_DELIVERED: 'RTO_DELIVERED',
+  CANCELLED: 'CANCELLED',
+} as const;
+export type ShipmentStatus = (typeof ShipmentStatus)[keyof typeof ShipmentStatus];
+
+export const ReturnStatus = {
+  REQUESTED: 'REQUESTED',
+  UNDER_REVIEW: 'UNDER_REVIEW',
+  APPROVED: 'APPROVED',
+  REJECTED: 'REJECTED',
+  PICKUP_SCHEDULED: 'PICKUP_SCHEDULED',
+  PICKED_UP: 'PICKED_UP',
+  RECEIVED: 'RECEIVED',
+  QUALITY_CHECK: 'QUALITY_CHECK',
+  REFUND_PENDING: 'REFUND_PENDING',
+  REFUNDED: 'REFUNDED',
+  REPLACEMENT_PENDING: 'REPLACEMENT_PENDING',
+  REPLACED: 'REPLACED',
+  COMPLETED: 'COMPLETED',
+  CANCELLED: 'CANCELLED',
+} as const;
+export type ReturnStatus = (typeof ReturnStatus)[keyof typeof ReturnStatus];
+
+export const ReturnReason = {
+  DAMAGED: 'DAMAGED',
+  WRONG_PRODUCT: 'WRONG_PRODUCT',
+  SIZE_ISSUE: 'SIZE_ISSUE',
+  DEFECTIVE: 'DEFECTIVE',
+  NOT_AS_DESCRIBED: 'NOT_AS_DESCRIBED',
+  OTHER: 'OTHER',
+} as const;
+export type ReturnReason = (typeof ReturnReason)[keyof typeof ReturnReason];
+
+export const ReturnAction = {
+  REFUND: 'REFUND',
+  REPLACEMENT: 'REPLACEMENT',
+} as const;
+export type ReturnAction = (typeof ReturnAction)[keyof typeof ReturnAction];
+
+export const QualityCheckResult = {
+  PENDING: 'PENDING',
+  PASSED_RESTOCKABLE: 'PASSED_RESTOCKABLE',
+  PASSED_DAMAGED_NO_RESTOCK: 'PASSED_DAMAGED_NO_RESTOCK',
+  FAILED_FRAUD_OR_MISMATCH: 'FAILED_FRAUD_OR_MISMATCH',
+} as const;
+export type QualityCheckResult = (typeof QualityCheckResult)[keyof typeof QualityCheckResult];
+
+export const RefundStatus = {
+  PENDING: 'PENDING',
+  PROCESSING: 'PROCESSING',
+  COMPLETED: 'COMPLETED',
+  FAILED: 'FAILED',
+  CANCELLED: 'CANCELLED',
+} as const;
+export type RefundStatus = (typeof RefundStatus)[keyof typeof RefundStatus];
+
+export const CODStatus = {
+  COD_PENDING: 'COD_PENDING',
+  COD_COLLECTED: 'COD_COLLECTED',
+  COD_SETTLED: 'COD_SETTLED',
+  COD_FAILED: 'COD_FAILED',
+} as const;
+export type CODStatus = (typeof CODStatus)[keyof typeof CODStatus];
 
 export const DiscountType = {
   PERCENTAGE: 'PERCENTAGE',
@@ -219,6 +309,8 @@ export interface CartDto {
   items: CartItemDto[];
   subtotal: number;
   totalItems: number;
+  discountAmount?: number;
+  coupon?: any;
 }
 
 export interface WishlistItemDto {
@@ -236,7 +328,7 @@ export interface WishlistDto {
 }
 
 // ==========================================
-// ORDER & CHECKOUT TYPES
+// ORDER, PAYMENT, SHIPPING, COD & RETURN TYPES
 // ==========================================
 
 export interface OrderItemDto {
@@ -264,6 +356,90 @@ export interface PaymentDto {
   createdAt: string | Date;
 }
 
+export interface ShipmentTrackingEventDto {
+  id: string;
+  shipmentId: string;
+  status: ShipmentStatus;
+  location?: string | null;
+  activity: string;
+  timestamp: string | Date;
+}
+
+export interface ShipmentDto {
+  id: string;
+  orderId: string;
+  courierProvider: string;
+  awbNumber?: string | null;
+  trackingUrl?: string | null;
+  labelUrl?: string | null;
+  status: ShipmentStatus;
+  weight?: number | null;
+  isCod: boolean;
+  codAmount?: number | null;
+  dispatchedAt?: string | Date | null;
+  deliveredAt?: string | Date | null;
+  estimatedDelivery?: string | Date | null;
+  trackingEvents?: ShipmentTrackingEventDto[];
+  createdAt: string | Date;
+}
+
+export interface CODTransactionDto {
+  id: string;
+  orderId: string;
+  amount: number;
+  currency: string;
+  status: CODStatus;
+  collectedAt?: string | Date | null;
+  settledAt?: string | Date | null;
+  collectedBy?: string | null;
+  receiptNumber?: string | null;
+  notes?: string | null;
+}
+
+export interface ReturnItemDto {
+  id: string;
+  returnRequestId: string;
+  orderItemId: string;
+  quantity: number;
+  reason?: ReturnReason | null;
+  restocked: boolean;
+}
+
+export interface ReturnRequestDto {
+  id: string;
+  returnNumber: string;
+  orderId: string;
+  userId: string;
+  status: ReturnStatus;
+  reason: ReturnReason;
+  action: ReturnAction;
+  customerNote?: string | null;
+  adminNote?: string | null;
+  evidenceImages: string[];
+  pickupAwb?: string | null;
+  qcResult: QualityCheckResult;
+  qcNotes?: string | null;
+  items: ReturnItemDto[];
+  requestedAt: string | Date;
+  approvedAt?: string | Date | null;
+  completedAt?: string | Date | null;
+}
+
+export interface RefundDto {
+  id: string;
+  refundNumber: string;
+  orderId: string;
+  paymentId?: string | null;
+  returnRequestId?: string | null;
+  amount: number;
+  currency: string;
+  reason: string;
+  status: RefundStatus;
+  gatewayRefundId?: string | null;
+  completedAt?: string | Date | null;
+  createdAt: string | Date;
+}
+
 export interface OrderDto {
   id: string;
   orderNumber: string;
@@ -278,6 +454,10 @@ export interface OrderDto {
   couponCode?: string | null;
   status: OrderStatus;
   payment?: PaymentDto | null;
+  shipment?: ShipmentDto | null;
+  codTransaction?: CODTransactionDto | null;
+  returnRequests?: ReturnRequestDto[];
+  refunds?: RefundDto[];
   items: OrderItemDto[];
   trackingNumber?: string | null;
   notes?: string | null;
