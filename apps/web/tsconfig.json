@@ -3,7 +3,13 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@ecommerce/types": ["../../packages/types/src"],
+      "@ecommerce/types/*": ["../../packages/types/src/*"],
+      "@ecommerce/config": ["../../packages/config/src"],
+      "@ecommerce/config/*": ["../../packages/config/src/*"],
+      "@ecommerce/ui": ["../../packages/ui/src"],
+      "@ecommerce/ui/*": ["../../packages/ui/src/*"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
