@@ -27,14 +27,16 @@
     "docker:down": "docker compose -f infra/docker/docker-compose.yml down",
     "docker:logs": "docker compose -f infra/docker/docker-compose.yml logs -f"
   },
-  "devDependencies": {
-    "@ecommerce/eslint-config": "workspace:*",
-    "@ecommerce/tsconfig": "workspace:*",
+  "dependencies": {
     "cross-env": "^7.0.3",
-    "eslint": "^8.57.1",
-    "prettier": "^3.4.2",
     "rimraf": "^6.0.1",
     "turbo": "^2.4.2",
     "typescript": "^5.7.3"
+  },
+  "devDependencies": {
+    "@ecommerce/eslint-config": "workspace:*",
+    "@ecommerce/tsconfig": "workspace:*",
+    "eslint": "^8.57.1",
+    "prettier": "^3.4.2"
   }
 }
