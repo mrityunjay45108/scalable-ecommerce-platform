@@ -16,6 +16,9 @@ RUN pnpm install --frozen-lockfile
 FROM dependencies AS builder
 COPY . .
 RUN pnpm db:generate
+RUN pnpm --filter=@ecommerce/config build
+RUN pnpm --filter=@ecommerce/types build
+RUN pnpm --filter=@ecommerce/database build
 RUN pnpm --filter=@ecommerce/api build
 
 FROM node:22-alpine AS runner
@@ -23,9 +26,9 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 COPY --from=dependencies /app/node_modules ./node_modules
+COPY --from=builder /app/packages ./packages
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
 COPY --from=builder /app/apps/api/package.json ./apps/api/package.json
-COPY --from=builder /app/packages/database ./packages/database
 
 EXPOSE 4000
 CMD ["node", "apps/api/dist/main"]

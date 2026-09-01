@@ -16,6 +16,9 @@ RUN pnpm install --frozen-lockfile
 FROM dependencies AS builder
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
+RUN pnpm --filter=@ecommerce/config build
+RUN pnpm --filter=@ecommerce/types build
+RUN pnpm --filter=@ecommerce/ui build
 RUN pnpm --filter=@ecommerce/web build
 
 FROM node:22-alpine AS runner
