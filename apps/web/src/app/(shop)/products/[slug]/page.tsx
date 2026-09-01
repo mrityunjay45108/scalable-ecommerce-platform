@@ -1,14 +1,12 @@
 'use client';
 
-import React, { useEffect, useState, use, useRef } from 'react';
+import React, { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import Link from 'next/link';
 import {
   Star,
   ShoppingBag,
   Heart,
-  Share2,
   ShieldCheck,
   Truck,
   RotateCcw,
@@ -20,11 +18,8 @@ import {
   ChevronRight,
   Maximize2,
   Video,
-  Sparkles,
   MapPin,
   Ruler,
-  Tag,
-  ThumbsUp,
   X,
 } from 'lucide-react';
 import { ProductDto, ProductVariantDto, ReviewDto } from '@ecommerce/types';
@@ -43,7 +38,7 @@ export default function ProductDetailPage({
   const { slug } = use(params);
   const router = useRouter();
   const { addToCart, toggleWishlist, isInWishlist } = useCart();
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated } = useAuth();
 
   const [product, setProduct] = useState<ProductDto | null>(null);
   const [selectedVariant, setSelectedVariant] = useState<ProductVariantDto | null>(null);
