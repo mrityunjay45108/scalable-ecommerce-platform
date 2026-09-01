@@ -24,15 +24,15 @@ export class StripeProvider implements PaymentProviderInterface {
     this.secretKey =
       this.configService.get<string>('payments.stripe.secretKey') ||
       process.env.STRIPE_SECRET_KEY ||
-      'sk_test_MockStripeKeyForDevelopmentTesting1234567890';
+      'mock_stripe_secret_key_development';
     this.publishableKey =
       this.configService.get<string>('payments.stripe.publishableKey') ||
       process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ||
-      'pk_test_mock_stripe_pub_key';
+      'mock_stripe_publishable_key_development';
     this.webhookSecret =
       this.configService.get<string>('payments.stripe.webhookSecret') ||
       process.env.STRIPE_WEBHOOK_SECRET ||
-      'whsec_mock_stripe_webhook_secret_development_12345';
+      'mock_stripe_webhook_secret_development';
   }
 
   async createOrder(params: CreateOrderParams): Promise<PaymentOrderResult> {

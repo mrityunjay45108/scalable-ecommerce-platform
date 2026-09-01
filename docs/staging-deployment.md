@@ -70,7 +70,7 @@ NEXT_PUBLIC_API_URL="https://novastore-api-staging.onrender.com/api/v1"
 NEXT_PUBLIC_APP_NAME="NovaStore (Staging)"
 
 # Firebase Client SDK
-NEXT_PUBLIC_FIREBASE_API_KEY="AIzaSyYourStagingKey"
+NEXT_PUBLIC_FIREBASE_API_KEY="your_staging_firebase_api_key"
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN="e-commerce-app-27cea.firebaseapp.com"
 NEXT_PUBLIC_FIREBASE_PROJECT_ID="e-commerce-app-27cea"
 NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET="e-commerce-app-27cea.firebasestorage.app"

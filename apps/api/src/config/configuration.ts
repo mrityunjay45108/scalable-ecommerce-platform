@@ -23,11 +23,11 @@ export default () => ({
     refreshSecret: process.env.JWT_REFRESH_SECRET || 'super_secret_refresh_jwt_key_dev',
     refreshExpiration: process.env.JWT_REFRESH_EXPIRATION || '7d',
   },
-  payments: {
-    stripe: {
-      secretKey: process.env.STRIPE_SECRET_KEY || 'sk_test_mock',
-      webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || 'whsec_mock',
-    },
+    payments: {
+      stripe: {
+        secretKey: process.env.STRIPE_SECRET_KEY || 'mock_stripe_key',
+        webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || 'mock_stripe_webhook_secret',
+      },
     razorpay: {
       keyId: process.env.RAZORPAY_KEY_ID || 'rzp_test_mock',
       keySecret: process.env.RAZORPAY_KEY_SECRET || 'mock_secret',

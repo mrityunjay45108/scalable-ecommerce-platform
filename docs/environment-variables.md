@@ -18,7 +18,7 @@ NovaStore uses a centralized root `.env` file along with scoped workspace config
 | `JWT_REFRESH_SECRET` | Secret key for signing refresh tokens | `super_secret_refresh_jwt_key_development_32chars_min_length` |
 | `JWT_REFRESH_EXPIRATION`| Refresh token lifespan | `7d` |
 | `STRIPE_SECRET_KEY` | Stripe payment gateway secret key | `sk_test_...` |
-| `STRIPE_WEBHOOK_SECRET` | Stripe webhook verification secret | `whsec_...` |
+| `STRIPE_WEBHOOK_SECRET` | Stripe webhook verification secret | `your_stripe_webhook_secret` |
 | `RAZORPAY_KEY_ID` | Razorpay Key ID | `rzp_test_...` |
 | `RAZORPAY_KEY_SECRET` | Razorpay Secret | `mock_secret...` |
 | `CLOUDINARY_CLOUD_NAME` | Cloudinary asset storage cloud name | `mock_cloud_name` |
