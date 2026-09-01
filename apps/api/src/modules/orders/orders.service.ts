@@ -487,14 +487,14 @@ export class OrdersService {
   private formatOrder(order: any) {
     const status = order.status;
     const isCompleted = (s: OrderStatus) => {
-      const orderProgression = [
+      const orderProgression: OrderStatus[] = [
         OrderStatus.PENDING_PAYMENT,
         OrderStatus.PAID,
         OrderStatus.PROCESSING,
         OrderStatus.SHIPPED,
         OrderStatus.DELIVERED,
       ];
-      return orderProgression.indexOf(status) >= orderProgression.indexOf(s);
+      return orderProgression.indexOf(status as OrderStatus) >= orderProgression.indexOf(s);
     };
 
     return {
