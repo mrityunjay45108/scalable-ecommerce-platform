@@ -83,13 +83,13 @@ export default function OrderDetailPage() {
       key: 'processing',
       label: 'Processing',
       icon: Package,
-      done: [OrderStatus.PROCESSING, OrderStatus.SHIPPED, OrderStatus.OUT_FOR_DELIVERY, OrderStatus.DELIVERED].includes(order.status),
+      done: ([OrderStatus.PROCESSING, OrderStatus.SHIPPED, OrderStatus.OUT_FOR_DELIVERY, OrderStatus.DELIVERED] as OrderStatus[]).includes(order.status),
     },
     {
       key: 'shipped',
       label: 'Shipped',
       icon: Truck,
-      done: [OrderStatus.SHIPPED, OrderStatus.OUT_FOR_DELIVERY, OrderStatus.DELIVERED].includes(order.status),
+      done: ([OrderStatus.SHIPPED, OrderStatus.OUT_FOR_DELIVERY, OrderStatus.DELIVERED] as OrderStatus[]).includes(order.status),
     },
     {
       key: 'delivered',
