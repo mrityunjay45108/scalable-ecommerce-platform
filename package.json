@@ -9,6 +9,7 @@
     "dev:api": "turbo run dev --filter=@ecommerce/api",
     "dev:web": "turbo run dev --filter=@ecommerce/web",
     "build": "turbo run build",
+    "build:api": "turbo run build --filter=@ecommerce/api...",
     "lint": "turbo run lint",
     "type-check": "turbo run type-check",
     "typecheck": "turbo run type-check",
