@@ -5,6 +5,7 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {
+    "build": "echo '@ecommerce/ui ready'",
     "type-check": "tsc --noEmit",
     "lint": "echo '@ecommerce/ui lint clean'"
   },
