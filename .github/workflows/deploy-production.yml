@@ -1,0 +1,162 @@
+name: Deploy to Production (Manual Approval)
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: 'Release Version / Tag (e.g. v1.0.0)'
+        required: true
+        default: 'latest'
+      deploy_api:
+        description: 'Deploy Backend API'
+        type: boolean
+        required: true
+        default: true
+      deploy_web:
+        description: 'Deploy Frontend Web'
+        type: boolean
+        required: true
+        default: true
+
+concurrency:
+  group: production-deployment
+  cancel-in-progress: false
+
+permissions:
+  id-token: write   # Required for AWS OpenID Connect (OIDC) authentication
+  contents: read    # Required for checkout
+
+jobs:
+  # =========================================================================
+  # 1. Pre-Deployment Verification
+  # =========================================================================
+  pre-deploy-check:
+    name: Pre-Deployment Automated Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: 📥 Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: ⚙️ Generate Database Client (Prisma)
+        run: pnpm --filter=@ecommerce/database db:generate
+
+      - name: 📐 TypeScript Typecheck
+        run: pnpm type-check
+
+      - name: 🧪 Execute Test Suites
+        run: pnpm test
+
+  # =========================================================================
+  # 2. Production Deployment (Requires Environment Approval)
+  # =========================================================================
+  deploy-production:
+    name: Deploy Container Services to AWS ECS
+    needs: pre-deploy-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: production
+      url: https://novastore.com
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🔒 Mask Secrets & Sensitive Variables
+        run: |
+          echo "::add-mask::${{ secrets.AWS_ACCOUNT_ID }}"
+          echo "::add-mask::${{ secrets.DATABASE_URL }}"
+          echo "::add-mask::${{ secrets.JWT_ACCESS_SECRET }}"
+          echo "::add-mask::${{ secrets.JWT_REFRESH_SECRET }}"
+          echo "::add-mask::${{ secrets.RAZORPAY_KEY_SECRET }}"
+          echo "::add-mask::${{ secrets.RAZORPAY_WEBHOOK_SECRET }}"
+
+      - name: 🔑 Configure AWS Credentials (OIDC - Zero Static Keys)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-ecs-deploy-role
+          aws-region: ${{ secrets.AWS_REGION || 'us-east-1' }}
+
+      - name: 🔐 Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: 🐳 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # -----------------------------------------------------------------------
+      # Build & Push Backend API Image
+      # -----------------------------------------------------------------------
+      - name: 🚀 Build and Push Backend API to ECR
+        if: ${{ inputs.deploy_api == true }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/novastore-api:${{ inputs.release_version }}
+            ${{ steps.login-ecr.outputs.registry }}/novastore-api:${{ github.sha }}
+            ${{ steps.login-ecr.outputs.registry }}/novastore-api:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # -----------------------------------------------------------------------
+      # Build & Push Frontend Web Image
+      # -----------------------------------------------------------------------
+      - name: 🚀 Build and Push Frontend Web to ECR
+        if: ${{ inputs.deploy_web == true }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/novastore-web:${{ inputs.release_version }}
+            ${{ steps.login-ecr.outputs.registry }}/novastore-web:${{ github.sha }}
+            ${{ steps.login-ecr.outputs.registry }}/novastore-web:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # -----------------------------------------------------------------------
+      # Zero-Downtime Rolling Deployment to Amazon ECS Fargate
+      # -----------------------------------------------------------------------
+      - name: 🔄 Update Amazon ECS Services (Rolling Deployment)
+        run: |
+          if [ "${{ inputs.deploy_api }}" = "true" ]; then
+            echo "Deploying novastore-api service to cluster..."
+            aws ecs update-service \
+              --cluster novastore-production-cluster \
+              --service novastore-api-service \
+              --force-new-deployment \
+              --region ${{ secrets.AWS_REGION || 'us-east-1' }}
+          fi
+
+          if [ "${{ inputs.deploy_web }}" = "true" ]; then
+            echo "Deploying novastore-web service to cluster..."
+            aws ecs update-service \
+              --cluster novastore-production-cluster \
+              --service novastore-web-service \
+              --force-new-deployment \
+              --region ${{ secrets.AWS_REGION || 'us-east-1' }}
+          fi
+
+      - name: ✅ Deployment Completed Successfully
+        run: |
+          echo "Production deployment initiated with zero-downtime rolling update."

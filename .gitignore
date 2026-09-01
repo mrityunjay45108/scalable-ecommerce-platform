@@ -1,0 +1,62 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+.pnp
+.pnp.js
+
+# Production Builds & Compilations
+dist/
+build/
+.next/
+out/
+.turbo/
+*.tsbuildinfo
+.tsbuildinfo
+
+# Environment Variables
+.env
+.env*.local
+.env.production
+.env.development
+.env.test
+!.env.example
+
+# Testing & Coverage
+coverage/
+.nyc_output/
+*.lcov
+
+# Prisma & DB
+packages/database/src/generated/
+*.db
+*.db-journal
+*.sqlite
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+*.log
+
+# OS & Temp Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDEs and Editors
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.bak

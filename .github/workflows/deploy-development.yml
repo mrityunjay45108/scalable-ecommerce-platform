@@ -1,0 +1,125 @@
+name: Deploy to Development (Automated)
+
+on:
+  push:
+    branches:
+      - develop
+
+concurrency:
+  group: development-deployment
+  cancel-in-progress: true
+
+permissions:
+  id-token: write   # Required for AWS OIDC authentication
+  contents: read
+
+jobs:
+  # =========================================================================
+  # 1. Quality & Test Verification
+  # =========================================================================
+  verify-development:
+    name: Verify Development Build & Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: 📥 Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: ⚙️ Generate Database Client (Prisma)
+        run: pnpm --filter=@ecommerce/database db:generate
+
+      - name: 📐 TypeScript Typecheck
+        run: pnpm type-check
+
+      - name: 🧪 Execute Test Suites
+        run: pnpm test
+
+  # =========================================================================
+  # 2. Continuous Deployment to Development Environment
+  # =========================================================================
+  deploy-development:
+    name: Deploy Container Services to Development ECS
+    needs: verify-development
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: development
+      url: https://dev.novastore.com
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🔒 Mask Secrets
+        run: |
+          echo "::add-mask::${{ secrets.AWS_ACCOUNT_ID }}"
+          echo "::add-mask::${{ secrets.DEV_DATABASE_URL }}"
+
+      - name: 🔑 Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-ecs-dev-deploy-role
+          aws-region: ${{ secrets.AWS_REGION || 'us-east-1' }}
+
+      - name: 🔐 Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: 🐳 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Build & Push Backend API
+      - name: 🚀 Build & Push API Image (dev tag)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/novastore-api:dev-${{ github.sha }}
+            ${{ steps.login-ecr.outputs.registry }}/novastore-api:dev-latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Build & Push Frontend Web
+      - name: 🚀 Build & Push Web Image (dev tag)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/novastore-web:dev-${{ github.sha }}
+            ${{ steps.login-ecr.outputs.registry }}/novastore-web:dev-latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Rolling deployment to development cluster
+      - name: 🔄 Update Development ECS Services
+        run: |
+          aws ecs update-service \
+            --cluster novastore-development-cluster \
+            --service novastore-api-dev-service \
+            --force-new-deployment \
+            --region ${{ secrets.AWS_REGION || 'us-east-1' }} || true
+
+          aws ecs update-service \
+            --cluster novastore-development-cluster \
+            --service novastore-web-dev-service \
+            --force-new-deployment \
+            --region ${{ secrets.AWS_REGION || 'us-east-1' }} || true
