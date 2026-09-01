@@ -4,7 +4,13 @@
     "outDir": "./dist",
     "baseUrl": "./",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "@ecommerce/types": ["../../packages/types/src"],
+      "@ecommerce/types/*": ["../../packages/types/src/*"],
+      "@ecommerce/config": ["../../packages/config/src"],
+      "@ecommerce/config/*": ["../../packages/config/src/*"],
+      "@ecommerce/database": ["../../packages/database/src"],
+      "@ecommerce/database/*": ["../../packages/database/src/*"]
     }
   },
   "include": ["src/**/*"],
