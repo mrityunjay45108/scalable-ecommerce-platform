@@ -1,51 +1,57 @@
 // ==========================================
-// SHARED DOMAIN ENUMS
+// SHARED DOMAIN ENUMS & CONSTANTS (TypeScript & Node 24 Compatible)
 // ==========================================
 
-export enum Role {
-  CUSTOMER = 'CUSTOMER',
-  ADMIN = 'ADMIN',
-  STAFF = 'STAFF',
-  MODERATOR = 'MODERATOR',
-}
+export const Role = {
+  CUSTOMER: 'CUSTOMER',
+  ADMIN: 'ADMIN',
+  STAFF: 'STAFF',
+  MODERATOR: 'MODERATOR',
+} as const;
+export type Role = (typeof Role)[keyof typeof Role];
 
-export enum OrderStatus {
-  PENDING_PAYMENT = 'PENDING_PAYMENT',
-  PAID = 'PAID',
-  PAYMENT_FAILED = 'PAYMENT_FAILED',
-  PROCESSING = 'PROCESSING',
-  SHIPPED = 'SHIPPED',
-  OUT_FOR_DELIVERY = 'OUT_FOR_DELIVERY',
-  DELIVERED = 'DELIVERED',
-  CANCELLED = 'CANCELLED',
-  REFUNDED = 'REFUNDED',
-}
+export const OrderStatus = {
+  PENDING_PAYMENT: 'PENDING_PAYMENT',
+  PAID: 'PAID',
+  PAYMENT_FAILED: 'PAYMENT_FAILED',
+  PROCESSING: 'PROCESSING',
+  SHIPPED: 'SHIPPED',
+  OUT_FOR_DELIVERY: 'OUT_FOR_DELIVERY',
+  DELIVERED: 'DELIVERED',
+  CANCELLED: 'CANCELLED',
+  REFUNDED: 'REFUNDED',
+} as const;
+export type OrderStatus = (typeof OrderStatus)[keyof typeof OrderStatus];
 
-export enum PaymentStatus {
-  PENDING = 'PENDING',
-  AUTHORIZED = 'AUTHORIZED',
-  CAPTURED = 'CAPTURED',
-  FAILED = 'FAILED',
-  REFUNDED = 'REFUNDED',
-}
+export const PaymentStatus = {
+  PENDING: 'PENDING',
+  AUTHORIZED: 'AUTHORIZED',
+  CAPTURED: 'CAPTURED',
+  FAILED: 'FAILED',
+  REFUNDED: 'REFUNDED',
+} as const;
+export type PaymentStatus = (typeof PaymentStatus)[keyof typeof PaymentStatus];
 
-export enum PaymentProvider {
-  STRIPE = 'STRIPE',
-  RAZORPAY = 'RAZORPAY',
-  COD = 'COD',
-}
+export const PaymentProvider = {
+  STRIPE: 'STRIPE',
+  RAZORPAY: 'RAZORPAY',
+  COD: 'COD',
+} as const;
+export type PaymentProvider = (typeof PaymentProvider)[keyof typeof PaymentProvider];
 
-export enum DiscountType {
-  PERCENTAGE = 'PERCENTAGE',
-  FIXED_AMOUNT = 'FIXED_AMOUNT',
-  FREE_SHIPPING = 'FREE_SHIPPING',
-}
+export const DiscountType = {
+  PERCENTAGE: 'PERCENTAGE',
+  FIXED_AMOUNT: 'FIXED_AMOUNT',
+  FREE_SHIPPING: 'FREE_SHIPPING',
+} as const;
+export type DiscountType = (typeof DiscountType)[keyof typeof DiscountType];
 
-export enum StockStatus {
-  IN_STOCK = 'IN_STOCK',
-  LOW_STOCK = 'LOW_STOCK',
-  OUT_OF_STOCK = 'OUT_OF_STOCK',
-}
+export const StockStatus = {
+  IN_STOCK: 'IN_STOCK',
+  LOW_STOCK: 'LOW_STOCK',
+  OUT_OF_STOCK: 'OUT_OF_STOCK',
+} as const;
+export type StockStatus = (typeof StockStatus)[keyof typeof StockStatus];
 
 // ==========================================
 // API ENVELOPES & PAGINATION
