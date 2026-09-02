@@ -29,10 +29,16 @@ WORKDIR /app
 ENV NODE_ENV=production
 RUN apk add --no-cache libc6-compat
 
-COPY --from=dependencies /app/node_modules ./node_modules
-COPY --from=builder /app/packages ./packages
-COPY --from=builder /app/apps/api/dist ./apps/api/dist
-COPY --from=builder /app/apps/api/package.json ./apps/api/package.json
+# Security: Run as dedicated non-root user
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nestjs
+
+COPY --from=dependencies --chown=nestjs:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=nestjs:nodejs /app/packages ./packages
+COPY --from=builder --chown=nestjs:nodejs /app/apps/api/dist ./apps/api/dist
+COPY --from=builder --chown=nestjs:nodejs /app/apps/api/package.json ./apps/api/package.json
+
+USER nestjs
 
 EXPOSE 4000
 CMD ["node", "apps/api/dist/main"]

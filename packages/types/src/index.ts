@@ -520,6 +520,7 @@ export interface AdminDashboardMetrics {
   averageOrderValue: number;
   pendingOrdersCount: number;
   lowStockProductsCount: number;
+  newCustomers?: number;
   salesByDay: Array<{
     date: string;
     revenue: number;

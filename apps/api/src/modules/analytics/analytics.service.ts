@@ -11,28 +11,24 @@ export class AnalyticsService {
     const end = query.endDate ? new Date(query.endDate) : new Date();
     let start = new Date();
 
-    switch (query.range) {
-      case DateRangeFilter.TODAY:
-        start = new Date();
-        start.setHours(0, 0, 0, 0);
-        break;
-      case DateRangeFilter.DAYS_7:
-        start.setDate(end.getDate() - 7);
-        break;
-      case DateRangeFilter.DAYS_90:
-        start.setDate(end.getDate() - 90);
-        break;
-      case DateRangeFilter.CUSTOM:
-        if (query.startDate) {
-          start = new Date(query.startDate);
-        } else {
-          start.setDate(end.getDate() - 30);
-        }
-        break;
-      case DateRangeFilter.DAYS_30:
-      default:
+    const range = (query.range || '').toUpperCase();
+
+    if (range === 'TODAY' || range === '1D') {
+      start = new Date();
+      start.setHours(0, 0, 0, 0);
+    } else if (range === '7_DAYS' || range === '7D') {
+      start.setDate(end.getDate() - 7);
+    } else if (range === '90_DAYS' || range === '90D') {
+      start.setDate(end.getDate() - 90);
+    } else if (range === 'CUSTOM') {
+      if (query.startDate) {
+        start = new Date(query.startDate);
+      } else {
         start.setDate(end.getDate() - 30);
-        break;
+      }
+    } else {
+      // Default to 30 days
+      start.setDate(end.getDate() - 30);
     }
 
     return { start, end };

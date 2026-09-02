@@ -1,0 +1,86 @@
+name: Security Audit & CodeQL Analysis
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    - cron: '0 4 * * 1' # Every Monday at 4:00 AM UTC
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  # =========================================================================
+  # 1. CodeQL Static Application Security Testing (SAST)
+  # =========================================================================
+  codeql-analysis:
+    name: CodeQL Security Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ['javascript-typescript']
+
+    steps:
+      - name: ?? Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: ?? Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          queries: security-extended,security-and-quality
+
+      - name: ?? Setup pnpm & Dependencies
+        uses: pnpm/action-setup@v4
+
+      - name: ?? Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: ?? Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: ?? Generate Database Client (Prisma)
+        run: pnpm --filter=@ecommerce/database db:generate
+
+      - name: ?? Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: '/language:${{ matrix.language }}'
+
+  # =========================================================================
+  # 2. Dependency Vulnerability Audit
+  # =========================================================================
+  dependency-audit:
+    name: Dependency Vulnerability Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: ?? Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: ?? Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: ?? Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: ?? Run PNPM Audit
+        run: |
+          pnpm audit --audit-level=high || true

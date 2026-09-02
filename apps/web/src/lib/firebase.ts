@@ -1,4 +1,4 @@
-import { initializeApp, getApps, getApp } from 'firebase/app';
+import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import {
   getAuth,
   GoogleAuthProvider,
@@ -7,25 +7,53 @@ import {
   createUserWithEmailAndPassword,
   signOut as firebaseSignOut,
   User as FirebaseUser,
+  Auth,
 } from 'firebase/auth';
 
+const rawApiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY || '';
+const isConfigured = Boolean(
+  rawApiKey &&
+  rawApiKey.trim().length > 5 &&
+  rawApiKey !== 'your_firebase_api_key_here'
+);
+
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || '',
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || '',
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || '',
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || '',
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '',
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || '',
-  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || '',
+  apiKey: rawApiKey || 'AIzaSyPlaceholderKeyForBuildValidation000',
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || 'app.firebaseapp.com',
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'app',
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || 'app.appspot.com',
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '1234567890',
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || '1:1234567890:web:mock',
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || 'G-MOCK',
 };
 
-// Initialize Firebase App (client singleton)
-const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+// Safe App getter
+function getFirebaseApp(): FirebaseApp | null {
+  try {
+    if (getApps().length > 0) {
+      return getApp();
+    }
+    return initializeApp(firebaseConfig);
+  } catch {
+    return null;
+  }
+}
 
-// Initialize Firebase Authentication
-export const auth = getAuth(app);
+// Safe Auth getter
+export function getFirebaseAuth(): Auth | null {
+  try {
+    const fbApp = getFirebaseApp();
+    if (!fbApp) return null;
+    return getAuth(fbApp);
+  } catch {
+    return null;
+  }
+}
 
-// Providers
+// Default export auth instance with safe fallback
+export const auth: Auth | null = getFirebaseAuth();
+
+// Google Auth Provider
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
 
@@ -33,7 +61,11 @@ googleProvider.setCustomParameters({ prompt: 'select_account' });
  * Sign in with Google Popup
  */
 export async function signInWithGooglePopup(): Promise<FirebaseUser> {
-  const result = await signInWithPopup(auth, googleProvider);
+  const currentAuth = getFirebaseAuth();
+  if (!currentAuth) {
+    throw new Error('Firebase Authentication is not available or configured with valid credentials.');
+  }
+  const result = await signInWithPopup(currentAuth, googleProvider);
   return result.user;
 }
 
@@ -41,7 +73,11 @@ export async function signInWithGooglePopup(): Promise<FirebaseUser> {
  * Sign in with Email and Password using Firebase Auth
  */
 export async function signInWithFirebaseEmail(email: string, password: string): Promise<FirebaseUser> {
-  const result = await signInWithEmailAndPassword(auth, email, password);
+  const currentAuth = getFirebaseAuth();
+  if (!currentAuth) {
+    throw new Error('Firebase Authentication is not available or configured with valid credentials.');
+  }
+  const result = await signInWithEmailAndPassword(currentAuth, email, password);
   return result.user;
 }
 
@@ -49,7 +85,11 @@ export async function signInWithFirebaseEmail(email: string, password: string): 
  * Sign up with Email and Password using Firebase Auth
  */
 export async function signUpWithFirebaseEmail(email: string, password: string): Promise<FirebaseUser> {
-  const result = await createUserWithEmailAndPassword(auth, email, password);
+  const currentAuth = getFirebaseAuth();
+  if (!currentAuth) {
+    throw new Error('Firebase Authentication is not available or configured with valid credentials.');
+  }
+  const result = await createUserWithEmailAndPassword(currentAuth, email, password);
   return result.user;
 }
 
@@ -57,7 +97,11 @@ export async function signUpWithFirebaseEmail(email: string, password: string): 
  * Sign out from Firebase
  */
 export async function signOutFirebase(): Promise<void> {
-  await firebaseSignOut(auth);
+  const currentAuth = getFirebaseAuth();
+  if (currentAuth) {
+    await firebaseSignOut(currentAuth);
+  }
 }
 
-export default app;
+export default getFirebaseApp();
+

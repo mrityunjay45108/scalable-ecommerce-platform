@@ -13,13 +13,37 @@ out/
 *.tsbuildinfo
 .tsbuildinfo
 
-# Environment Variables
+# Environment Variables & Secrets
 .env
+.env.*
 .env*.local
-.env.production
-.env.development
-.env.test
+.env.production*
+.env.development*
+.env.test*
+.env.staging*
 !.env.example
+
+# Cryptographic Keys & Certificates
+*.pem
+*.key
+*.cert
+*.crt
+*.p12
+*.pfx
+*.keystore
+id_rsa*
+id_ed25519*
+*.pub
+
+# Cloud Credentials & Service Accounts
+credentials.json
+service-account*.json
+serviceAccount*.json
+firebase-adminsdk*.json
+*-credentials.json
+*.tfvars
+*.tfstate*
+.secrets*
 
 # Testing & Coverage
 coverage/

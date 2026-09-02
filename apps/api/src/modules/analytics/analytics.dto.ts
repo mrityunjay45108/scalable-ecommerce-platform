@@ -1,4 +1,4 @@
-import { IsOptional, IsEnum, IsDateString } from 'class-validator';
+import { IsOptional, IsString, IsDateString } from 'class-validator';
 
 export enum DateRangeFilter {
   TODAY = 'TODAY',
@@ -10,8 +10,8 @@ export enum DateRangeFilter {
 
 export class AnalyticsQueryDto {
   @IsOptional()
-  @IsEnum(DateRangeFilter)
-  range?: DateRangeFilter = DateRangeFilter.DAYS_30;
+  @IsString()
+  range?: string = '30_DAYS';
 
   @IsOptional()
   @IsDateString()
@@ -21,3 +21,4 @@ export class AnalyticsQueryDto {
   @IsDateString()
   endDate?: string;
 }
+

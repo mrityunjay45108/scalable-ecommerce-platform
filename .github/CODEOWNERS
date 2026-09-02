@@ -1,0 +1,30 @@
+# =============================================================================
+# NOVASTORE E-COMMERCE PLATFORM - CODEOWNERS
+# =============================================================================
+# Defines individuals or teams that are responsible for code in the repository.
+# These owners are automatically requested for review when a pull request opens.
+
+# Default Global Owners
+* @mrityunjay45108
+
+# Security & CI/CD Workflows
+/.github/workflows/ @mrityunjay45108
+/.github/CODEOWNERS @mrityunjay45108
+/.github/dependabot.yml @mrityunjay45108
+
+# Environment & Infrastructure
+/.env.example @mrityunjay45108
+/docker-compose*.yml @mrityunjay45108
+/infra/ @mrityunjay45108
+/render.yaml @mrityunjay45108
+/vercel.json @mrityunjay45108
+
+# Database Schema & Migrations
+/packages/database/prisma/ @mrityunjay45108
+
+# Backend Core & Security Services
+/apps/api/src/modules/auth/ @mrityunjay45108
+/apps/api/src/modules/payments/ @mrityunjay45108
+/apps/api/src/modules/shipping/ @mrityunjay45108
+/apps/api/src/common/guards/ @mrityunjay45108
+/apps/api/src/common/filters/ @mrityunjay45108

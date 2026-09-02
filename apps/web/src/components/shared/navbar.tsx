@@ -170,6 +170,7 @@ export function Navbar() {
 
                   <button
                     onClick={handleLogout}
+                    suppressHydrationWarning
                     className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg text-rose-500 hover:bg-rose-500/10 transition-colors mt-1"
                   >
                     <LogOut className="w-4 h-4" />

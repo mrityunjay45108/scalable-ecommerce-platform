@@ -40,5 +40,9 @@
     "@ecommerce/tsconfig": "workspace:*",
     "eslint": "^8.57.1",
     "prettier": "^3.4.2"
+  },
+  "overrides": {
+    "tar": ">=7.5.18",
+    "postcss": ">=8.5.23"
   }
 }

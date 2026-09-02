@@ -237,7 +237,11 @@ export class AuthService {
       const appUrl = this.configService.get<string>('appUrl', 'http://localhost:3000');
       const resetLink = `${appUrl}/reset-password?token=${rawToken}`;
 
-      this.logger.log(`[PASSWORD RESET] Reset link generated for ${user.email}: ${resetLink}`);
+      if (process.env.NODE_ENV === 'production') {
+        this.logger.log(`[PASSWORD RESET] Reset token dispatched for ${user.email}`);
+      } else {
+        this.logger.log(`[PASSWORD RESET] Reset link generated for ${user.email}: ${resetLink}`);
+      }
     }
 
     // Generic response to prevent email enumeration attacks
@@ -383,7 +387,11 @@ export class AuthService {
     const appUrl = this.configService.get<string>('appUrl', 'http://localhost:3000');
     const verifyLink = `${appUrl}/verify-email?token=${rawToken}`;
 
-    this.logger.log(`[EMAIL VERIFICATION] Verification link for ${email}: ${verifyLink}`);
+    if (process.env.NODE_ENV === 'production') {
+      this.logger.log(`[EMAIL VERIFICATION] Verification token dispatched for ${email}`);
+    } else {
+      this.logger.log(`[EMAIL VERIFICATION] Verification link for ${email}: ${verifyLink}`);
+    }
   }
 
   private async generateTokens(userId: string, email: string, role: string) {

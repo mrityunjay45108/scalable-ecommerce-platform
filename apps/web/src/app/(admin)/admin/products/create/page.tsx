@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -17,12 +17,20 @@ import {
   Eye,
   Layers,
   IndianRupee,
+  UploadCloud,
+  ChevronLeft,
+  ChevronRight,
+  Play,
+  Zap,
+  Tag,
 } from 'lucide-react';
 import { CategoryDto } from '@ecommerce/types';
 import { apiClient } from '@/lib/api-client';
 import { formatPrice } from '@/lib/utils';
+import { formatDescriptionWithSpecs } from '@/lib/product-specs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Building2, Globe2, ShieldCheck as ShieldIcon } from 'lucide-react';
 
 interface MediaItem {
   id: string;
@@ -44,9 +52,11 @@ interface VariantForm {
 const APPAREL_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'];
 const SHOE_SIZES = ['UK 6', 'UK 7', 'UK 8', 'UK 9', 'UK 10', 'UK 11', 'UK 12'];
 const POPULAR_COLORS = ['Black', 'White', 'Navy Blue', 'Olive Green', 'Crimson Red', 'Charcoal Grey', 'Beige'];
+const ANGLE_PRESETS = ['Front View (Hero)', 'Back View', 'Side Profile', 'Detail & Texture', 'Model Lifestyle'];
 
 export default function CreateProductPage() {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [categories, setCategories] = useState<CategoryDto[]>([]);
   const [isLoadingCats, setIsLoadingCats] = useState(true);
 
@@ -60,25 +70,43 @@ export default function CreateProductPage() {
   const [isPublished, setIsPublished] = useState(true);
   const [isFeatured, setIsFeatured] = useState(false);
 
-  // Multiple Media (Images & Videos)
+  // Brand & Material Specifications
+  const [brand, setBrand] = useState('Roadster');
+  const [material, setMaterial] = useState('100% Breathable Washed Cotton Denim');
+  const [countryOfOrigin, setCountryOfOrigin] = useState('India');
+  const [fit, setFit] = useState('Relaxed Comfort Fit');
+  const [washCare, setWashCare] = useState('Machine Wash Cold (30°C)');
+  const [warranty, setWarranty] = useState('1 Year Official Brand Warranty');
+
+  // Multiple Photos (2, 3, 5+ Images)
   const [mediaList, setMediaList] = useState<MediaItem[]>([
     {
       id: 'media-1',
       url: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800',
       type: 'image',
-      altText: 'Main Product Image',
+      altText: 'Front View (Hero)',
       isPrimary: true,
     },
     {
       id: 'media-2',
       url: 'https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=800',
       type: 'image',
-      altText: 'Side Angle View',
+      altText: 'Side Profile',
+      isPrimary: false,
+    },
+    {
+      id: 'media-3',
+      url: 'https://images.unsplash.com/photo-1584735935682-2f2b69dff9d2?w=800',
+      type: 'image',
+      altText: 'Sole & Detail View',
       isPrimary: false,
     },
   ]);
-  const [newMediaUrl, setNewMediaUrl] = useState('');
-  const [newMediaType, setNewMediaType] = useState<'image' | 'video'>('image');
+  const [newImageUrl, setNewImageUrl] = useState('');
+
+  // Dedicated Product Video (YouTube, MP4, Vimeo, Cloudinary)
+  const [videoUrl, setVideoUrl] = useState('');
+  const [videoInput, setVideoInput] = useState('');
 
   // Variants (Sizes & Colors)
   const [variants, setVariants] = useState<VariantForm[]>([
@@ -113,25 +141,52 @@ export default function CreateProductPage() {
     setSlug(val.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''));
   };
 
-  // Media Handlers
-  const handleAddMedia = () => {
-    if (!newMediaUrl.trim()) return;
-    const isVideo =
-      newMediaType === 'video' ||
-      newMediaUrl.includes('.mp4') ||
-      newMediaUrl.includes('youtube.com') ||
-      newMediaUrl.includes('youtu.be');
+  // MULTI-IMAGE HANDLERS
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
+    Array.from(files).forEach((file, index) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          const resultUrl = event.target.result as string;
+          const defaultLabel =
+            mediaList.length === 0 && index === 0
+              ? 'Front View (Hero)'
+              : index === 1
+              ? 'Back View'
+              : index === 2
+              ? 'Side Profile'
+              : 'Detail & Texture';
+
+          setMediaList((prev) => [
+            ...prev,
+            {
+              id: `media-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+              url: resultUrl,
+              type: 'image',
+              altText: defaultLabel,
+              isPrimary: prev.length === 0 && index === 0,
+            },
+          ]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleAddImageUrl = () => {
+    if (!newImageUrl.trim()) return;
     const newItem: MediaItem = {
       id: `media-${Date.now()}`,
-      url: newMediaUrl.trim(),
-      type: isVideo ? 'video' : 'image',
-      altText: title || 'Product Media',
+      url: newImageUrl.trim(),
+      type: 'image',
+      altText: mediaList.length === 0 ? 'Front View (Hero)' : `Product Angle ${mediaList.length + 1}`,
       isPrimary: mediaList.length === 0,
     };
-
     setMediaList([...mediaList, newItem]);
-    setNewMediaUrl('');
+    setNewImageUrl('');
   };
 
   const handleRemoveMedia = (id: string) => {
@@ -149,6 +204,98 @@ export default function CreateProductPage() {
         isPrimary: m.id === id,
       })),
     );
+  };
+
+  const handleMoveMedia = (index: number, direction: 'left' | 'right') => {
+    const targetIdx = direction === 'left' ? index - 1 : index + 1;
+    if (targetIdx < 0 || targetIdx >= mediaList.length) return;
+    const updated = [...mediaList];
+    const temp = updated[index];
+    updated[index] = updated[targetIdx];
+    updated[targetIdx] = temp;
+    setMediaList(updated);
+  };
+
+  const handleUpdateLabel = (id: string, label: string) => {
+    setMediaList(
+      mediaList.map((m) => (m.id === id ? { ...m, altText: label } : m)),
+    );
+  };
+
+  // VIDEO HANDLERS
+  const handleAttachVideo = () => {
+    if (!videoInput.trim()) return;
+    setVideoUrl(videoInput.trim());
+    setVideoInput('');
+  };
+
+  const handleRemoveVideo = () => {
+    setVideoUrl('');
+  };
+
+  // Quick Preset Sample Packs
+  const handleApplyPreset = (preset: 'sneakers' | 'hoodie' | 'watch') => {
+    if (preset === 'sneakers') {
+      setTitle('Puma Nitro Velocity 3 Running Shoes');
+      setSlug('puma-nitro-velocity-3-running-shoes');
+      setDescription('Engineered for daily distance runners with dual-layer NITRO foam cushioning, engineered mono-mesh upper, and PUMAGRIP rubber outsole.');
+      setBasePrice('2999');
+      setComparePrice('4999');
+      setMediaList([
+        {
+          id: 'p-1',
+          url: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800',
+          type: 'image',
+          altText: 'Front View (Hero)',
+          isPrimary: true,
+        },
+        {
+          id: 'p-2',
+          url: 'https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=800',
+          type: 'image',
+          altText: 'Side Profile Angle',
+          isPrimary: false,
+        },
+        {
+          id: 'p-3',
+          url: 'https://images.unsplash.com/photo-1584735935682-2f2b69dff9d2?w=800',
+          type: 'image',
+          altText: 'Sole & Grip Detail',
+          isPrimary: false,
+        },
+      ]);
+      setVideoUrl('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+    } else if (preset === 'hoodie') {
+      setTitle('450 GSM Heavyweight Oversized Hoodie');
+      setSlug('450-gsm-heavyweight-oversized-hoodie');
+      setDescription('100% French Terry luxury heavyweight cotton hoodie with custom drop-shoulder boxy fit and ribbed kangaroo pocket.');
+      setBasePrice('1899');
+      setComparePrice('2999');
+      setMediaList([
+        {
+          id: 'h-1',
+          url: 'https://images.unsplash.com/photo-1556905055-8f358a7a47b2?w=800',
+          type: 'image',
+          altText: 'Front View (Hero)',
+          isPrimary: true,
+        },
+        {
+          id: 'h-2',
+          url: 'https://images.unsplash.com/photo-1509967419530-da38b4704bc6?w=800',
+          type: 'image',
+          altText: 'Back View & Fit',
+          isPrimary: false,
+        },
+        {
+          id: 'h-3',
+          url: 'https://images.unsplash.com/photo-1578587018452-892bacefd3f2?w=800',
+          type: 'image',
+          altText: 'Fabric & Stitching Detail',
+          isPrimary: false,
+        },
+      ]);
+      setVideoUrl('');
+    }
   };
 
   // Quick Size Addition
@@ -191,7 +338,6 @@ export default function CreateProductPage() {
   const handleUpdateVariant = (index: number, field: keyof VariantForm, value: any) => {
     const updated = [...variants];
     updated[index] = { ...updated[index], [field]: value };
-    // Auto update title if size or color changed
     if (field === 'size' || field === 'color') {
       const s = field === 'size' ? value : updated[index].size;
       const c = field === 'color' ? value : updated[index].color;
@@ -229,22 +375,47 @@ export default function CreateProductPage() {
     setErrorMsg('');
 
     try {
+      // Assemble images list + attached video if present
+      const combinedImages = [
+        ...mediaList.map((m, idx) => ({
+          url: m.url,
+          publicId: `novastore/photo-${Date.now()}-${idx}`,
+          altText: m.altText || title,
+          isPrimary: m.isPrimary,
+          sortOrder: idx,
+        })),
+        ...(videoUrl
+          ? [
+              {
+                url: videoUrl,
+                publicId: `novastore/video-${Date.now()}`,
+                altText: 'video',
+                isPrimary: false,
+                sortOrder: mediaList.length,
+              },
+            ]
+          : []),
+      ];
+
+      const fullDescription = formatDescriptionWithSpecs(description, {
+        brand,
+        material,
+        origin: countryOfOrigin,
+        fit,
+        care: washCare,
+        warranty,
+      });
+
       const payload = {
         title,
         slug: slug || undefined,
-        description,
+        description: fullDescription,
         categoryId,
         basePrice: parseFloat(basePrice),
         comparePrice: comparePrice ? parseFloat(comparePrice) : undefined,
         isPublished,
         isFeatured,
-        images: mediaList.map((m, idx) => ({
-          url: m.url,
-          publicId: `novastore/${m.type}-${Date.now()}-${idx}`,
-          altText: m.type === 'video' ? 'video' : m.altText || title,
-          isPrimary: m.isPrimary,
-          sortOrder: idx,
-        })),
+        images: combinedImages,
         variants: variants.map((v) => ({
           sku: v.sku,
           title: v.title,
@@ -281,39 +452,62 @@ export default function CreateProductPage() {
             <ArrowLeft className="w-4 h-4" />
             <span>Back to Products</span>
           </Link>
-          <h1 className="text-3xl font-black tracking-tight">Create & Publish Product</h1>
+          <h1 className="text-3xl font-black tracking-tight text-foreground">Create & Publish Product</h1>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Add multiple photos, product videos, Indian sizes, colors, and ₹ INR pricing
+            Attach multiple photos, video preview, Brand details, Material specs, and ₹ INR pricing
           </p>
+        </div>
+
+        {/* 1-Click Sample Presets */}
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-bold text-muted-foreground hidden sm:inline">⚡ Quick Presets:</span>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => handleApplyPreset('sneakers')}
+            className="rounded-xl text-xs font-bold"
+          >
+            👟 Sneakers Preset
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => handleApplyPreset('hoodie')}
+            className="rounded-xl text-xs font-bold"
+          >
+            👕 Hoodie Preset
+          </Button>
         </div>
       </div>
 
       {errorMsg && (
-        <div className="p-4 rounded-2xl bg-destructive/10 border border-destructive/20 text-destructive text-xs font-medium flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 shrink-0" />
+        <div className="p-4 rounded-2xl bg-destructive/10 text-destructive text-xs font-bold flex items-center gap-2 border border-destructive/20">
+          <AlertCircle className="w-4 h-4" />
           <span>{errorMsg}</span>
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* LEFT 2 COLUMNS: Form Configuration */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* 1. Basic Info */}
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* LEFT COLUMN: Main Form (8 Cols) */}
+        <div className="lg:col-span-8 space-y-6">
+          {/* 1. General Info */}
           <div className="rounded-3xl border bg-card p-6 shadow-sm space-y-4">
             <h2 className="text-base font-bold flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-primary" /> 1. Product Details
+              <Layers className="w-4 h-4 text-primary" /> 1. General Information
             </h2>
 
-            <div className="space-y-3 text-xs">
+            <div className="space-y-4 text-xs">
               <div>
                 <label className="block font-bold mb-1">Product Title *</label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Puma Velocity Nitro 3 Running Shoes"
+                  placeholder="e.g. Slim Fit Denim Jeans / Apex Velocity Shoes"
                   value={title}
                   onChange={(e) => handleTitleChange(e.target.value)}
-                  className="w-full h-10 px-3 rounded-xl border bg-background text-sm font-medium focus:ring-1 focus:ring-primary"
+                  className="w-full h-10 px-3 rounded-xl border bg-background text-sm font-semibold focus:ring-1 focus:ring-primary"
                 />
               </div>
 
@@ -348,9 +542,9 @@ export default function CreateProductPage() {
               <div>
                 <label className="block font-bold mb-1">Description *</label>
                 <textarea
-                  rows={4}
+                  rows={3}
                   required
-                  placeholder="Detailed product features, material, wash care, warranty, and specifications..."
+                  placeholder="Detailed product features and overview..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   className="w-full p-3 rounded-xl border bg-background text-xs leading-relaxed"
@@ -359,10 +553,138 @@ export default function CreateProductPage() {
             </div>
           </div>
 
-          {/* 2. Indian Pricing (₹ INR) */}
+          {/* 🏢 2. BRAND, MATERIAL & PRODUCT SPECIFICATIONS */}
+          <div className="rounded-3xl border bg-card p-6 shadow-sm space-y-4">
+            <div className="flex items-center justify-between border-b pb-3">
+              <h2 className="text-base font-bold flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-primary" /> 2. Brand, Materials & Product Specifications
+              </h2>
+              <span className="text-[11px] font-bold text-indigo-500 bg-indigo-500/10 px-2.5 py-0.5 rounded-full">
+                Appears on Product Page
+              </span>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              {/* Brand & Manufacturer */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-bold mb-1">Brand / Company Name *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Roadster, Nike, Apple, Puma, Levi's, Zara"
+                    value={brand}
+                    onChange={(e) => setBrand(e.target.value)}
+                    className="w-full h-10 px-3 rounded-xl border bg-background text-xs font-bold"
+                  />
+                  {/* Quick Brand presets */}
+                  <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
+                    {['Roadster', 'Nike', 'Apple', "Levi's", 'Puma', 'Zara', 'NovaStore'].map((bName) => (
+                      <button
+                        key={bName}
+                        type="button"
+                        onClick={() => setBrand(bName)}
+                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border transition-colors ${
+                          brand === bName
+                            ? 'bg-primary text-white border-primary'
+                            : 'bg-muted/40 hover:bg-muted text-muted-foreground'
+                        }`}
+                      >
+                        {bName}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-bold mb-1">Material / Fabric / Composition *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. 100% Breathable Cotton Denim, Titanium Alloy, etc."
+                    value={material}
+                    onChange={(e) => setMaterial(e.target.value)}
+                    className="w-full h-10 px-3 rounded-xl border bg-background text-xs font-semibold"
+                  />
+                  {/* Quick Material Presets */}
+                  <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
+                    {['100% Cotton Denim', 'French Terry Cotton', 'Engineered Mesh & Carbon', 'Aluminum & Titanium'].map(
+                      (mName) => (
+                        <button
+                          key={mName}
+                          type="button"
+                          onClick={() => setMaterial(mName)}
+                          className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border transition-colors ${
+                            material === mName
+                              ? 'bg-primary text-white border-primary'
+                              : 'bg-muted/40 hover:bg-muted text-muted-foreground'
+                          }`}
+                        >
+                          {mName}
+                        </button>
+                      ),
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Country of Origin & Fit/Style */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-bold mb-1">Country of Origin / Made In *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. India, Vietnam, USA, Germany"
+                    value={countryOfOrigin}
+                    onChange={(e) => setCountryOfOrigin(e.target.value)}
+                    className="w-full h-10 px-3 rounded-xl border bg-background text-xs font-semibold"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold mb-1">Fit / Silhouette / Type</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Relaxed Fit, Slim Fit, Ergonomic Over-Ear"
+                    value={fit}
+                    onChange={(e) => setFit(e.target.value)}
+                    className="w-full h-10 px-3 rounded-xl border bg-background text-xs font-semibold"
+                  />
+                </div>
+              </div>
+
+              {/* Wash Care & Warranty */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-bold mb-1">Wash & Care Instructions</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Machine Wash Cold (30°C), Do Not Bleach"
+                    value={washCare}
+                    onChange={(e) => setWashCare(e.target.value)}
+                    className="w-full h-10 px-3 rounded-xl border bg-background text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold mb-1">Official Warranty & Guarantee</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 1 Year Brand Warranty, 6 Months Replacement"
+                    value={warranty}
+                    onChange={(e) => setWarranty(e.target.value)}
+                    className="w-full h-10 px-3 rounded-xl border bg-background text-xs"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 3. Indian Pricing (₹ INR) */}
           <div className="rounded-3xl border bg-card p-6 shadow-sm space-y-4">
             <h2 className="text-base font-bold flex items-center gap-2">
-              <IndianRupee className="w-4 h-4 text-primary" /> 2. Indian Pricing (₹ INR)
+              <IndianRupee className="w-4 h-4 text-primary" /> 3. Indian Pricing (₹ INR)
             </h2>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
@@ -413,115 +735,255 @@ export default function CreateProductPage() {
             </div>
           </div>
 
-          {/* 3. MULTI-MEDIA STUDIO (PHOTOS & VIDEOS) */}
-          <div className="rounded-3xl border bg-card p-6 shadow-sm space-y-4">
+          {/* 3. MULTI-PHOTO STUDIO (2, 3, 5+ PHOTOS) */}
+          <div className="rounded-3xl border bg-card p-6 shadow-sm space-y-5">
             <div className="flex items-center justify-between">
-              <h2 className="text-base font-bold flex items-center gap-2">
-                <ImagePlus className="w-4 h-4 text-primary" /> 3. Product Photos & Video Studio
-              </h2>
-              <span className="text-xs text-muted-foreground font-semibold">
-                {mediaList.length} media items attached
-              </span>
+              <div>
+                <h2 className="text-base font-bold flex items-center gap-2">
+                  <ImagePlus className="w-4 h-4 text-primary" /> 3. Product Photos Studio (2-5+ Photos)
+                </h2>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Upload multiple photos from your device or paste web URLs. Set cover photo and angle tags.
+                </p>
+              </div>
+              <Badge variant="secondary" className="font-bold text-xs">
+                {mediaList.length} {mediaList.length === 1 ? 'Photo' : 'Photos'}
+              </Badge>
             </div>
 
-            <p className="text-xs text-muted-foreground">
-              Add multiple angles (Front, Back, Side, Lifestyle) and Product Video URL.
-            </p>
+            {/* Upload Area & URL Input */}
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Local Multi-File Picker */}
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="border-2 border-dashed border-primary/30 hover:border-primary/60 bg-primary/5 hover:bg-primary/10 rounded-2xl p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all group"
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                  />
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-1.5 group-hover:scale-110 transition-transform">
+                    <UploadCloud className="w-5 h-5" />
+                  </div>
+                  <p className="text-xs font-bold text-foreground">Upload from Device</p>
+                  <p className="text-[10px] text-muted-foreground">Select 2, 3 or more photos at once (PNG, JPG, WebP)</p>
+                </div>
 
-            {/* Add Media Input Bar */}
-            <div className="flex flex-col sm:flex-row gap-2 pt-1">
-              <select
-                value={newMediaType}
-                onChange={(e) => setNewMediaType(e.target.value as any)}
-                className="h-10 px-3 rounded-xl border bg-background text-xs font-bold sm:w-32"
-              >
-                <option value="image">📸 Photo</option>
-                <option value="video">🎥 Video</option>
-              </select>
+                {/* Paste URL */}
+                <div className="border rounded-2xl p-4 bg-muted/20 flex flex-col justify-between space-y-2">
+                  <div>
+                    <label className="block text-[11px] font-bold text-muted-foreground mb-1">
+                      Or Add Image URL (Cloudinary / Unsplash):
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="https://images.unsplash.com/..."
+                      value={newImageUrl}
+                      onChange={(e) => setNewImageUrl(e.target.value)}
+                      className="w-full h-8 px-2.5 rounded-lg border bg-background text-xs"
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={handleAddImageUrl}
+                    disabled={!newImageUrl.trim()}
+                    size="sm"
+                    className="rounded-xl font-bold text-xs gap-1 self-end"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Add Image
+                  </Button>
+                </div>
+              </div>
+            </div>
 
+            {/* Photos Gallery Strip with Reordering & Angle Tagging */}
+            {mediaList.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+                {mediaList.map((m, idx) => (
+                  <div
+                    key={m.id}
+                    className={`relative rounded-2xl border bg-background p-2.5 space-y-2 group transition-all shadow-xs ${
+                      m.isPrimary ? 'ring-2 ring-primary border-primary' : 'hover:border-primary/50'
+                    }`}
+                  >
+                    {/* Image Preview Container */}
+                    <div className="relative aspect-square w-full rounded-xl overflow-hidden bg-muted/40">
+                      <Image src={m.url} alt={m.altText} fill className="object-cover" />
+
+                      {/* Primary / Cover Badge */}
+                      <div className="absolute top-2 left-2 flex gap-1 z-10">
+                        {m.isPrimary ? (
+                          <Badge className="text-[9px] px-2 py-0.5 bg-primary text-primary-foreground font-extrabold shadow-sm">
+                            ⭐ Cover Photo
+                          </Badge>
+                        ) : (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-black/60 text-white font-bold backdrop-blur">
+                            #{idx + 1}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Delete Button */}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveMedia(m.id)}
+                        className="absolute top-2 right-2 p-1.5 rounded-lg bg-black/60 hover:bg-destructive text-white backdrop-blur transition-colors"
+                        title="Remove photo"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    {/* Angle Tag Selector */}
+                    <div className="space-y-1">
+                      <label className="block text-[10px] font-bold text-muted-foreground">Angle / View:</label>
+                      <select
+                        value={m.altText}
+                        onChange={(e) => handleUpdateLabel(m.id, e.target.value)}
+                        className="w-full h-7 px-2 text-[11px] font-semibold rounded-lg border bg-background"
+                      >
+                        {ANGLE_PRESETS.map((angle) => (
+                          <option key={angle} value={angle}>
+                            {angle}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Action Bar: Reorder & Make Cover */}
+                    <div className="flex items-center justify-between pt-1 border-t text-[11px]">
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          disabled={idx === 0}
+                          onClick={() => handleMoveMedia(idx, 'left')}
+                          className="p-1 rounded-md border bg-muted/40 hover:bg-muted disabled:opacity-30"
+                          title="Move Left"
+                        >
+                          <ChevronLeft className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={idx === mediaList.length - 1}
+                          onClick={() => handleMoveMedia(idx, 'right')}
+                          className="p-1 rounded-md border bg-muted/40 hover:bg-muted disabled:opacity-30"
+                          title="Move Right"
+                        >
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      {!m.isPrimary && (
+                        <button
+                          type="button"
+                          onClick={() => handleSetPrimary(m.id)}
+                          className="text-[10px] font-bold text-primary hover:underline"
+                        >
+                          Make Cover
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="py-8 text-center border-2 border-dashed rounded-2xl text-muted-foreground text-xs">
+                <ImagePlus className="w-8 h-8 mx-auto opacity-40 mb-1" />
+                <p className="font-bold">No product photos added yet</p>
+                <p className="text-[10px]">Add at least 2 or 3 photos for optimal customer engagement.</p>
+              </div>
+            )}
+          </div>
+
+          {/* 4. DEDICATED PRODUCT VIDEO STUDIO */}
+          <div className="rounded-3xl border bg-card p-6 shadow-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-base font-bold flex items-center gap-2">
+                  <Video className="w-4 h-4 text-amber-500" /> 4. Product Video Studio (Reels / Teaser / Demo)
+                </h2>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Attach a YouTube video, MP4 link, or video reel to show 360° product fit and details.
+                </p>
+              </div>
+              {videoUrl && (
+                <Badge className="bg-amber-500 text-white font-extrabold text-[10px]">
+                  🎥 Video Attached
+                </Badge>
+              )}
+            </div>
+
+            {/* Video URL Input */}
+            <div className="flex flex-col sm:flex-row gap-2">
               <input
                 type="text"
-                placeholder={
-                  newMediaType === 'video'
-                    ? 'Paste Video URL (MP4 / YouTube / Cloudinary)'
-                    : 'Paste Image URL (Unsplash, Cloudinary, etc.)'
-                }
-                value={newMediaUrl}
-                onChange={(e) => setNewMediaUrl(e.target.value)}
-                className="flex-1 h-10 px-3 rounded-xl border bg-background text-xs"
+                placeholder="Paste Video URL (e.g. https://www.youtube.com/watch?v=... or https://cdn.../demo.mp4)"
+                value={videoInput}
+                onChange={(e) => setVideoInput(e.target.value)}
+                className="flex-1 h-10 px-3 rounded-xl border bg-background text-xs font-mono"
               />
-
               <Button
                 type="button"
-                onClick={handleAddMedia}
-                disabled={!newMediaUrl.trim()}
-                className="rounded-xl font-bold gap-1 text-xs"
+                onClick={handleAttachVideo}
+                disabled={!videoInput.trim()}
+                className="rounded-xl font-bold gap-1 text-xs bg-amber-600 hover:bg-amber-700 text-white"
               >
-                <Plus className="w-4 h-4" /> Add
+                <Plus className="w-4 h-4" /> Attach Video
               </Button>
             </div>
 
-            {/* Media Gallery Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
-              {mediaList.map((m, idx) => (
-                <div
-                  key={m.id}
-                  className={`relative rounded-2xl border overflow-hidden group aspect-square bg-muted/40 transition-all ${
-                    m.isPrimary ? 'ring-2 ring-primary border-primary shadow-sm' : 'hover:border-primary/50'
-                  }`}
-                >
-                  {m.type === 'video' ? (
-                    <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900 text-white p-2 text-center">
-                      <Video className="w-8 h-8 text-primary animate-pulse mb-1" />
-                      <span className="text-[10px] font-bold">Product Video</span>
-                    </div>
-                  ) : (
-                    <Image src={m.url} alt={m.altText} fill className="object-cover" />
-                  )}
-
-                  {/* Badges */}
-                  <div className="absolute top-2 left-2 flex gap-1 z-10">
-                    {m.isPrimary && (
-                      <Badge className="text-[9px] px-1.5 py-0 bg-primary font-extrabold">
-                        Primary
-                      </Badge>
-                    )}
-                    {m.type === 'video' && (
-                      <Badge className="text-[9px] px-1.5 py-0 bg-amber-500 text-white font-extrabold">
-                        Video
-                      </Badge>
-                    )}
+            {/* Live Video Preview Box */}
+            {videoUrl ? (
+              <div className="p-4 rounded-2xl border bg-background space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="text-xs font-bold text-foreground truncate max-w-sm">{videoUrl}</span>
                   </div>
-
-                  {/* Overlay Actions */}
-                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1.5 p-2 text-white">
-                    {!m.isPrimary && (
-                      <button
-                        type="button"
-                        onClick={() => handleSetPrimary(m.id)}
-                        className="text-[10px] bg-primary px-2 py-1 rounded-lg font-bold hover:bg-primary/90"
-                      >
-                        Set Primary
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveMedia(m.id)}
-                      className="text-[10px] bg-destructive px-2 py-1 rounded-lg font-bold hover:bg-destructive/90 flex items-center gap-1"
-                    >
-                      <Trash2 className="w-3 h-3" /> Remove
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRemoveVideo}
+                    className="text-xs font-bold text-destructive hover:underline flex items-center gap-1"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" /> Remove Video
+                  </button>
                 </div>
-              ))}
-            </div>
+
+                <div className="relative aspect-video w-full rounded-xl overflow-hidden bg-black flex items-center justify-center shadow-md">
+                  {videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be') ? (
+                    <iframe
+                      src={videoUrl.replace('watch?v=', 'embed/').replace('youtu.be/', 'www.youtube.com/embed/')}
+                      title="Product Video Live Preview"
+                      className="w-full h-full border-0"
+                      allowFullScreen
+                    />
+                  ) : (
+                    <video
+                      src={videoUrl}
+                      controls
+                      className="w-full h-full object-contain"
+                    />
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="p-4 rounded-2xl border border-dashed bg-muted/10 text-center text-xs text-muted-foreground">
+                <p className="font-semibold">No video attached yet (Optional)</p>
+                <p className="text-[10px]">Products with short demo videos convert 2.4x higher on the storefront.</p>
+              </div>
+            )}
           </div>
 
-          {/* 4. VARIANTS (SIZES, COLORS & STOCK) */}
+          {/* 5. VARIANTS (SIZES, COLORS & STOCK) */}
           <div className="rounded-3xl border bg-card p-6 shadow-sm space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-base font-bold flex items-center gap-2">
-                <Layers className="w-4 h-4 text-primary" /> 4. Sizes, Colors & Inventory
+                <Layers className="w-4 h-4 text-primary" /> 5. Sizes, Colors & Inventory
               </h2>
               <Button
                 type="button"
@@ -656,8 +1118,8 @@ export default function CreateProductPage() {
           </div>
         </div>
 
-        {/* RIGHT COLUMN: Live Customer Preview & Publish Control */}
-        <div className="space-y-6">
+        {/* RIGHT COLUMN: Live Customer Preview & Publish Control (4 Cols) */}
+        <div className="lg:col-span-4 space-y-6">
           {/* Publish Action Card */}
           <div className="rounded-3xl border bg-card p-6 shadow-sm space-y-4 sticky top-6">
             <h3 className="font-bold text-sm">Publishing Options</h3>
@@ -713,10 +1175,26 @@ export default function CreateProductPage() {
                       No Image
                     </div>
                   )}
-                  {discountPercent > 0 && (
-                    <Badge className="absolute top-2 left-2 bg-rose-600 text-white font-extrabold text-[10px]">
-                      -{discountPercent}%
-                    </Badge>
+
+                  {/* Overlays */}
+                  <div className="absolute top-2 left-2 flex flex-col gap-1">
+                    {discountPercent > 0 && (
+                      <Badge className="bg-rose-600 text-white font-extrabold text-[10px]">
+                        -{discountPercent}%
+                      </Badge>
+                    )}
+                    {videoUrl && (
+                      <Badge className="bg-amber-500 text-white font-extrabold text-[9px] flex items-center gap-1">
+                        <Play className="w-2.5 h-2.5 fill-current" /> Video
+                      </Badge>
+                    )}
+                  </div>
+
+                  {/* Multiple Photos Indicator */}
+                  {mediaList.length > 1 && (
+                    <div className="absolute bottom-2 right-2 bg-black/70 backdrop-blur text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md">
+                      1 / {mediaList.length + (videoUrl ? 1 : 0)}
+                    </div>
                   )}
                 </div>
 

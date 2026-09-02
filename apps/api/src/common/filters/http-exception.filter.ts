@@ -26,7 +26,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
       message = typeof res === 'object' && 'message' in res ? (res as any).message : res;
     } else if (exception instanceof Error) {
       this.logger.error(`Unhandled Exception: ${exception.message}`, exception.stack);
-      message = exception.message;
+      message =
+        process.env.NODE_ENV === 'production'
+          ? 'An internal error occurred. Please try again later.'
+          : exception.message;
     }
 
     response.status(status).json({

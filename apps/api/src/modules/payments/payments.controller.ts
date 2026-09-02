@@ -74,8 +74,9 @@ export class PaymentsController {
     return this.paymentsService.getPaymentStatus(orderId);
   }
 
+  @Roles(Role.ADMIN)
   @Post('confirm')
-  @ApiOperation({ summary: 'Confirm online payment (Internal / Gateway webhook)' })
+  @ApiOperation({ summary: 'Admin / Internal: Confirm online payment' })
   @ApiResponse({ status: 200, description: 'Payment confirmed' })
   confirmPayment(@Body() dto: ConfirmPaymentDto) {
     return this.paymentsService.confirmPayment(dto);
