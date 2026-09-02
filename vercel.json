@@ -2,9 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
   "buildCommand": "pnpm --filter=@ecommerce/web build",
-  "outputDirectory": "apps/web/.next",
   "installCommand": "pnpm install",
-  "ignoreCommand": "exit 1",
   "cleanUrls": true,
   "headers": [
     {
