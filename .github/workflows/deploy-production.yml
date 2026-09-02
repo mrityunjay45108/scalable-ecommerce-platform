@@ -88,7 +88,7 @@ jobs:
           echo "::add-mask::${{ secrets.RAZORPAY_WEBHOOK_SECRET }}"
 
       - name: 🔑 Configure AWS Credentials (OIDC - Zero Static Keys)
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v5
         with:
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-ecs-deploy-role
           aws-region: ${{ secrets.AWS_REGION || 'us-east-1' }}
