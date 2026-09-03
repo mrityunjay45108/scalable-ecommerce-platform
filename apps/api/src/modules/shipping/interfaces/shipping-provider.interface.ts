@@ -94,6 +94,70 @@ export interface ReturnPickupResult {
   trackingUrl: string;
 }
 
+export interface ServiceabilityResult {
+  serviceable: boolean;
+  pincode?: string;
+  city?: string;
+  state?: string;
+  codAvailable?: boolean;
+  prepaidAvailable?: boolean;
+  estimatedDays?: number;
+  message?: string;
+}
+
+export interface PricingQuoteInput {
+  pickupPincode: string;
+  deliveryPincode: string;
+  weight: number;
+  length?: number;
+  width?: number;
+  height?: number;
+  shipmentType: 'PREPAID' | 'COD' | string;
+  codAmount?: number;
+}
+
+export interface PricingQuoteResult {
+  shippingCost: number;
+  currency: string;
+  estimatedDays?: number;
+  carrier?: string;
+  zone?: string;
+  breakdown?: {
+    freightCharge?: number;
+    codCharge?: number;
+    fuelSurcharge?: number;
+    tax?: number;
+  };
+}
+
+export interface ReconciliationQuery {
+  updatedAfter?: string;
+  updatedBefore?: string;
+  status?: string;
+  externalOrderId?: string;
+  trackingNumber?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface ReconciliationResult {
+  shipments: Array<{
+    shipmentId: string;
+    externalOrderId: string;
+    trackingNumber: string;
+    status: string;
+    carrier?: string;
+    shippingCost?: number;
+    codAmount?: number;
+    estimatedDelivery?: string;
+    updatedAt: string;
+  }>;
+  total: number;
+  page: number;
+  limit: number;
+  hasMore?: boolean;
+}
+
 export interface ShippingProviderInterface {
   readonly providerName: string;
   createShipment(input: CreateShipmentInput): Promise<ShipmentResult>;
@@ -103,5 +167,8 @@ export interface ShippingProviderInterface {
   cancelShipment(awbNumber: string, reason?: string): Promise<{ success: boolean; message: string }>;
   scheduleReturnPickup(input: ReturnPickupInput): Promise<ReturnPickupResult>;
   cancelReturnPickup?(pickupAwb: string, reason?: string): Promise<{ success: boolean; message: string }>;
-  verifyWebhookSignature(headers: Record<string, any>, payload: any): boolean;
+  verifyWebhookSignature(headers: Record<string, any>, payload: any, rawBody?: string | Buffer): boolean;
+  checkServiceability?(pincode: string): Promise<ServiceabilityResult>;
+  getQuote?(input: PricingQuoteInput): Promise<PricingQuoteResult>;
+  reconcileShipments?(query: ReconciliationQuery): Promise<ReconciliationResult>;
 }

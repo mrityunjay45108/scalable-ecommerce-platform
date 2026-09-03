@@ -4,6 +4,7 @@ import { ShippingProviderInterface } from '../interfaces/shipping-provider.inter
 import { StandardExpressShippingProvider } from './standard-express.provider';
 import { MockShippingProvider } from './mock-shipping.provider';
 import { ShiprocketProvider } from './shiprocket.provider';
+import { CourierPlatformProvider } from './courier-platform.provider';
 
 @Injectable()
 export class ShippingProviderFactory {
@@ -13,19 +14,26 @@ export class ShippingProviderFactory {
     private configService: ConfigService,
     private standardExpressProvider: StandardExpressShippingProvider,
     private mockShippingProvider: MockShippingProvider,
+    @Optional() private courierPlatformProvider?: CourierPlatformProvider,
     @Optional() private shiprocketProvider?: ShiprocketProvider,
   ) {}
 
   getProvider(providerName?: string): ShippingProviderInterface {
     const configuredProvider =
       this.configService.get<string>('shipping.provider') || 'STANDARD_EXPRESS';
-    const target = (providerName || configuredProvider).toUpperCase();
+    const target = (providerName || configuredProvider).toUpperCase().replace(/[\s-]+/g, '_');
 
     this.logger.debug(`Resolving courier provider adapter for: ${target}`);
 
     switch (target) {
-      case 'SHIPROCKET':
+      case 'COURIER_PLATFORM':
       case 'COURIER':
+      case 'COURIER_LOGISTICS':
+      case 'CUSTOM_COURIER':
+      case 'LOGISTICS_PLATFORM':
+        return this.courierPlatformProvider || this.standardExpressProvider;
+
+      case 'SHIPROCKET':
       case 'PARTNER':
       case 'LOGISTICS':
         return this.shiprocketProvider || this.standardExpressProvider;

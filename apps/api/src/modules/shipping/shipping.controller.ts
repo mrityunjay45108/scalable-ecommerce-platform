@@ -120,6 +120,47 @@ export class ShippingController {
     return this.shippingService.generateLabel(id, userId, role);
   }
 
+  // Public Serviceability Check
+  @Public()
+  @Get('serviceability/:pincode')
+  @ApiOperation({ summary: 'Check delivery serviceability for destination postal code' })
+  checkServiceability(
+    @Param('pincode') pincode: string,
+    @Query('provider') provider?: string,
+  ) {
+    return this.shippingService.checkServiceability(pincode, provider);
+  }
+
+  // Public Pricing Quote
+  @Public()
+  @Post('quote')
+  @ApiOperation({ summary: 'Get dynamic shipping rate quote from courier provider' })
+  getQuote(
+    @Body() dto: any,
+    @Query('provider') provider?: string,
+  ) {
+    return this.shippingService.getPricingQuote(dto, provider);
+  }
+
+  // Admin Reconciliation
+  @Roles(Role.ADMIN, Role.STAFF)
+  @Get('admin/reconcile')
+  @ApiOperation({ summary: 'Admin: Run background reconciliation audit with Courier Platform' })
+  reconcileShipments(
+    @Query('provider') provider?: string,
+    @Query('updatedAfter') updatedAfter?: string,
+    @Query('updatedBefore') updatedBefore?: string,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ) {
+    return this.shippingService.reconcileShipments(provider || 'COURIER_PLATFORM', {
+      updatedAfter,
+      updatedBefore,
+      page: page ? Number(page) : 1,
+      limit: limit ? Number(limit) : 50,
+    });
+  }
+
   // Courier Webhook Endpoint (Public, Signature Verified)
   @Public()
   @Post('webhooks/:provider')

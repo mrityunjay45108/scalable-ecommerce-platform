@@ -9,6 +9,11 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ShippingProviderFactory } from './providers/shipping-provider.factory';
+import { CourierStatusMappingService } from './courier-status-mapping.service';
+import {
+  PricingQuoteInput,
+  ReconciliationQuery,
+} from './interfaces/shipping-provider.interface';
 import {
   CreateShipmentDto,
   UpdateShipmentStatusDto,
@@ -35,6 +40,7 @@ export class ShippingService {
     private redisService: RedisService,
     private notificationsService: NotificationsService,
     private providerFactory: ShippingProviderFactory,
+    private statusMappingService: CourierStatusMappingService,
   ) {}
 
   // =========================================================================
@@ -417,15 +423,11 @@ export class ShippingService {
           },
         });
 
-        // Lifecycle Synchronization with Order
-        let targetOrderStatus: OrderStatus | null = null;
-        if (dto.status === ShipmentStatus.IN_TRANSIT || dto.status === ShipmentStatus.PICKED_UP) {
-          targetOrderStatus = OrderStatus.SHIPPED;
-        } else if (dto.status === ShipmentStatus.OUT_FOR_DELIVERY) {
-          targetOrderStatus = OrderStatus.OUT_FOR_DELIVERY;
-        } else if (dto.status === ShipmentStatus.DELIVERED) {
-          targetOrderStatus = OrderStatus.DELIVERED;
-        }
+        // Lifecycle Synchronization with Order using centralized status mapping & state machine
+        const targetOrderStatus = this.statusMappingService.mapCourierToOrderStatus(
+          dto.status,
+          shipment.order?.status,
+        );
 
         if (targetOrderStatus && shipment.order) {
           await tx.order.update({
@@ -481,44 +483,82 @@ export class ShippingService {
   // 8. COURIER WEBHOOK HANDLER (IDEMPOTENT & SIGNATURE VERIFIED)
   // =========================================================================
 
-  async handleCourierWebhook(providerName: string, headers: Record<string, any>, payload: any) {
+  async handleCourierWebhook(
+    providerName: string,
+    headers: Record<string, any>,
+    payload: any,
+    rawBody?: string | Buffer,
+  ) {
     const provider = this.providerFactory.getProvider(providerName);
 
     // 1. Verify cryptographic signature or security token
-    const isValidSignature = provider.verifyWebhookSignature(headers, payload);
+    const isValidSignature = provider.verifyWebhookSignature(headers, payload, rawBody);
     if (!isValidSignature) {
       throw new ForbiddenException('Invalid courier webhook cryptographic signature');
     }
 
     // Extract fields resiliently across standard DTO and provider-specific payload schemas
-    const awb = payload.awbNumber || payload.awb || payload.awb_code || payload.tracking_number;
-    const rawStatus = payload.status || payload.current_status || payload.current_status_id || payload.shipment_status;
-    const eventId = payload.eventId || payload.event_id || (awb && rawStatus ? `evt_${awb}_${rawStatus}` : `evt_generic_${Date.now()}`);
-    const location = payload.location || payload.scans?.[0]?.location || 'Hub Checkpoint';
-    const activity = payload.activity || payload.scans?.[0]?.activity || `Webhook update: ${rawStatus}`;
+    const awb =
+      payload.awbNumber ||
+      payload.awb ||
+      payload.awb_code ||
+      payload.trackingNumber ||
+      payload.tracking_number;
+    const externalOrderId = payload.externalOrderId || payload.orderNumber || payload.order_number;
+    const rawStatus =
+      payload.status ||
+      payload.current_status ||
+      payload.current_status_id ||
+      payload.shipment_status;
+    const eventId =
+      headers['x-courier-event-id'] ||
+      headers['X-Courier-Event-Id'] ||
+      payload.eventId ||
+      payload.event_id ||
+      (awb && rawStatus ? `evt_${awb}_${rawStatus}` : `evt_generic_${Date.now()}`);
+    const location =
+      payload.location ||
+      payload.scans?.[0]?.location ||
+      payload.checkpoint?.location ||
+      'Hub Checkpoint';
+    const activity =
+      payload.activity ||
+      payload.scans?.[0]?.activity ||
+      payload.checkpoint?.activity ||
+      `Webhook update: ${rawStatus}`;
 
-    // 2. Replay & Idempotency check via Redis
+    // 2. Replay & Idempotency check via Redis (7-day TTL)
     const cacheKey = `webhook_shipping:${eventId}`;
     const alreadyProcessed = await this.redisService.get(cacheKey);
     if (alreadyProcessed) {
       return { received: true, idempotent: true, eventId };
     }
 
-    // 3. Find shipment by AWB
-    const shipment = await this.prisma.shipment.findUnique({
-      where: { awbNumber: awb },
-    });
+    // 3. Find shipment by AWB or externalOrderId
+    let shipment = null;
+    if (awb) {
+      shipment = await this.prisma.shipment.findFirst({
+        where: {
+          OR: [{ awbNumber: awb }, { metadata: { path: ['carrierTrackingNumber'], equals: awb } }],
+        },
+        include: { order: true },
+      });
+    }
+
+    if (!shipment && externalOrderId) {
+      shipment = await this.prisma.shipment.findFirst({
+        where: { order: { orderNumber: externalOrderId } },
+        include: { order: true },
+      });
+    }
 
     if (!shipment) {
-      this.logger.warn(`Webhook received for unknown AWB: ${awb}`);
-      return { received: true, warning: 'AWB not found' };
+      this.logger.warn(`Webhook received for unknown AWB '${awb}' or Order '${externalOrderId}'`);
+      return { received: true, warning: 'Shipment not found' };
     }
 
     // 4. Normalize status and update tracking events
-    const normalizedStatus =
-      typeof (provider as any).normalizeStatus === 'function'
-        ? (provider as any).normalizeStatus(rawStatus)
-        : rawStatus;
+    const normalizedStatus = this.statusMappingService.mapCourierToShipmentStatus(rawStatus);
 
     await this.updateShipmentStatus(
       shipment.id,
@@ -534,5 +574,99 @@ export class ShippingService {
     await this.redisService.set(cacheKey, '1', 604800);
 
     return { received: true, eventId };
+  }
+
+  // =========================================================================
+  // 9. SERVICEABILITY & DYNAMIC PRICING QUOTE HELPERS
+  // =========================================================================
+
+  async checkServiceability(pincode: string, providerName?: string) {
+    const provider = this.providerFactory.getProvider(providerName);
+    if (provider.checkServiceability) {
+      return provider.checkServiceability(pincode);
+    }
+    return {
+      serviceable: true,
+      pincode,
+      codAvailable: true,
+      prepaidAvailable: true,
+      estimatedDays: 3,
+      message: 'Serviceable via default logistics',
+    };
+  }
+
+  async getPricingQuote(input: PricingQuoteInput, providerName?: string) {
+    const provider = this.providerFactory.getProvider(providerName);
+    if (provider.getQuote) {
+      return provider.getQuote(input);
+    }
+    return {
+      shippingCost: input.shipmentType === 'COD' ? 60 : 40,
+      currency: 'INR',
+      estimatedDays: 3,
+      carrier: 'Standard Logistics',
+    };
+  }
+
+  // =========================================================================
+  // 10. RECONCILIATION AUDIT TASK
+  // =========================================================================
+
+  async reconcileShipments(providerName = 'COURIER_PLATFORM', query: ReconciliationQuery = {}) {
+    const provider = this.providerFactory.getProvider(providerName);
+    if (!provider.reconcileShipments) {
+      throw new BadRequestException(`Provider '${providerName}' does not support automatic reconciliation`);
+    }
+
+    const result = await provider.reconcileShipments(query);
+    let updatedCount = 0;
+    let skippedCount = 0;
+
+    for (const item of result.shipments || []) {
+      try {
+        const shipment = await this.prisma.shipment.findFirst({
+          where: {
+            OR: [
+              { awbNumber: item.trackingNumber },
+              { order: { orderNumber: item.externalOrderId } },
+              { id: item.shipmentId },
+            ],
+          },
+          include: { order: true },
+        });
+
+        if (!shipment) {
+          skippedCount++;
+          continue;
+        }
+
+        const mappedStatus = this.statusMappingService.mapCourierToShipmentStatus(item.status);
+        if (shipment.status !== mappedStatus) {
+          await this.updateShipmentStatus(
+            shipment.id,
+            {
+              status: mappedStatus,
+              location: item.carrier || 'Reconciled Facility',
+              activity: `Reconciled via ${providerName} background synchronization`,
+            },
+            'SYSTEM_RECONCILIATION_JOB',
+          );
+          updatedCount++;
+        } else {
+          skippedCount++;
+        }
+      } catch (err) {
+        this.logger.error(`Error reconciling shipment ${item.externalOrderId}: ${err}`);
+      }
+    }
+
+    return {
+      totalFound: result.total || result.shipments?.length || 0,
+      updatedCount,
+      skippedCount,
+      page: result.page,
+      limit: result.limit,
+      hasMore: result.hasMore,
+    };
   }
 }

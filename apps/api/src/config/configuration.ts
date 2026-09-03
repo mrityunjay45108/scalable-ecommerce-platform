@@ -51,6 +51,16 @@ export default () => ({
       webhookSecret: process.env.SHIPROCKET_WEBHOOK_SECRET || process.env.SHIPPING_WEBHOOK_SECRET || 'mock_shiprocket_webhook_secret',
       pickupLocation: process.env.SHIPROCKET_PICKUP_LOCATION || 'Primary',
     },
+    courierPlatform: {
+      baseUrl: process.env.COURIER_API_BASE_URL || 'http://localhost:5000',
+      apiKey: process.env.COURIER_API_KEY || undefined,
+      webhookSecret: process.env.COURIER_WEBHOOK_SECRET || process.env.SHIPPING_WEBHOOK_SECRET || 'mock_courier_webhook_secret',
+      timeoutMs: parseInt(process.env.COURIER_TIMEOUT_MS || process.env.SHIPPING_TIMEOUT_MS || '10000', 10),
+      enabled: process.env.COURIER_ENABLED === 'true' || process.env.SHIPPING_PROVIDER === 'COURIER_PLATFORM',
+      providerName: process.env.COURIER_PROVIDER_NAME || 'COURIER_PLATFORM',
+      trackingBaseUrl: process.env.COURIER_FRONTEND_BASE_URL || 'http://localhost:5000/track',
+      pickupPincode: process.env.COURIER_PICKUP_PINCODE || '110001',
+    },
   },
   returns: {
     windowDays: (() => {

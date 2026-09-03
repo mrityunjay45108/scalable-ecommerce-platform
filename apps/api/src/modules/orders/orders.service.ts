@@ -8,6 +8,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { InventoryService } from '../inventory/inventory.service';
 import { CouponsService } from '../coupons/coupons.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { ShippingService } from '../shipping/shipping.service';
+import { ConfigService } from '@nestjs/config';
 import { CheckoutDto, CheckoutPreviewDto, UpdateOrderStatusDto, OrderQueryDto } from './orders.dto';
 import { OrderStatus, PaymentStatus, PaymentProvider } from '@ecommerce/types';
 import { NotificationType } from '@ecommerce/database';
@@ -25,6 +27,8 @@ export class OrdersService {
     private inventoryService: InventoryService,
     private couponsService: CouponsService,
     private notificationsService: NotificationsService,
+    private shippingService: ShippingService,
+    private configService: ConfigService,
   ) {}
 
   async previewCheckout(userId: string, dto: CheckoutPreviewDto) {
@@ -106,7 +110,52 @@ export class OrdersService {
       couponDetails = couponResult;
     }
 
-    const shippingCost = subtotal >= 100 ? 0 : 10;
+    // 5. Courier Serviceability & Shipping Quote
+    const isCourierPlatform =
+      this.configService.get<string>('shipping.provider') === 'COURIER_PLATFORM' ||
+      this.configService.get<boolean>('shipping.courierPlatform.enabled');
+
+    let shippingCost = subtotal >= 100 ? 0 : 10;
+    let serviceabilityInfo: any = null;
+    let carrierQuoteInfo: any = null;
+
+    if (isCourierPlatform && address.postalCode) {
+      try {
+        const serviceability = await this.shippingService.checkServiceability(
+          address.postalCode,
+          'COURIER_PLATFORM',
+        );
+        serviceabilityInfo = serviceability;
+
+        if (serviceability && serviceability.serviceable === false) {
+          throw new BadRequestException(
+            `Delivery is not serviceable for postal code: ${address.postalCode}`,
+          );
+        }
+
+        const estimatedWeight = Math.max(1.5, totalItems * 0.5);
+        const quote = await this.shippingService.getPricingQuote(
+          {
+            pickupPincode:
+              this.configService.get<string>('shipping.courierPlatform.pickupPincode') || '110001',
+            deliveryPincode: address.postalCode,
+            weight: estimatedWeight,
+            shipmentType: 'PREPAID',
+            codAmount: 0,
+          },
+          'COURIER_PLATFORM',
+        );
+
+        if (quote && typeof quote.shippingCost === 'number') {
+          shippingCost = subtotal >= 100 ? 0 : quote.shippingCost;
+          carrierQuoteInfo = quote;
+        }
+      } catch (err: any) {
+        if (err instanceof BadRequestException) throw err;
+        this.logger.warn(`Courier serviceability/quote bypassed in preview: ${err.message}`);
+      }
+    }
+
     const taxableAmount = Math.max(0, subtotal - discountAmount);
     const tax = Number((taxableAmount * 0.08).toFixed(2));
     const totalAmount = Number((taxableAmount + tax + shippingCost).toFixed(2));
@@ -121,6 +170,8 @@ export class OrdersService {
       totalAmount,
       coupon: couponDetails,
       shippingAddress: address,
+      serviceability: serviceabilityInfo,
+      carrierQuote: carrierQuoteInfo,
       inventoryIssues,
       isReadyForPayment: inventoryIssues.length === 0,
     };
@@ -189,13 +240,44 @@ export class OrdersService {
       couponId = couponResult.couponId;
     }
 
-    const shippingCost = subtotal >= 100 ? 0 : 10;
+    // 5. Courier Dynamic Shipping calculation
+    const isCourierPlatform =
+      this.configService.get<string>('shipping.provider') === 'COURIER_PLATFORM' ||
+      this.configService.get<boolean>('shipping.courierPlatform.enabled');
+
+    let shippingCost = subtotal >= 100 ? 0 : 10;
+    if (isCourierPlatform && address.postalCode) {
+      try {
+        const totalItemsCount = cart.items.reduce((sum, i) => sum + i.quantity, 0);
+        const estimatedWeight = Math.max(1.5, totalItemsCount * 0.5);
+        const quote = await this.shippingService.getPricingQuote(
+          {
+            pickupPincode:
+              this.configService.get<string>('shipping.courierPlatform.pickupPincode') || '110001',
+            deliveryPincode: address.postalCode,
+            weight: estimatedWeight,
+            shipmentType: dto.paymentProvider === PaymentProvider.COD ? 'COD' : 'PREPAID',
+            codAmount:
+              dto.paymentProvider === PaymentProvider.COD
+                ? Math.max(0, subtotal - discountAmount)
+                : 0,
+          },
+          'COURIER_PLATFORM',
+        );
+        if (quote && typeof quote.shippingCost === 'number') {
+          shippingCost = subtotal >= 100 ? 0 : quote.shippingCost;
+        }
+      } catch (err: any) {
+        this.logger.warn(`Courier quote bypassed during checkout: ${err.message}`);
+      }
+    }
+
     const tax = Number(((subtotal - discountAmount) * 0.08).toFixed(2));
     const totalAmount = Number((subtotal - discountAmount + tax + shippingCost).toFixed(2));
 
     const orderNumber = `ORD-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
 
-    // 5. Reserve Inventory before order transaction (concurrency safe)
+    // 6. Reserve Inventory before order transaction (concurrency safe)
     await this.inventoryService.reserveStock(orderNumber, reservationItems);
 
     let order: any;
