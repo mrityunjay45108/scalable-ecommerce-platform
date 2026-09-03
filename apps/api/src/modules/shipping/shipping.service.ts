@@ -4,6 +4,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Logger,
+  Optional,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
@@ -34,14 +35,17 @@ import { NotificationType } from '@ecommerce/database';
 @Injectable()
 export class ShippingService {
   private readonly logger = new Logger(ShippingService.name);
+  private readonly statusMappingService: CourierStatusMappingService;
 
   constructor(
     private prisma: PrismaService,
     private redisService: RedisService,
     private notificationsService: NotificationsService,
     private providerFactory: ShippingProviderFactory,
-    private statusMappingService: CourierStatusMappingService,
-  ) {}
+    @Optional() statusMappingService?: CourierStatusMappingService,
+  ) {
+    this.statusMappingService = statusMappingService || new CourierStatusMappingService();
+  }
 
   // =========================================================================
   // 1. CREATE SHIPMENT (AWB & LABEL GENERATION)
@@ -537,12 +541,19 @@ export class ShippingService {
     // 3. Find shipment by AWB or externalOrderId
     let shipment = null;
     if (awb) {
-      shipment = await this.prisma.shipment.findFirst({
-        where: {
-          OR: [{ awbNumber: awb }, { metadata: { path: ['carrierTrackingNumber'], equals: awb } }],
-        },
+      shipment = await this.prisma.shipment.findUnique({
+        where: { awbNumber: awb },
         include: { order: true },
       });
+
+      if (!shipment) {
+        shipment = await this.prisma.shipment.findFirst({
+          where: {
+            OR: [{ awbNumber: awb }, { metadata: { path: ['carrierTrackingNumber'], equals: awb } }],
+          },
+          include: { order: true },
+        });
+      }
     }
 
     if (!shipment && externalOrderId) {
@@ -554,7 +565,7 @@ export class ShippingService {
 
     if (!shipment) {
       this.logger.warn(`Webhook received for unknown AWB '${awb}' or Order '${externalOrderId}'`);
-      return { received: true, warning: 'Shipment not found' };
+      return { received: true, warning: 'Shipment not found', eventId };
     }
 
     // 4. Normalize status and update tracking events

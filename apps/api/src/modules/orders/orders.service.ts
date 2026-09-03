@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
   Logger,
+  Optional,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { InventoryService } from '../inventory/inventory.service';
@@ -27,8 +28,8 @@ export class OrdersService {
     private inventoryService: InventoryService,
     private couponsService: CouponsService,
     private notificationsService: NotificationsService,
-    private shippingService: ShippingService,
-    private configService: ConfigService,
+    @Optional() private shippingService?: ShippingService,
+    @Optional() private configService?: ConfigService,
   ) {}
 
   async previewCheckout(userId: string, dto: CheckoutPreviewDto) {
@@ -112,14 +113,14 @@ export class OrdersService {
 
     // 5. Courier Serviceability & Shipping Quote
     const isCourierPlatform =
-      this.configService.get<string>('shipping.provider') === 'COURIER_PLATFORM' ||
-      this.configService.get<boolean>('shipping.courierPlatform.enabled');
+      this.configService?.get<string>('shipping.provider') === 'COURIER_PLATFORM' ||
+      this.configService?.get<boolean>('shipping.courierPlatform.enabled');
 
     let shippingCost = subtotal >= 100 ? 0 : 10;
     let serviceabilityInfo: any = null;
     let carrierQuoteInfo: any = null;
 
-    if (isCourierPlatform && address.postalCode) {
+    if (isCourierPlatform && address.postalCode && this.shippingService) {
       try {
         const serviceability = await this.shippingService.checkServiceability(
           address.postalCode,
@@ -137,7 +138,7 @@ export class OrdersService {
         const quote = await this.shippingService.getPricingQuote(
           {
             pickupPincode:
-              this.configService.get<string>('shipping.courierPlatform.pickupPincode') || '110001',
+              this.configService?.get<string>('shipping.courierPlatform.pickupPincode') || '110001',
             deliveryPincode: address.postalCode,
             weight: estimatedWeight,
             shipmentType: 'PREPAID',
@@ -242,18 +243,18 @@ export class OrdersService {
 
     // 5. Courier Dynamic Shipping calculation
     const isCourierPlatform =
-      this.configService.get<string>('shipping.provider') === 'COURIER_PLATFORM' ||
-      this.configService.get<boolean>('shipping.courierPlatform.enabled');
+      this.configService?.get<string>('shipping.provider') === 'COURIER_PLATFORM' ||
+      this.configService?.get<boolean>('shipping.courierPlatform.enabled');
 
     let shippingCost = subtotal >= 100 ? 0 : 10;
-    if (isCourierPlatform && address.postalCode) {
+    if (isCourierPlatform && address.postalCode && this.shippingService) {
       try {
         const totalItemsCount = cart.items.reduce((sum, i) => sum + i.quantity, 0);
         const estimatedWeight = Math.max(1.5, totalItemsCount * 0.5);
         const quote = await this.shippingService.getPricingQuote(
           {
             pickupPincode:
-              this.configService.get<string>('shipping.courierPlatform.pickupPincode') || '110001',
+              this.configService?.get<string>('shipping.courierPlatform.pickupPincode') || '110001',
             deliveryPincode: address.postalCode,
             weight: estimatedWeight,
             shipmentType: dto.paymentProvider === PaymentProvider.COD ? 'COD' : 'PREPAID',
