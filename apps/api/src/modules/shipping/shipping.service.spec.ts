@@ -4,6 +4,7 @@ import { ShippingService } from './shipping.service';
 import { ShippingProviderFactory } from './providers/shipping-provider.factory';
 import { StandardExpressShippingProvider } from './providers/standard-express.provider';
 import { MockShippingProvider } from './providers/mock-shipping.provider';
+import { CourierStatusMappingService } from './courier-status-mapping.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -89,6 +90,7 @@ describe('ShippingService & Courier Provider Abstraction (Unit & Integration)', 
         ShippingProviderFactory,
         StandardExpressShippingProvider,
         MockShippingProvider,
+        CourierStatusMappingService,
         {
           provide: ConfigService,
           useValue: {

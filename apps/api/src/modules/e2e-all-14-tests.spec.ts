@@ -21,6 +21,7 @@ import { StripeProvider } from './payments/providers/stripe.provider';
 import { ShippingProviderFactory } from './shipping/providers/shipping-provider.factory';
 import { StandardExpressShippingProvider } from './shipping/providers/standard-express.provider';
 import { MockShippingProvider } from './shipping/providers/mock-shipping.provider';
+import { CourierStatusMappingService } from './shipping/courier-status-mapping.service';
 import { StorageService } from './storage/storage.service';
 import {
   OrderStatus,
@@ -267,6 +268,7 @@ describe('Phase 13 — Complete E2E Testing of All 14 Mission-Critical Workflows
         RefundsService,
         InventoryService,
         UsersService,
+        CourierStatusMappingService,
         PaymentProviderFactory,
         RazorpayProvider,
         StripeProvider,

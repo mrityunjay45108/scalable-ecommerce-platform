@@ -12,6 +12,7 @@ import { CouponsService } from './coupons/coupons.service';
 import { ShippingProviderFactory } from './shipping/providers/shipping-provider.factory';
 import { StandardExpressShippingProvider } from './shipping/providers/standard-express.provider';
 import { MockShippingProvider } from './shipping/providers/mock-shipping.provider';
+import { CourierStatusMappingService } from './shipping/courier-status-mapping.service';
 import { PaymentProviderFactory } from './payments/providers/payment-provider.factory';
 import { RazorpayProvider } from './payments/providers/razorpay.provider';
 import { StripeProvider } from './payments/providers/stripe.provider';
@@ -247,6 +248,7 @@ describe('Phase 1: Production Security Hardening & Authorization Verification', 
         ShippingProviderFactory,
         StandardExpressShippingProvider,
         MockShippingProvider,
+        CourierStatusMappingService,
         PaymentProviderFactory,
         RazorpayProvider,
         StripeProvider,
