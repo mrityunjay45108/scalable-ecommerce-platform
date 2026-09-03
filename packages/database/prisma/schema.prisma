@@ -844,3 +844,27 @@ model AuditLog {
   @@index([userId])
   @@index([entity, entityId, createdAt])
 }
+
+// ==========================================
+// BRAND SPOTLIGHTS & PARTNERS
+// ==========================================
+
+model Brand {
+  id          String    @id @default(uuid())
+  name        String    @unique
+  offer       String    // e.g. "UNDER ₹799", "MIN. 40% OFF"
+  imageUrl    String
+  query       String    // search keyword or link URL
+  order       Int       @default(0)
+  isActive    Boolean   @default(true)
+  deletedAt   DateTime?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([name])
+  @@index([isActive])
+  @@index([order])
+  @@index([deletedAt])
+}
+

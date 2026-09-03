@@ -22,6 +22,7 @@ import {
   ShieldCheck,
   PlusCircle,
   KeyRound,
+  Award,
   X,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
@@ -65,6 +66,7 @@ export function AdminSidebar({ onClose, className = '' }: AdminSidebarProps) {
     {
       title: 'GROWTH & MANAGEMENT',
       links: [
+        { href: '/admin/brands', label: 'Brand Spotlights', icon: Award },
         { href: '/admin/coupons', label: 'Coupons & Promos', icon: Tag },
         { href: '/admin/reviews', label: 'Review Moderation', icon: MessageSquare },
         { href: '/admin/users', label: 'Users & Staff', icon: Users },

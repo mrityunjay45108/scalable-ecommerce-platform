@@ -535,3 +535,38 @@ export interface AdminDashboardMetrics {
     revenue: number;
   }>;
 }
+
+// ==========================================
+// BRAND SPOTLIGHT DTOs
+// ==========================================
+
+export interface BrandDto {
+  id: string;
+  name: string;
+  offer: string;
+  imageUrl: string;
+  query: string;
+  order: number;
+  isActive: boolean;
+  createdAt: string | Date;
+  updatedAt: string | Date;
+}
+
+export interface CreateBrandDto {
+  name: string;
+  offer: string;
+  imageUrl: string;
+  query: string;
+  order?: number;
+  isActive?: boolean;
+}
+
+export interface UpdateBrandDto {
+  name?: string;
+  offer?: string;
+  imageUrl?: string;
+  query?: string;
+  order?: number;
+  isActive?: boolean;
+}
+

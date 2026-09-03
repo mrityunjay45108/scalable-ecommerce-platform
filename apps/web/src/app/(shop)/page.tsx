@@ -21,7 +21,7 @@ import {
   Flame,
   Award,
 } from 'lucide-react';
-import { ProductDto, CategoryDto } from '@ecommerce/types';
+import { ProductDto, CategoryDto, BrandDto } from '@ecommerce/types';
 import { apiClient } from '@/lib/api-client';
 import { ProductCard } from '@/components/shop/product-card';
 import { Button } from '@/components/ui/button';
@@ -80,16 +80,16 @@ const HERO_SLIDES = [
   },
 ];
 
-// TOP SPOTLIGHT BRANDS (MYNTRA STYLE)
+// DEFAULT FALLBACK SPOTLIGHT BRANDS (MYNTRA STYLE)
 const SPOTLIGHT_BRANDS = [
-  { name: 'ROADSTER', offer: 'UNDER ₹799', image: 'https://images.unsplash.com/photo-1576995853123-5a10305d93c0?w=400', query: 'Roadster' },
-  { name: 'NIKE', offer: 'MIN. 40% OFF', image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400', query: 'Nike' },
-  { name: 'HIGHLANDER', offer: 'FLAT 60% OFF', image: 'https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?w=400', query: 'Highlander' },
-  { name: "LEVI'S", offer: 'MIN. 50% OFF', image: 'https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=400', query: "Levi's" },
-  { name: 'PUMA', offer: 'FROM ₹899', image: 'https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=400', query: 'Puma' },
-  { name: 'ZARA', offer: 'NEW SEASON', image: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=400', query: 'Zara' },
-  { name: 'HRX', offer: 'UNDER ₹699', image: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=400', query: 'HRX' },
-  { name: 'NOVA TECH', offer: 'FLAT 50% OFF', image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400', query: 'Nova' },
+  { name: 'ROADSTER', offer: 'UNDER ₹799', imageUrl: 'https://images.unsplash.com/photo-1576995853123-5a10305d93c0?w=400', query: 'Roadster' },
+  { name: 'NIKE', offer: 'MIN. 40% OFF', imageUrl: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400', query: 'Nike' },
+  { name: 'HIGHLANDER', offer: 'FLAT 60% OFF', imageUrl: 'https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?w=400', query: 'Highlander' },
+  { name: "LEVI'S", offer: 'MIN. 50% OFF', imageUrl: 'https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=400', query: "Levi's" },
+  { name: 'PUMA', offer: 'FROM ₹899', imageUrl: 'https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=400', query: 'Puma' },
+  { name: 'ZARA', offer: 'NEW SEASON', imageUrl: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=400', query: 'Zara' },
+  { name: 'HRX', offer: 'UNDER ₹699', imageUrl: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=400', query: 'HRX' },
+  { name: 'NOVA TECH', offer: 'FLAT 50% OFF', imageUrl: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400', query: 'Nova' },
 ];
 
 // CATEGORIES TO BAG (MYNTRA VISUAL TILES)
@@ -107,6 +107,7 @@ export default function HomePage() {
   const [allProducts, setAllProducts] = useState<ProductDto[]>([]);
   const [activeCatalogTab, setActiveCatalogTab] = useState<'all' | 'featured' | 'deals' | string>('all');
   const [categories, setCategories] = useState<CategoryDto[]>([]);
+  const [spotlightBrands, setSpotlightBrands] = useState<Array<{ name: string; offer: string; imageUrl: string; query: string }>>(SPOTLIGHT_BRANDS);
   const [isLoading, setIsLoading] = useState(true);
   const [heroIndex, setHeroIndex] = useState(0);
   const [isHeroHovered, setIsHeroHovered] = useState(false);
@@ -141,10 +142,11 @@ export default function HomePage() {
   useEffect(() => {
     const loadHomeData = async () => {
       try {
-        const [featuredRes, allProdRes, categoriesRes] = await Promise.all([
+        const [featuredRes, allProdRes, categoriesRes, brandsRes] = await Promise.all([
           apiClient.get('/products/featured').catch(() => ({ data: [] })),
           apiClient.get('/products?limit=50').catch(() => ({ data: [] })),
           apiClient.get('/categories').catch(() => []),
+          apiClient.get('/brands').catch(() => []),
         ]);
 
         const fList = Array.isArray(featuredRes) ? featuredRes : featuredRes.data || [];
@@ -152,6 +154,9 @@ export default function HomePage() {
         setFeaturedProducts(fList);
         setAllProducts(aList.length > 0 ? aList : fList);
         setCategories(Array.isArray(categoriesRes) ? categoriesRes : []);
+        if (Array.isArray(brandsRes) && brandsRes.length > 0) {
+          setSpotlightBrands(brandsRes);
+        }
       } catch {
         // graceful fallback
       } finally {
@@ -355,15 +360,15 @@ export default function HomePage() {
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 sm:gap-4">
-          {SPOTLIGHT_BRANDS.map((brand, idx) => (
+          {spotlightBrands.map((brand, idx) => (
             <Link
               key={idx}
-              href={`/products?search=${encodeURIComponent(brand.query)}`}
+              href={`/products?search=${encodeURIComponent(brand.query || brand.name)}`}
               className="group rounded-2xl border border-border bg-card p-3 text-center space-y-2.5 transition-all hover:shadow-xl hover:border-primary/50 hover:-translate-y-1 flex flex-col items-center justify-between"
             >
               <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden border-2 border-border/80 group-hover:border-primary transition-colors bg-muted/30 shadow-xs">
                 <Image
-                  src={brand.image}
+                  src={brand.imageUrl}
                   alt={brand.name}
                   fill
                   className="object-cover group-hover:scale-110 transition-transform duration-500"

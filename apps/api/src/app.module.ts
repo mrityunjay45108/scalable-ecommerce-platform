@@ -26,6 +26,7 @@ import { HealthModule } from './modules/health/health.module';
 import { ShippingModule } from './modules/shipping/shipping.module';
 import { ReturnsModule } from './modules/returns/returns.module';
 import { RefundsModule } from './modules/refunds/refunds.module';
+import { BrandsModule } from './modules/brands/brands.module';
 
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
@@ -53,6 +54,7 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
     UsersModule,
     CategoriesModule,
     ProductsModule,
+    BrandsModule,
     InventoryModule,
     CartModule,
     WishlistModule,
