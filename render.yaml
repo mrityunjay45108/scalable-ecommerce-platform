@@ -7,7 +7,7 @@ services:
     env: node
     plan: starter
     region: oregon
-    buildCommand: pnpm install --frozen-lockfile && pnpm turbo run build --filter=@ecommerce/api
+    buildCommand: pnpm install && pnpm db:generate && pnpm db:push && pnpm build:api
     startCommand: pnpm --filter=@ecommerce/api start:prod
     healthCheckPath: /api/v1/health
     autoDeploy: true
