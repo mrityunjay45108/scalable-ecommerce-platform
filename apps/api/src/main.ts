@@ -13,11 +13,21 @@ async function bootstrap() {
   app.use(helmet());
   app.use(cookieParser());
   app.enableCors({
-    origin: [
-      'http://localhost:3000',
-      'http://127.0.0.1:3000',
-      process.env.APP_URL || 'http://localhost:3000',
-    ],
+    origin: (requestOrigin, callback) => {
+      // Allow requests with no origin (like mobile apps, curl, or server-to-server)
+      if (!requestOrigin) return callback(null, true);
+
+      const isAllowed =
+        requestOrigin.includes('localhost') ||
+        requestOrigin.includes('127.0.0.1') ||
+        requestOrigin.endsWith('.vercel.app') ||
+        requestOrigin === process.env.APP_URL;
+
+      if (isAllowed) {
+        return callback(null, true);
+      }
+      return callback(null, true);
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: [
