@@ -127,15 +127,15 @@ export function Navbar() {
 
       {/* 2. MAIN NAVBAR */}
       <header className="sticky top-0 z-40 w-full border-b bg-background/98 backdrop-blur-md shadow-xs">
-        <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-18 flex items-center justify-between gap-3 lg:gap-6">
+        <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-15 sm:h-18 flex items-center justify-between gap-2 sm:gap-6">
           {/* Logo & Category Mega Links */}
           <div className="flex items-center gap-6 lg:gap-8 shrink-0">
             {/* Brand Logo */}
             <Link href="/" className="flex items-center gap-2 shrink-0 group">
-              <span className="h-9 w-9 rounded-xl bg-gradient-to-tr from-rose-600 to-orange-500 text-white flex items-center justify-center font-black text-lg shadow-md group-hover:scale-105 transition-transform">
+              <span className="h-8 w-8 sm:h-9 sm:w-9 rounded-xl bg-gradient-to-tr from-rose-600 to-orange-500 text-white flex items-center justify-center font-black text-base sm:text-lg shadow-md group-hover:scale-105 transition-transform">
                 N
               </span>
-              <span className="font-black text-xl tracking-tight text-foreground flex items-center">
+              <span className="font-black text-lg sm:text-xl tracking-tight text-foreground flex items-center">
                 Nova<span className="text-rose-600">Store</span>
               </span>
             </Link>
@@ -163,32 +163,37 @@ export function Navbar() {
                     )}
                   </Link>
 
-                  {/* Dropdown Menu on Hover */}
-                  {hoveredCategory === cat.name && cat.subcategories && (
-                    <div className="absolute top-full left-0 w-64 bg-card border border-border shadow-2xl rounded-2xl p-4 space-y-3 animate-in fade-in zoom-in-95 z-50">
-                      <div className="border-b pb-2">
-                        <span className="text-[10px] font-black uppercase tracking-wider text-rose-600">
-                          {cat.featured}
-                        </span>
-                        <h4 className="text-xs font-bold text-foreground mt-0.5">Top Categories</h4>
-                      </div>
-                      <div className="space-y-1.5">
-                        {cat.subcategories.map((sub, i) => (
+                  {/* Mega Dropdown Menu */}
+                  {hoveredCategory === cat.name && (
+                    <div className="absolute left-0 top-full pt-1 z-50 w-72 animate-in fade-in zoom-in-95 duration-150">
+                      <div className="rounded-2xl border bg-card p-4 shadow-2xl space-y-3">
+                        <div className="flex items-center justify-between border-b pb-2">
+                          <span className="font-black text-xs uppercase tracking-wider text-rose-600">
+                            {cat.name} Collection
+                          </span>
+                          <span className="text-[10px] text-muted-foreground font-bold">100% Original</span>
+                        </div>
+                        <div className="grid grid-cols-1 gap-1">
+                          {cat.subcategories?.map((sub) => (
+                            <Link
+                              key={sub}
+                              href={`/products?categorySlug=${cat.slug}&search=${encodeURIComponent(sub)}`}
+                              className="text-xs text-muted-foreground hover:text-rose-600 hover:bg-muted/50 px-2 py-1.5 rounded-lg transition-colors font-semibold flex items-center justify-between group/sub"
+                            >
+                              <span>{sub}</span>
+                              <ChevronRight className="w-3.5 h-3.5 opacity-0 group-hover/sub:opacity-100 transition-opacity" />
+                            </Link>
+                          ))}
+                        </div>
+                        <div className="pt-2 border-t text-center">
                           <Link
-                            key={i}
-                            href={`/products?search=${encodeURIComponent(sub)}`}
-                            className="block text-xs text-muted-foreground hover:text-foreground hover:font-bold transition-all py-1"
+                            href={`/products?categorySlug=${cat.slug}`}
+                            className="text-[11px] font-bold text-rose-600 hover:underline"
                           >
-                            {sub}
+                            Explore All {cat.name} &rarr;
                           </Link>
-                        ))}
+                        </div>
                       </div>
-                      <Link
-                        href={`/products?categorySlug=${cat.slug}`}
-                        className="block pt-2 text-[11px] font-black text-primary hover:underline"
-                      >
-                        Explore All {cat.name} &gt;
-                      </Link>
                     </div>
                   )}
                 </div>
@@ -196,21 +201,23 @@ export function Navbar() {
             </nav>
           </div>
 
-          {/* Desktop Search Bar (Myntra Wide Style) */}
-          <form onSubmit={handleSearch} className="hidden md:flex items-center flex-1 max-w-lg relative">
+          {/* Desktop Search Bar (Myntra Wide Pill) */}
+          <form
+            onSubmit={handleSearch}
+            className="hidden md:flex flex-1 max-w-md lg:max-w-lg relative items-center mx-4"
+          >
+            <Search className="absolute left-3.5 w-4 h-4 text-muted-foreground pointer-events-none" />
             <input
               type="text"
               placeholder="Search for products, brands and more..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              suppressHydrationWarning
-              className="w-full h-10 pl-10 pr-4 text-xs font-medium rounded-full border bg-muted/40 focus:bg-background focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all shadow-xs"
+              className="w-full h-10 pl-10 pr-4 rounded-xl bg-muted/50 border border-border/80 focus:bg-background focus:border-rose-500 focus:outline-none text-xs font-medium placeholder:text-muted-foreground/70 transition-all shadow-2xs"
             />
-            <Search className="w-4 h-4 text-muted-foreground absolute left-3.5 pointer-events-none" />
           </form>
 
           {/* Right Action Icons Stack (Profile, Wishlist, Bag) */}
-          <div className="flex items-center gap-2 sm:gap-5 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-4 shrink-0">
             {/* Mobile Search Icon */}
             <Button
               variant="ghost"
@@ -222,8 +229,8 @@ export function Navbar() {
               <Search className="w-4 h-4" />
             </Button>
 
-            {/* Profile Stack */}
-            <div className="relative">
+            {/* Profile Stack (Desktop) */}
+            <div className="relative hidden sm:block">
               {isAuthenticated ? (
                 <button
                   onClick={() => setUserDropdownOpen(!userDropdownOpen)}

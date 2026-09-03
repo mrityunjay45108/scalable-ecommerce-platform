@@ -306,12 +306,12 @@ export function ChatbotWidget() {
   };
 
   return (
-    <div className="fixed bottom-5 right-5 z-50 select-none">
+    <div className="fixed bottom-4 right-4 sm:bottom-5 sm:right-5 z-50 select-none">
       {/* 1. FLOATING CHAT BUTTON */}
       {!isOpen && (
         <div className="relative group">
           {hasUnread && (
-            <div className="absolute -top-10 right-0 bg-primary text-white text-[11px] font-bold px-3 py-1 rounded-full shadow-lg border border-white/20 whitespace-nowrap animate-bounce flex items-center gap-1.5">
+            <div className="hidden sm:flex absolute -top-10 right-0 bg-primary text-white text-[11px] font-bold px-3 py-1 rounded-full shadow-lg border border-white/20 whitespace-nowrap animate-bounce items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-amber-300" />
               <span>Ask Nova AI Store Assistant</span>
             </div>
@@ -319,18 +319,18 @@ export function ChatbotWidget() {
 
           <button
             onClick={() => setIsOpen(true)}
-            className="w-14 h-14 rounded-full bg-primary hover:bg-primary/95 text-white shadow-2xl flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 ring-4 ring-primary/20"
+            className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-primary hover:bg-primary/95 text-white shadow-2xl flex items-center justify-center transition-all duration-300 hover:scale-105 active:scale-95 ring-4 ring-primary/20"
             aria-label="Open AI Store Assistant"
           >
-            <MessageSquare className="w-6 h-6" />
-            <span className="absolute top-0 right-0 w-3.5 h-3.5 bg-emerald-500 rounded-full ring-2 ring-white animate-pulse" />
+            <MessageSquare className="w-5 h-5 sm:w-6 sm:h-6" />
+            <span className="absolute top-0 right-0 w-3 h-3 sm:w-3.5 sm:h-3.5 bg-emerald-500 rounded-full ring-2 ring-white animate-pulse" />
           </button>
         </div>
       )}
 
       {/* 2. CHATBOT MODAL WINDOW */}
       {isOpen && (
-        <div className="w-[360px] sm:w-[400px] h-[580px] max-h-[85vh] bg-background border border-border/80 rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        <div className="w-[calc(100vw-32px)] sm:w-[400px] h-[540px] sm:h-[580px] max-h-[85vh] bg-background border border-border/80 rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
           {/* Chat Header */}
           <div className="bg-primary text-white p-4 flex items-center justify-between relative shadow-md">
             <div className="flex items-center gap-3">
