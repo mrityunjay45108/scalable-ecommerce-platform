@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -15,11 +15,66 @@ import {
   X,
   Sparkles,
   ChevronRight,
+  ChevronDown,
+  Tag,
+  ShieldCheck,
+  Zap,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { useCart } from '@/lib/cart-context';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
+
+const MEGA_CATEGORIES = [
+  {
+    name: 'MEN',
+    slug: 'apparel-fashion',
+    featured: 'New Season Casuals',
+    subcategories: ['T-Shirts', 'Casual Shirts', 'Jeans & Denims', 'Sneakers & Shoes', 'Oversized Hoodies', 'Watches & Belts'],
+  },
+  {
+    name: 'WOMEN',
+    slug: 'apparel-fashion',
+    featured: 'Western & Ethnic',
+    subcategories: ['Kurtas & Sets', 'Tops & Tees', 'Dresses', 'Jeans & Trousers', 'Flats & Sneakers', 'Handbags'],
+  },
+  {
+    name: 'KIDS',
+    slug: 'apparel-fashion',
+    featured: 'Boys & Girls',
+    subcategories: ['T-Shirts & Tops', 'Dresses', 'Shorts & Jeans', 'Footwear', 'Toys & Accessories'],
+  },
+  {
+    name: 'FOOTWEAR',
+    slug: 'footwear',
+    featured: 'Running & Sneakers',
+    subcategories: ['Sports Shoes', 'Casual Sneakers', 'Running Shoes', 'Slides & Sandals', 'Formal Shoes'],
+  },
+  {
+    name: 'AUDIO & TECH',
+    slug: 'electronics',
+    featured: 'Studio Acoustics',
+    subcategories: ['ANC Headphones', 'Wireless Earbuds', 'Smart Watches', 'Bluetooth Speakers', 'Accessories'],
+  },
+  {
+    name: 'HOME & LIVING',
+    slug: 'home-living',
+    featured: 'Modern Decor',
+    subcategories: ['Lamps & Lighting', 'Desk Essentials', 'Aesthetic Decor', 'Organizers', 'Wall Art'],
+  },
+  {
+    name: 'STUDIO',
+    slug: 'products?sortBy=popularity',
+    isNew: true,
+  },
+];
+
+const PROMO_MESSAGES = [
+  '🎉 BIG FASHION FESTIVAL | Flat 50-80% OFF on 10,000+ Styles',
+  '⚡ Flat 20% OFF on First Order | Use Coupon Code: WELCOME20',
+  '🚚 Free Express Shipping Across 19,000+ Pincodes on Orders ₹999+',
+  '💵 Cash on Delivery (COD) & Easy 14-Day Doorstep Returns Available',
+];
 
 export function Navbar() {
   const router = useRouter();
@@ -29,6 +84,16 @@ export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
+  const [promoIndex, setPromoIndex] = useState(0);
+
+  // Auto-cycle promotional ticker every 4 seconds
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setPromoIndex((prev) => (prev + 1) % PROMO_MESSAGES.length);
+    }, 4000);
+    return () => clearInterval(timer);
+  }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,111 +113,185 @@ export function Navbar() {
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 shadow-sm">
-      <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2 sm:gap-4">
-        {/* Brand Logo */}
-        <div className="flex items-center gap-4 sm:gap-6 shrink-0">
-          <Link href="/" className="flex items-center gap-2 font-bold text-lg sm:text-xl tracking-tight text-primary">
-            <span className="h-8 w-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center font-extrabold shadow-sm">
-              N
-            </span>
-            <span className="font-extrabold tracking-tight">NovaStore</span>
-          </Link>
+    <>
+      {/* 1. TOP OFFER TICKER BAR (MYNTRA STYLE) */}
+      <div className="bg-gradient-to-r from-rose-600 via-orange-500 to-amber-500 text-white text-[11px] font-black py-1.5 px-4 text-center tracking-wide shadow-xs flex items-center justify-center gap-2 overflow-hidden transition-all">
+        <Sparkles className="w-3.5 h-3.5 animate-spin hidden sm:inline" />
+        <span className="truncate animate-in fade-in duration-500" key={promoIndex}>
+          {PROMO_MESSAGES[promoIndex]}
+        </span>
+        <span className="hidden md:inline font-bold bg-white/20 px-2 py-0.2 rounded text-[10px]">
+          LIMITED TIME
+        </span>
+      </div>
 
-          {/* Desktop Categories Navigation */}
-          <nav className="hidden lg:flex items-center gap-5 text-sm font-medium text-muted-foreground">
-            <Link href="/products" className="hover:text-foreground transition-colors">
-              All Products
-            </Link>
-            <Link href="/products?categorySlug=electronics" className="hover:text-foreground transition-colors">
-              Electronics
-            </Link>
-            <Link href="/products?categorySlug=apparel-fashion" className="hover:text-foreground transition-colors">
-              Apparel
-            </Link>
-            <Link href="/products?categorySlug=home-living" className="hover:text-foreground transition-colors">
-              Home & Living
-            </Link>
-          </nav>
-        </div>
-
-        {/* Desktop Search Bar */}
-        <form onSubmit={handleSearch} className="hidden md:flex items-center flex-1 max-w-md mx-4 relative">
-          <input
-            type="text"
-            placeholder="Search audio, sneakers, streetwear..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            suppressHydrationWarning
-            className="w-full h-9 pl-9 pr-4 text-sm rounded-full border bg-muted/40 focus:bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-          />
-          <Search className="w-4 h-4 text-muted-foreground absolute left-3 pointer-events-none" />
-        </form>
-
-        {/* Right Actions */}
-        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-          {/* Mobile Search Icon Toggle */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden text-muted-foreground hover:text-foreground h-9 w-9"
-            onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
-            aria-label="Toggle Search"
-          >
-            <Search className="w-4 h-4" />
-          </Button>
-
-          {/* Wishlist */}
-          <Button asChild variant="ghost" size="icon" className="relative h-9 w-9" aria-label="Wishlist">
-            <Link href="/wishlist">
-              <Heart className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground hover:text-rose-500 transition-colors" />
-              {(wishlist?.items?.length ?? 0) > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 bg-rose-500 text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center shadow">
-                  {wishlist?.items.length}
-                </span>
-              )}
-            </Link>
-          </Button>
-
-          {/* Cart */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={openCart}
-            className="relative h-9 w-9"
-            aria-label="Shopping Cart"
-          >
-            <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5" />
-            {(cart?.totalItems ?? 0) > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 bg-primary text-primary-foreground text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center shadow">
-                {cart?.totalItems}
+      {/* 2. MAIN NAVBAR */}
+      <header className="sticky top-0 z-40 w-full border-b bg-background/98 backdrop-blur-md shadow-xs">
+        <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-18 flex items-center justify-between gap-3 lg:gap-6">
+          {/* Logo & Category Mega Links */}
+          <div className="flex items-center gap-6 lg:gap-8 shrink-0">
+            {/* Brand Logo */}
+            <Link href="/" className="flex items-center gap-2 shrink-0 group">
+              <span className="h-9 w-9 rounded-xl bg-gradient-to-tr from-rose-600 to-orange-500 text-white flex items-center justify-center font-black text-lg shadow-md group-hover:scale-105 transition-transform">
+                N
               </span>
-            )}
-          </Button>
+              <span className="font-black text-xl tracking-tight text-foreground flex items-center">
+                Nova<span className="text-rose-600">Store</span>
+              </span>
+            </Link>
 
-          {/* Desktop User Account / Auth */}
-          {isAuthenticated ? (
-            <div className="relative hidden sm:block">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                className="flex items-center gap-2 pl-2 pr-3 h-9 rounded-full border border-border/60 hover:bg-muted/60"
-              >
-                <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">
-                  {user?.firstName?.[0] || 'U'}
+            {/* Desktop Mega Menu Categories */}
+            <nav className="hidden lg:flex items-center gap-6 font-extrabold text-[13px] tracking-wider text-foreground">
+              {MEGA_CATEGORIES.map((cat) => (
+                <div
+                  key={cat.name}
+                  className="relative py-5"
+                  onMouseEnter={() => setHoveredCategory(cat.name)}
+                  onMouseLeave={() => setHoveredCategory(null)}
+                >
+                  <Link
+                    href={`/products?categorySlug=${cat.slug}`}
+                    className={`hover:text-rose-600 transition-colors uppercase flex items-center gap-1 ${
+                      hoveredCategory === cat.name ? 'text-rose-600' : ''
+                    }`}
+                  >
+                    <span>{cat.name}</span>
+                    {cat.isNew && (
+                      <span className="bg-rose-500 text-white text-[9px] font-black px-1.5 py-0.2 rounded-full uppercase">
+                        NEW
+                      </span>
+                    )}
+                  </Link>
+
+                  {/* Dropdown Menu on Hover */}
+                  {hoveredCategory === cat.name && cat.subcategories && (
+                    <div className="absolute top-full left-0 w-64 bg-card border border-border shadow-2xl rounded-2xl p-4 space-y-3 animate-in fade-in zoom-in-95 z-50">
+                      <div className="border-b pb-2">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-rose-600">
+                          {cat.featured}
+                        </span>
+                        <h4 className="text-xs font-bold text-foreground mt-0.5">Top Categories</h4>
+                      </div>
+                      <div className="space-y-1.5">
+                        {cat.subcategories.map((sub, i) => (
+                          <Link
+                            key={i}
+                            href={`/products?search=${encodeURIComponent(sub)}`}
+                            className="block text-xs text-muted-foreground hover:text-foreground hover:font-bold transition-all py-1"
+                          >
+                            {sub}
+                          </Link>
+                        ))}
+                      </div>
+                      <Link
+                        href={`/products?categorySlug=${cat.slug}`}
+                        className="block pt-2 text-[11px] font-black text-primary hover:underline"
+                      >
+                        Explore All {cat.name} &gt;
+                      </Link>
+                    </div>
+                  )}
                 </div>
-                <span className="text-xs font-semibold max-w-[90px] truncate">{user?.firstName}</span>
-              </Button>
+              ))}
+            </nav>
+          </div>
 
-              {userDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-56 rounded-2xl border bg-card p-2 shadow-xl z-50 animate-in fade-in zoom-in-95">
-                  <div className="px-3 py-2 border-b mb-1">
-                    <p className="text-sm font-semibold">{user?.firstName} {user?.lastName}</p>
-                    <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+          {/* Desktop Search Bar (Myntra Wide Style) */}
+          <form onSubmit={handleSearch} className="hidden md:flex items-center flex-1 max-w-lg relative">
+            <input
+              type="text"
+              placeholder="Search for products, brands and more..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              suppressHydrationWarning
+              className="w-full h-10 pl-10 pr-4 text-xs font-medium rounded-full border bg-muted/40 focus:bg-background focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all shadow-xs"
+            />
+            <Search className="w-4 h-4 text-muted-foreground absolute left-3.5 pointer-events-none" />
+          </form>
+
+          {/* Right Action Icons Stack (Profile, Wishlist, Bag) */}
+          <div className="flex items-center gap-2 sm:gap-5 shrink-0">
+            {/* Mobile Search Icon */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="md:hidden text-muted-foreground hover:text-foreground h-9 w-9"
+              onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
+              aria-label="Toggle Search"
+            >
+              <Search className="w-4 h-4" />
+            </Button>
+
+            {/* Profile Stack */}
+            <div className="relative">
+              {isAuthenticated ? (
+                <button
+                  onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                  className="flex flex-col items-center justify-center text-foreground hover:text-rose-600 transition-colors px-1.5 py-1"
+                >
+                  <User className="w-5 h-5" />
+                  <span className="text-[10px] font-black uppercase tracking-wider hidden sm:block">
+                    {user?.firstName || 'Profile'}
+                  </span>
+                </button>
+              ) : (
+                <div
+                  className="relative group"
+                  onMouseEnter={() => setUserDropdownOpen(true)}
+                  onMouseLeave={() => setUserDropdownOpen(false)}
+                >
+                  <button
+                    onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                    className="flex flex-col items-center justify-center text-foreground hover:text-rose-600 transition-colors px-1.5 py-1"
+                  >
+                    <User className="w-5 h-5" />
+                    <span className="text-[10px] font-black uppercase tracking-wider hidden sm:block">
+                      Profile
+                    </span>
+                  </button>
+
+                  {/* Guest Dropdown */}
+                  {userDropdownOpen && (
+                    <div className="absolute right-0 top-full mt-1 w-64 rounded-2xl border bg-card p-4 shadow-2xl z-50 animate-in fade-in zoom-in-95 space-y-3">
+                      <div>
+                        <h4 className="text-xs font-black text-foreground">Welcome to NovaStore</h4>
+                        <p className="text-[11px] text-muted-foreground">To access orders and wishlist</p>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <Button asChild size="sm" className="w-full rounded-xl font-bold text-xs bg-rose-600 hover:bg-rose-700 text-white">
+                          <Link href="/login" onClick={() => setUserDropdownOpen(false)}>LOGIN</Link>
+                        </Button>
+                        <Button asChild variant="outline" size="sm" className="w-full rounded-xl font-bold text-xs">
+                          <Link href="/register" onClick={() => setUserDropdownOpen(false)}>SIGN UP</Link>
+                        </Button>
+                      </div>
+
+                      <div className="border-t pt-2 space-y-1 text-xs">
+                        <Link href="/orders" className="block py-1 text-muted-foreground hover:text-foreground font-medium">
+                          Track Orders
+                        </Link>
+                        <Link href="/wishlist" className="block py-1 text-muted-foreground hover:text-foreground font-medium">
+                          Wishlist
+                        </Link>
+                        <Link href="/products" className="block py-1 text-muted-foreground hover:text-foreground font-medium">
+                          Special Offers & Coupons
+                        </Link>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Authenticated Dropdown */}
+              {isAuthenticated && userDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-60 rounded-2xl border bg-card p-2 shadow-2xl z-50 animate-in fade-in zoom-in-95 space-y-1">
+                  <div className="px-3 py-2.5 border-b mb-1">
+                    <p className="text-xs font-black text-foreground">{user?.firstName} {user?.lastName}</p>
+                    <p className="text-[11px] text-muted-foreground truncate">{user?.email}</p>
                     {isAdmin && (
-                      <Badge variant="default" className="mt-1.5 text-[10px] px-1.5 py-0">
-                        Admin
+                      <Badge className="mt-1 bg-rose-600 text-white text-[9px] font-extrabold px-1.5 py-0">
+                        ADMIN
                       </Badge>
                     )}
                   </div>
@@ -161,35 +300,44 @@ export function Navbar() {
                     <Link
                       href="/admin/dashboard"
                       onClick={() => setUserDropdownOpen(false)}
-                      className="flex items-center gap-2 px-3 py-2 text-sm rounded-lg hover:bg-muted text-primary font-medium transition-colors"
+                      className="flex items-center gap-2 px-3 py-2 text-xs font-black text-rose-600 hover:bg-rose-500/10 rounded-xl transition-colors"
                     >
                       <LayoutDashboard className="w-4 h-4" />
-                      Admin Dashboard
+                      Admin Control Center
                     </Link>
                   )}
 
                   <Link
                     href="/orders"
                     onClick={() => setUserDropdownOpen(false)}
-                    className="flex items-center gap-2 px-3 py-2 text-sm rounded-lg hover:bg-muted transition-colors"
+                    className="flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-xl hover:bg-muted transition-colors text-foreground"
                   >
-                    <Package className="w-4 h-4" />
+                    <Package className="w-4 h-4 text-muted-foreground" />
                     My Orders
+                  </Link>
+
+                  <Link
+                    href="/wishlist"
+                    onClick={() => setUserDropdownOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-xl hover:bg-muted transition-colors text-foreground"
+                  >
+                    <Heart className="w-4 h-4 text-muted-foreground" />
+                    My Wishlist ({wishlist?.items?.length ?? 0})
                   </Link>
 
                   <Link
                     href="/account"
                     onClick={() => setUserDropdownOpen(false)}
-                    className="flex items-center gap-2 px-3 py-2 text-sm rounded-lg hover:bg-muted transition-colors"
+                    className="flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-xl hover:bg-muted transition-colors text-foreground"
                   >
-                    <User className="w-4 h-4" />
-                    Account Settings
+                    <User className="w-4 h-4 text-muted-foreground" />
+                    Profile Settings & Password
                   </Link>
 
                   <button
                     onClick={handleLogout}
                     suppressHydrationWarning
-                    className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg text-rose-500 hover:bg-rose-500/10 transition-colors mt-1 font-medium"
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-500/10 rounded-xl transition-colors mt-1"
                   >
                     <LogOut className="w-4 h-4" />
                     Sign Out
@@ -197,215 +345,186 @@ export function Navbar() {
                 </div>
               )}
             </div>
-          ) : (
-            <div className="hidden md:flex items-center gap-2">
-              <Button asChild variant="ghost" size="sm" className="font-semibold text-xs h-9">
-                <Link href="/login">Sign In</Link>
-              </Button>
-              <Button asChild size="sm" className="font-semibold text-xs h-9 rounded-full px-4 shadow-sm">
-                <Link href="/register">Get Started</Link>
-              </Button>
-            </div>
-          )}
 
-          {/* Mobile menu trigger - ALWAYS VISIBLE ON MOBILE WITHOUT OVERFLOW */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="lg:hidden h-9 w-9 text-foreground hover:bg-muted shrink-0 ml-1"
-            onClick={() => {
-              setMobileMenuOpen(!mobileMenuOpen);
-              setMobileSearchOpen(false);
-            }}
-            aria-label="Toggle Navigation Menu"
-          >
-            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </Button>
-        </div>
-      </div>
+            {/* Wishlist Stack */}
+            <Link
+              href="/wishlist"
+              className="flex flex-col items-center justify-center text-foreground hover:text-rose-600 transition-colors px-1.5 py-1 relative"
+              aria-label="Wishlist"
+            >
+              <div className="relative">
+                <Heart className="w-5 h-5" />
+                {(wishlist?.items?.length ?? 0) > 0 && (
+                  <span className="absolute -top-1.5 -right-2 bg-rose-500 text-white text-[9px] font-black rounded-full h-4 w-4 flex items-center justify-center shadow-xs">
+                    {wishlist?.items.length}
+                  </span>
+                )}
+              </div>
+              <span className="text-[10px] font-black uppercase tracking-wider hidden sm:block">
+                Wishlist
+              </span>
+            </Link>
 
-      {/* Mobile Search Drawer (Expandable) */}
-      {mobileSearchOpen && (
-        <div className="md:hidden border-t px-4 py-3 bg-muted/30 animate-in slide-in-from-top-2 duration-200">
-          <form onSubmit={handleSearch} className="flex items-center relative">
-            <input
-              type="text"
-              placeholder="Search audio, sneakers, streetwear..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              autoFocus
-              suppressHydrationWarning
-              className="w-full h-10 pl-10 pr-10 text-sm rounded-xl border bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm"
-            />
-            <Search className="w-4 h-4 text-muted-foreground absolute left-3.5 pointer-events-none" />
+            {/* Bag Stack */}
             <button
-              type="button"
-              onClick={() => setMobileSearchOpen(false)}
-              className="absolute right-3 text-muted-foreground hover:text-foreground text-xs"
+              onClick={openCart}
+              className="flex flex-col items-center justify-center text-foreground hover:text-rose-600 transition-colors px-1.5 py-1 relative"
+              aria-label="Shopping Bag"
             >
-              <X className="w-4 h-4" />
+              <div className="relative">
+                <ShoppingBag className="w-5 h-5" />
+                {(cart?.totalItems ?? 0) > 0 && (
+                  <span className="absolute -top-1.5 -right-2 bg-rose-600 text-white text-[9px] font-black rounded-full h-4 w-4 flex items-center justify-center shadow-xs">
+                    {cart?.totalItems}
+                  </span>
+                )}
+              </div>
+              <span className="text-[10px] font-black uppercase tracking-wider hidden sm:block">
+                Bag
+              </span>
             </button>
-          </form>
-        </div>
-      )}
 
-      {/* Full Mobile Menu Dropdown */}
-      {mobileMenuOpen && (
-        <div className="lg:hidden border-t p-4 bg-background/98 backdrop-blur-xl shadow-2xl animate-in slide-in-from-top-2 duration-200 space-y-4 max-h-[85vh] overflow-y-auto">
-          {/* Search bar inside mobile menu */}
-          <form onSubmit={handleSearch} className="flex items-center relative">
-            <input
-              type="text"
-              placeholder="Search products, brands..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              suppressHydrationWarning
-              className="w-full h-10 pl-10 pr-4 text-sm rounded-xl border bg-muted/40 focus:bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-            />
-            <Search className="w-4 h-4 text-muted-foreground absolute left-3.5 pointer-events-none" />
-          </form>
-
-          {/* User Auth Section in Mobile Menu */}
-          {isAuthenticated ? (
-            <div className="p-3.5 rounded-2xl bg-muted/40 border space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold shadow">
-                    {user?.firstName?.[0] || 'U'}
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold leading-tight">{user?.firstName} {user?.lastName}</p>
-                    <p className="text-xs text-muted-foreground truncate max-w-[180px]">{user?.email}</p>
-                  </div>
-                </div>
-                {isAdmin && (
-                  <Badge variant="default" className="text-[10px] px-2 py-0.5">
-                    Admin
-                  </Badge>
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 pt-1 border-t border-border/60">
-                {isAdmin && (
-                  <Link
-                    href="/admin/dashboard"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-2 p-2 text-xs font-semibold rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
-                  >
-                    <LayoutDashboard className="w-3.5 h-3.5" />
-                    Admin Panel
-                  </Link>
-                )}
-                <Link
-                  href="/orders"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-2 p-2 text-xs font-semibold rounded-lg bg-background border hover:bg-muted transition-colors"
-                >
-                  <Package className="w-3.5 h-3.5 text-muted-foreground" />
-                  My Orders
-                </Link>
-                <Link
-                  href="/account"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-2 p-2 text-xs font-semibold rounded-lg bg-background border hover:bg-muted transition-colors"
-                >
-                  <User className="w-3.5 h-3.5 text-muted-foreground" />
-                  Settings
-                </Link>
-                <button
-                  onClick={handleLogout}
-                  suppressHydrationWarning
-                  className="flex items-center gap-2 p-2 text-xs font-semibold rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 transition-colors"
-                >
-                  <LogOut className="w-3.5 h-3.5" />
-                  Sign Out
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-2 p-1">
-              <Button asChild variant="outline" className="w-full justify-center rounded-xl font-semibold text-xs h-10">
-                <Link href="/login" onClick={() => setMobileMenuOpen(false)}>
-                  Sign In
-                </Link>
-              </Button>
-              <Button asChild className="w-full justify-center rounded-xl font-semibold text-xs h-10 shadow-sm">
-                <Link href="/register" onClick={() => setMobileMenuOpen(false)}>
-                  Get Started
-                </Link>
-              </Button>
-            </div>
-          )}
-
-          {/* Navigation Category Links */}
-          <div className="space-y-1">
-            <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider px-2 py-1">
-              Explore Store
-            </p>
-            <Link
-              href="/products"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium hover:bg-muted transition-colors"
-            >
-              <span>All Products & Deals</span>
-              <ChevronRight className="w-4 h-4 text-muted-foreground" />
-            </Link>
-            <Link
-              href="/products?categorySlug=electronics"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium hover:bg-muted transition-colors"
-            >
-              <span>Studio Electronics & Audio</span>
-              <ChevronRight className="w-4 h-4 text-muted-foreground" />
-            </Link>
-            <Link
-              href="/products?categorySlug=apparel-fashion"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium hover:bg-muted transition-colors"
-            >
-              <span>Apparel & Luxury Fashion</span>
-              <ChevronRight className="w-4 h-4 text-muted-foreground" />
-            </Link>
-            <Link
-              href="/products?categorySlug=footwear"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium hover:bg-muted transition-colors"
-            >
-              <span>Footwear & Athletic Shoes</span>
-              <ChevronRight className="w-4 h-4 text-muted-foreground" />
-            </Link>
-            <Link
-              href="/products?categorySlug=home-living"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium hover:bg-muted transition-colors"
-            >
-              <span>Home & Ergonomics</span>
-              <ChevronRight className="w-4 h-4 text-muted-foreground" />
-            </Link>
-          </div>
-
-          {/* Quick Coupon Promo in Mobile Menu */}
-          <div className="p-3 rounded-xl bg-gradient-to-r from-indigo-50 to-sky-50 border border-indigo-100 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-indigo-600 shrink-0" />
-              <div>
-                <p className="text-xs font-bold text-indigo-950">20% OFF Coupon</p>
-                <p className="text-[10px] text-indigo-700">Code: <span className="font-mono font-bold">WELCOME20</span></p>
-              </div>
-            </div>
+            {/* Mobile Menu Hamburger */}
             <Button
-              size="sm"
-              variant="outline"
-              className="h-7 text-[11px] font-bold border-indigo-200 text-indigo-700 bg-white hover:bg-indigo-50"
+              variant="ghost"
+              size="icon"
+              className="lg:hidden h-9 w-9 text-foreground hover:bg-muted shrink-0"
               onClick={() => {
-                navigator.clipboard.writeText('WELCOME20');
+                setMobileMenuOpen(!mobileMenuOpen);
+                setMobileSearchOpen(false);
               }}
+              aria-label="Toggle Navigation Menu"
             >
-              Copy
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </Button>
           </div>
         </div>
-      )}
-    </header>
+
+        {/* Expandable Mobile Search Drawer */}
+        {mobileSearchOpen && (
+          <div className="md:hidden border-t px-4 py-3 bg-muted/30 animate-in slide-in-from-top-2 duration-200">
+            <form onSubmit={handleSearch} className="flex items-center relative">
+              <input
+                type="text"
+                placeholder="Search products, brands and more..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                autoFocus
+                suppressHydrationWarning
+                className="w-full h-10 pl-10 pr-10 text-xs rounded-xl border bg-background focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 shadow-xs"
+              />
+              <Search className="w-4 h-4 text-muted-foreground absolute left-3.5 pointer-events-none" />
+              <button
+                type="button"
+                onClick={() => setMobileSearchOpen(false)}
+                className="absolute right-3 text-muted-foreground hover:text-foreground text-xs"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </form>
+          </div>
+        )}
+
+        {/* Mobile Slide-Over Menu */}
+        {mobileMenuOpen && (
+          <div className="lg:hidden border-t p-4 bg-background/98 backdrop-blur-xl shadow-2xl animate-in slide-in-from-top-2 duration-200 space-y-4 max-h-[85vh] overflow-y-auto">
+            {/* Search */}
+            <form onSubmit={handleSearch} className="flex items-center relative">
+              <input
+                type="text"
+                placeholder="Search products, brands and more..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                suppressHydrationWarning
+                className="w-full h-10 pl-10 pr-4 text-xs rounded-xl border bg-muted/40 focus:bg-background focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
+              />
+              <Search className="w-4 h-4 text-muted-foreground absolute left-3.5 pointer-events-none" />
+            </form>
+
+            {/* Categories */}
+            <div className="space-y-1">
+              <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground px-2 py-1">
+                SHOP BY CATEGORIES
+              </p>
+              {MEGA_CATEGORIES.map((cat) => (
+                <Link
+                  key={cat.name}
+                  href={`/products?categorySlug=${cat.slug}`}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold hover:bg-muted transition-colors text-foreground"
+                >
+                  <span className="flex items-center gap-2">
+                    {cat.name}
+                    {cat.isNew && (
+                      <span className="bg-rose-500 text-white text-[8px] font-black px-1.5 py-0.2 rounded-full">
+                        NEW
+                      </span>
+                    )}
+                  </span>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                </Link>
+              ))}
+            </div>
+
+            {/* User Links */}
+            <div className="border-t pt-3 space-y-2">
+              {isAuthenticated ? (
+                <div className="p-3 rounded-2xl bg-muted/40 border space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-black text-foreground">{user?.firstName} {user?.lastName}</p>
+                      <p className="text-[10px] text-muted-foreground">{user?.email}</p>
+                    </div>
+                    {isAdmin && (
+                      <Badge className="bg-rose-600 text-white text-[9px] font-extrabold">ADMIN</Badge>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    {isAdmin && (
+                      <Link
+                        href="/admin/dashboard"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="p-2 text-[11px] font-bold rounded-lg bg-rose-500/10 text-rose-600 text-center"
+                      >
+                        Admin Panel
+                      </Link>
+                    )}
+                    <Link
+                      href="/orders"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="p-2 text-[11px] font-bold rounded-lg bg-card border text-center"
+                    >
+                      Orders
+                    </Link>
+                    <Link
+                      href="/account"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="p-2 text-[11px] font-bold rounded-lg bg-card border text-center"
+                    >
+                      Settings
+                    </Link>
+                    <button
+                      onClick={handleLogout}
+                      className="p-2 text-[11px] font-bold rounded-lg bg-rose-50 text-rose-600 text-center"
+                    >
+                      Sign Out
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  <Button asChild variant="outline" className="rounded-xl font-bold text-xs h-10">
+                    <Link href="/login" onClick={() => setMobileMenuOpen(false)}>Sign In</Link>
+                  </Button>
+                  <Button asChild className="rounded-xl font-bold text-xs h-10 bg-rose-600 hover:bg-rose-700 text-white">
+                    <Link href="/register" onClick={() => setMobileMenuOpen(false)}>Get Started</Link>
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </header>
+    </>
   );
 }
