@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Star, Filter, RotateCcw } from 'lucide-react';
+import { Star, Filter, RotateCcw, Tag } from 'lucide-react';
 import { Button } from '../ui/button';
 
 interface FilterSidebarProps {
@@ -17,6 +17,7 @@ export function FilterSidebar({ categories }: FilterSidebarProps) {
   const currentMinPrice = searchParams.get('minPrice') || '';
   const currentMaxPrice = searchParams.get('maxPrice') || '';
   const currentRating = searchParams.get('rating') || '';
+  const currentDiscount = searchParams.get('discount') || '';
   const inStockOnly = searchParams.get('inStockOnly') === 'true';
 
   const [minPriceInput, setMinPriceInput] = useState(currentMinPrice);
@@ -58,6 +59,16 @@ export function FilterSidebar({ categories }: FilterSidebarProps) {
     router.push(`/products?${params.toString()}`);
   };
 
+  const handlePricePreset = (min: string, max: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (min) params.set('minPrice', min);
+    else params.delete('minPrice');
+    if (max) params.set('maxPrice', max);
+    else params.delete('maxPrice');
+    params.set('page', '1');
+    router.push(`/products?${params.toString()}`);
+  };
+
   const handleReset = () => {
     router.push('/products');
   };
@@ -65,27 +76,27 @@ export function FilterSidebar({ categories }: FilterSidebarProps) {
   return (
     <aside className="w-full lg:w-64 space-y-6 rounded-3xl border bg-card p-5 shadow-sm">
       <div className="flex items-center justify-between pb-3 border-b">
-        <div className="flex items-center gap-1.5 font-bold text-sm">
+        <div className="flex items-center gap-1.5 font-black text-sm uppercase tracking-wider">
           <Filter className="w-4 h-4 text-primary" />
-          <span>Filter Catalog</span>
+          <span>FILTERS</span>
         </div>
         <button
           onClick={handleReset}
-          className="text-xs text-primary hover:underline font-semibold flex items-center gap-1"
+          className="text-xs text-rose-600 hover:underline font-extrabold flex items-center gap-1 uppercase tracking-wide"
         >
-          <RotateCcw className="w-3 h-3" /> Reset
+          <RotateCcw className="w-3 h-3" /> CLEAR ALL
         </button>
       </div>
 
       {/* Categories */}
       <div className="space-y-2.5">
-        <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+        <h4 className="text-xs font-black uppercase tracking-wider text-muted-foreground">
           Categories
         </h4>
         <div className="space-y-1 text-sm max-h-48 overflow-y-auto pr-1">
           <button
             onClick={() => updateFilter('categorySlug', null)}
-            className={`block w-full text-left px-2.5 py-1.5 rounded-xl text-xs font-medium transition-colors ${
+            className={`block w-full text-left px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
               !currentCategory ? 'bg-primary/10 text-primary font-bold' : 'hover:bg-muted text-muted-foreground hover:text-foreground'
             }`}
           >
@@ -95,9 +106,9 @@ export function FilterSidebar({ categories }: FilterSidebarProps) {
             <button
               key={cat.id}
               onClick={() => updateFilter('categorySlug', cat.slug)}
-              className={`flex items-center justify-between w-full text-left px-2.5 py-1.5 rounded-xl text-xs font-medium transition-colors ${
+              className={`flex items-center justify-between w-full text-left px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
                 currentCategory === cat.slug
-                  ? 'bg-primary/10 text-primary font-bold'
+                  ? 'bg-primary/10 text-primary font-black'
                   : 'hover:bg-muted text-muted-foreground hover:text-foreground'
               }`}
             >
@@ -110,41 +121,98 @@ export function FilterSidebar({ categories }: FilterSidebarProps) {
         </div>
       </div>
 
-      {/* Price Range */}
-      <form onSubmit={handleApplyPrice} className="space-y-2.5 pt-3 border-t">
-        <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-          Price Range ($)
+      {/* Price Presets & Range */}
+      <div className="space-y-2.5 pt-3 border-t">
+        <h4 className="text-xs font-black uppercase tracking-wider text-muted-foreground">
+          Price Range (₹)
         </h4>
-        <div className="flex items-center gap-2">
-          <input
-            type="number"
-            min="0"
-            step="1"
-            placeholder="Min"
-            value={minPriceInput}
-            onChange={(e) => setMinPriceInput(e.target.value)}
-            className="w-full h-8 px-2.5 text-xs rounded-xl border bg-background font-mono focus:ring-1 focus:ring-primary"
-          />
-          <span className="text-xs text-muted-foreground">-</span>
-          <input
-            type="number"
-            min="0"
-            step="1"
-            placeholder="Max"
-            value={maxPriceInput}
-            onChange={(e) => setMaxPriceInput(e.target.value)}
-            className="w-full h-8 px-2.5 text-xs rounded-xl border bg-background font-mono focus:ring-1 focus:ring-primary"
-          />
+
+        {/* Quick Presets */}
+        <div className="space-y-1 text-xs">
+          {[
+            { label: 'Under ₹500', min: '', max: '500' },
+            { label: '₹500 - ₹1,000', min: '500', max: '1000' },
+            { label: '₹1,000 - ₹2,500', min: '1000', max: '2500' },
+            { label: '₹2,500 & Above', min: '2500', max: '' },
+          ].map((tier, idx) => {
+            const isActive = currentMinPrice === tier.min && currentMaxPrice === tier.max;
+            return (
+              <button
+                key={idx}
+                onClick={() => (isActive ? handlePricePreset('', '') : handlePricePreset(tier.min, tier.max))}
+                className={`flex items-center justify-between w-full text-left px-2.5 py-1.5 rounded-xl transition-colors font-medium ${
+                  isActive ? 'bg-primary/10 text-primary font-bold' : 'hover:bg-muted text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <span>{tier.label}</span>
+                {isActive && <span className="text-primary font-bold">✓</span>}
+              </button>
+            );
+          })}
         </div>
-        <Button type="submit" variant="secondary" size="sm" className="w-full rounded-xl text-xs font-semibold h-7">
-          Apply Price
-        </Button>
-      </form>
+
+        {/* Custom Min / Max Input Form */}
+        <form onSubmit={handleApplyPrice} className="space-y-2 pt-2">
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              min="0"
+              step="1"
+              placeholder="₹ Min"
+              value={minPriceInput}
+              onChange={(e) => setMinPriceInput(e.target.value)}
+              className="w-full h-8 px-2.5 text-xs rounded-xl border bg-background font-mono focus:ring-1 focus:ring-primary"
+            />
+            <span className="text-xs text-muted-foreground">-</span>
+            <input
+              type="number"
+              min="0"
+              step="1"
+              placeholder="₹ Max"
+              value={maxPriceInput}
+              onChange={(e) => setMaxPriceInput(e.target.value)}
+              className="w-full h-8 px-2.5 text-xs rounded-xl border bg-background font-mono focus:ring-1 focus:ring-primary"
+            />
+          </div>
+          <Button type="submit" variant="secondary" size="sm" className="w-full rounded-xl text-xs font-bold h-7">
+            Apply Custom Price
+          </Button>
+        </form>
+      </div>
+
+      {/* Myntra Discount Filter */}
+      <div className="space-y-2 pt-3 border-t">
+        <h4 className="text-xs font-black uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+          <Tag className="w-3.5 h-3.5 text-orange-500" /> Discount Range
+        </h4>
+        <div className="space-y-1 text-xs">
+          {[
+            { label: '10% and above', val: '10' },
+            { label: '30% and above', val: '30' },
+            { label: '50% and above', val: '50' },
+            { label: '70% and above', val: '70' },
+          ].map((d) => {
+            const isSelected = currentDiscount === d.val;
+            return (
+              <button
+                key={d.val}
+                onClick={() => updateFilter('discount', isSelected ? null : d.val)}
+                className={`flex items-center justify-between w-full px-2.5 py-1.5 rounded-xl transition-colors font-medium ${
+                  isSelected ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400 font-bold' : 'hover:bg-muted text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <span>{d.label}</span>
+                {isSelected && <span className="font-bold">✓</span>}
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       {/* Customer Rating */}
       <div className="space-y-2 pt-3 border-t">
-        <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-          Minimum Rating
+        <h4 className="text-xs font-black uppercase tracking-wider text-muted-foreground">
+          Customer Rating
         </h4>
         <div className="space-y-1">
           {[4, 3, 2].map((stars) => (
@@ -163,7 +231,7 @@ export function FilterSidebar({ categories }: FilterSidebarProps) {
                   />
                 ))}
               </div>
-              <span className="text-[11px]">& Up</span>
+              <span className="text-[11px] font-bold">& Up</span>
             </button>
           ))}
         </div>
@@ -178,7 +246,7 @@ export function FilterSidebar({ categories }: FilterSidebarProps) {
             onChange={(e) => updateFilter('inStockOnly', e.target.checked)}
             className="rounded border-input text-primary focus:ring-primary h-4 w-4"
           />
-          <span className="font-semibold text-foreground">In Stock Only</span>
+          <span className="font-bold text-foreground">In Stock Only</span>
         </label>
       </div>
     </aside>

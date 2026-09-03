@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import Image from 'next/image';
 import {
   Star,
@@ -29,6 +30,8 @@ import {
   Copy,
   MessageCircle,
   Zap,
+  Tag,
+  CheckCircle2,
 } from 'lucide-react';
 import { ProductDto, ProductVariantDto, ReviewDto } from '@ecommerce/types';
 import { apiClient } from '@/lib/api-client';
@@ -60,6 +63,7 @@ export default function ProductDetailPage({
   // Share Modal State
   const [showShareModal, setShowShareModal] = useState(false);
   const [isCopiedLink, setIsCopiedLink] = useState(false);
+  const [copiedCoupon, setCopiedCoupon] = useState<string | null>(null);
 
   // Auto-Slide Gallery State
   const [isAutoSlide, setIsAutoSlide] = useState(true);
@@ -416,7 +420,24 @@ const getFallbackProduct = (rawSlug: string): ProductDto => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-10 space-y-16">
+    <div className="container mx-auto px-4 py-6 space-y-12">
+      {/* BREADCRUMB NAVIGATION */}
+      <nav className="flex items-center gap-1.5 text-xs text-muted-foreground pb-2 font-medium flex-wrap">
+        <Link href="/" className="hover:text-primary transition-colors">Home</Link>
+        <span>/</span>
+        <Link href="/products" className="hover:text-primary transition-colors">Products</Link>
+        {product.category && (
+          <>
+            <span>/</span>
+            <Link href={`/products?categorySlug=${product.category.slug}`} className="hover:text-primary transition-colors">
+              {product.category.name}
+            </Link>
+          </>
+        )}
+        <span>/</span>
+        <span className="text-foreground font-bold truncate max-w-xs">{product.title}</span>
+      </nav>
+
       {/* Product Details Header */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
         {/* LEFT COLUMN (7 Cols): Interactive Auto-Sliding Media Studio */}
@@ -549,42 +570,33 @@ const getFallbackProduct = (rawSlug: string): ProductDto => {
         </div>
 
         {/* RIGHT COLUMN (5 Cols): Product Info, Pricing in ₹, Sizes & Checkout */}
-        <div className="lg:col-span-5 space-y-6">
+        {/* RIGHT COLUMN (5 Cols): Product Info, Pricing in ₹, Sizes & Checkout */}
+        <div className="lg:col-span-5 space-y-5">
           {(() => {
             const specs = parseProductSpecs(product.description, product.category?.name);
+            const brandDisplay = specs.brand || product.category?.name || 'NovaStore';
             return (
-              <>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {product.category && (
-                      <Badge variant="secondary" className="font-semibold text-xs bg-primary/10 text-primary border-primary/20">
-                        {product.category.name}
-                      </Badge>
-                    )}
-                    {specs.brand && (
-                      <span className="inline-flex items-center gap-1 text-xs font-bold text-foreground bg-muted/60 px-2.5 py-0.5 rounded-md border">
-                        <Building2 className="w-3 h-3 text-primary" /> {specs.brand}
-                      </span>
-                    )}
-                  </div>
-
-                  <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-foreground">
-                    {product.title}
-                  </h1>
-
-                  {/* Ratings & Social Share */}
-                  <div className="flex items-center justify-between pt-1">
+              <div className="space-y-4">
+                {/* 1. MYNTRA BRAND & TITLE HEADER */}
+                <div className="space-y-1 border-b pb-3">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-xl sm:text-2xl font-black uppercase tracking-wider text-foreground">
+                      {brandDisplay}
+                    </h2>
                     <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-1 bg-amber-500/10 text-amber-700 dark:text-amber-300 px-2.5 py-1 rounded-lg">
-                        <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-                        <span className="text-xs font-black">{Number(product.avgRating).toFixed(1)}</span>
-                      </div>
-                      <span className="text-xs text-muted-foreground">
-                        ({product.reviewCount || 0} customer ratings)
-                      </span>
-                    </div>
+                      {/* Wishlist Button */}
+                      <button
+                        onClick={() => toggleWishlist(product.id)}
+                        className={`p-2.5 rounded-full border transition-all ${
+                          isWishlisted
+                            ? 'border-rose-500 bg-rose-500 text-white shadow-md shadow-rose-500/30'
+                            : 'border-border bg-card hover:bg-muted text-muted-foreground hover:text-rose-500'
+                        }`}
+                        title="Add to Wishlist"
+                      >
+                        <Heart className={`w-4 h-4 ${isWishlisted ? 'fill-current' : ''}`} />
+                      </button>
 
-                    <div className="flex items-center gap-2">
                       {/* Share Button */}
                       <button
                         onClick={async () => {
@@ -600,332 +612,400 @@ const getFallbackProduct = (rawSlug: string): ProductDto => {
                           }
                           setShowShareModal(true);
                         }}
-                        className="p-2.5 rounded-full border border-border bg-card hover:bg-muted text-muted-foreground hover:text-foreground transition-all flex items-center justify-center"
+                        className="p-2.5 rounded-full border border-border bg-card hover:bg-muted text-muted-foreground hover:text-foreground transition-all"
                         title="Share Product"
                       >
                         <Share2 className="w-4 h-4" />
                       </button>
+                    </div>
+                  </div>
 
-                      {/* Wishlist Button */}
+                  <h1 className="text-sm sm:text-base text-muted-foreground font-medium">
+                    {product.title}
+                  </h1>
+
+                  {/* Myntra Star Rating Badge */}
+                  <div className="pt-2 flex items-center gap-3">
+                    <div className="inline-flex items-center gap-1.5 border border-border bg-background px-2.5 py-1 rounded-md text-xs font-black shadow-xs">
+                      <span>{Number(product.avgRating || 4.5).toFixed(1)}</span>
+                      <Star className="w-3.5 h-3.5 fill-emerald-500 text-emerald-500" />
+                      <span className="text-muted-foreground font-semibold text-[11px] pl-1.5 border-l">
+                        {(product.reviewCount || 148) > 999
+                          ? `${((product.reviewCount || 148) / 1000).toFixed(1)}k`
+                          : product.reviewCount || 148}{' '}
+                        Ratings
+                      </span>
+                    </div>
+                    {product.category && (
+                      <span className="text-[11px] text-muted-foreground font-bold uppercase tracking-wider bg-muted/60 px-2 py-0.5 rounded-md">
+                        {product.category.name}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* 2. MYNTRA PRICING BOX */}
+                <div className="space-y-1">
+                  <div className="flex items-baseline gap-3 flex-wrap">
+                    <span className="text-3xl font-black text-foreground">
+                      {formatPrice(currentPrice)}
+                    </span>
+                    {hasDiscount && (
+                      <span className="text-lg text-muted-foreground line-through font-medium">
+                        {formatPrice(comparePrice)}
+                      </span>
+                    )}
+                    {discountPercent > 0 && (
+                      <span className="text-lg font-black text-orange-600 dark:text-orange-400">
+                        ({discountPercent}% OFF)
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-emerald-600 dark:text-emerald-400 font-bold">
+                    inclusive of all taxes • 100% Original Products Guaranteed
+                  </p>
+                </div>
+
+                {/* 3. SELECT SIZE SECTION (MYNTRA PILLS) */}
+                {product.variants?.length > 0 && (
+                  <div className="space-y-3 pt-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-black uppercase tracking-wider text-foreground flex items-center gap-1">
+                        Select Size:
+                      </label>
                       <button
-                        onClick={() => toggleWishlist(product.id)}
-                        className={`p-2.5 rounded-full border transition-all ${
-                          isWishlisted
-                            ? 'border-rose-500 bg-rose-500 text-white'
-                            : 'border-border bg-card hover:bg-muted text-muted-foreground'
-                        }`}
-                        title="Add to Wishlist"
+                        type="button"
+                        onClick={() => setShowSizeGuide(true)}
+                        className="text-xs font-extrabold text-primary hover:underline flex items-center gap-1 uppercase tracking-wide"
                       >
-                        <Heart className={`w-4 h-4 ${isWishlisted ? 'fill-current' : ''}`} />
+                        <Ruler className="w-3.5 h-3.5" /> Size Chart &gt;
+                      </button>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2.5">
+                      {product.variants.map((variant) => {
+                        const isSelected = selectedVariant?.id === variant.id;
+                        const isVarOutOfStock = variant.availableStock <= 0;
+
+                        return (
+                          <button
+                            key={variant.id}
+                            disabled={isVarOutOfStock}
+                            onClick={() => {
+                              setSelectedVariant(variant);
+                              setQuantity(1);
+                            }}
+                            className={`min-w-[52px] h-12 px-3.5 rounded-full text-xs font-black border-2 transition-all flex items-center justify-center gap-1.5 shadow-xs ${
+                              isSelected
+                                ? 'border-primary bg-primary text-primary-foreground shadow-md scale-105 ring-2 ring-primary/30'
+                                : isVarOutOfStock
+                                ? 'border-border/40 bg-muted/20 text-muted-foreground line-through opacity-40 cursor-not-allowed'
+                                : 'border-border bg-card hover:border-primary text-foreground'
+                            }`}
+                          >
+                            <span>{variant.title}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Stock Urgency Indicator */}
+                <div className="flex items-center gap-2 text-xs font-medium pt-1">
+                  {isOutOfStock ? (
+                    <span className="flex items-center gap-1 text-destructive font-bold">
+                      <AlertCircle className="w-4 h-4" /> Currently Out of Stock
+                    </span>
+                  ) : availableStock <= 5 ? (
+                    <span className="flex items-center gap-1 text-orange-600 dark:text-orange-400 font-extrabold animate-pulse">
+                      🔥 Hurry! Only {availableStock} left in stock!
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1 text-emerald-600 font-bold">
+                      <Check className="w-4 h-4" /> In Stock ({availableStock} units ready for immediate dispatch)
+                    </span>
+                  )}
+                </div>
+
+                {/* 4. DUAL CTA BUTTONS (ADD TO BAG + ⚡ BUY NOW) */}
+                <div className="space-y-3 pt-2">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center border rounded-xl bg-muted/40 p-1 w-32 justify-between">
+                      <button
+                        disabled={quantity <= 1 || isOutOfStock}
+                        onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                        className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-background disabled:opacity-40 text-sm font-bold"
+                      >
+                        -
+                      </button>
+                      <span className="w-10 text-center text-sm font-bold">{quantity}</span>
+                      <button
+                        disabled={quantity >= availableStock || isOutOfStock}
+                        onClick={() => setQuantity((q) => Math.min(availableStock, q + 1))}
+                        className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-background disabled:opacity-40 text-sm font-bold"
+                      >
+                        +
+                      </button>
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      Subtotal: <strong className="text-foreground font-bold">{formatPrice(currentPrice * quantity)}</strong>
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      disabled={isOutOfStock || isAdding || isBuyingNow}
+                      onClick={handleAddToCart}
+                      className="w-full rounded-2xl gap-2 font-black h-13 text-sm border-2 border-primary/30 hover:bg-primary/5 hover:border-primary text-foreground uppercase tracking-wider"
+                    >
+                      <ShoppingBag className="w-4 h-4 text-primary" />
+                      {isAdding ? 'Adding to Bag...' : 'Add to Bag'}
+                    </Button>
+
+                    <Button
+                      size="lg"
+                      disabled={isOutOfStock || isAdding || isBuyingNow}
+                      onClick={handleBuyNow}
+                      className="w-full rounded-2xl gap-2 font-black shadow-lg shadow-primary/25 h-13 text-sm bg-primary hover:bg-primary/90 text-primary-foreground uppercase tracking-wider"
+                    >
+                      <Zap className="w-4 h-4 fill-current" />
+                      {isBuyingNow ? 'Proceeding...' : '⚡ Buy Now'}
+                    </Button>
+                  </div>
+                </div>
+
+                {/* 5. MYNTRA BEST AVAILABLE OFFERS & COUPONS */}
+                <div className="rounded-2xl border border-dashed border-orange-500/40 bg-orange-500/5 p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-black uppercase tracking-wider text-orange-600 dark:text-orange-400 flex items-center gap-1.5">
+                      <Tag className="w-4 h-4" /> Best Available Offers
+                    </h4>
+                    <span className="text-[10px] font-bold text-orange-700 dark:text-orange-300 bg-orange-500/15 px-2 py-0.5 rounded-full">
+                      2 Offers Applicable
+                    </span>
+                  </div>
+
+                  <div className="space-y-2 text-xs">
+                    <div className="flex items-center justify-between p-2.5 rounded-xl bg-card border border-border/80">
+                      <div>
+                        <span className="font-black text-foreground">Flat 20% OFF</span>
+                        <p className="text-[11px] text-muted-foreground">
+                          Applicable on first order with code <strong className="font-mono text-primary font-black">WELCOME20</strong>
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                            navigator.clipboard.writeText('WELCOME20');
+                            setCopiedCoupon('WELCOME20');
+                            setTimeout(() => setCopiedCoupon(null), 2000);
+                          }
+                        }}
+                        className="text-[11px] font-bold px-3 py-1 rounded-lg border border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-colors shrink-0"
+                      >
+                        {copiedCoupon === 'WELCOME20' ? 'COPIED ✓' : 'COPY'}
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-between p-2.5 rounded-xl bg-card border border-border/80">
+                      <div>
+                        <span className="font-black text-foreground">Flat ₹50 OFF</span>
+                        <p className="text-[11px] text-muted-foreground">
+                          On orders above ₹499 with code <strong className="font-mono text-primary font-black">FLAT50</strong>
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                            navigator.clipboard.writeText('FLAT50');
+                            setCopiedCoupon('FLAT50');
+                            setTimeout(() => setCopiedCoupon(null), 2000);
+                          }
+                        }}
+                        className="text-[11px] font-bold px-3 py-1 rounded-lg border border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-colors shrink-0"
+                      >
+                        {copiedCoupon === 'FLAT50' ? 'COPIED ✓' : 'COPY'}
                       </button>
                     </div>
                   </div>
                 </div>
 
-                {/* Pricing Box in Indian Rupees (₹ INR) */}
-                <div className="p-4 rounded-2xl bg-muted/20 border border-border/80 space-y-1">
-                  <div className="flex items-baseline gap-3">
-                    <span className="text-3xl font-black text-foreground">
-                      {formatPrice(currentPrice)}
-                    </span>
-                    {hasDiscount && (
-                      <span className="text-base text-muted-foreground line-through">
-                        {formatPrice(comparePrice)}
-                      </span>
-                    )}
-                    {discountPercent > 0 && (
-                      <Badge className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-extrabold px-2.5 py-0.5">
-                        {discountPercent}% OFF
-                      </Badge>
-                    )}
+                {/* 6. INDIAN PINCODE DELIVERY ESTIMATOR */}
+                <div className="rounded-2xl border bg-card p-4 space-y-2.5">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-foreground">
+                    <Truck className="w-4 h-4 text-primary" />
+                    <span>Delivery Options & COD Availability:</span>
                   </div>
-                  {savingsAmount > 0 && (
-                    <p className="text-xs text-emerald-600 dark:text-emerald-400 font-bold">
-                      🎉 Special Savings: You save {formatPrice(savingsAmount)} on this order!
-                    </p>
+
+                  <form onSubmit={handleCheckPincode} className="flex gap-2">
+                    <input
+                      type="text"
+                      maxLength={6}
+                      placeholder="Enter 6-Digit Pincode (e.g. 110001)"
+                      value={pincode}
+                      onChange={(e) => {
+                        setPincode(e.target.value.replace(/\D/g, ''));
+                        setPincodeChecked(false);
+                      }}
+                      className="flex-1 h-9 px-3 text-xs rounded-xl border bg-background font-mono"
+                    />
+                    <Button
+                      type="submit"
+                      size="sm"
+                      variant="secondary"
+                      disabled={pincode.length !== 6 || isCheckingPincode}
+                      className="rounded-xl font-bold text-xs"
+                    >
+                      {isCheckingPincode ? 'Checking...' : 'Check'}
+                    </Button>
+                  </form>
+
+                  {pincodeChecked && (
+                    <div className="text-[11px] text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 p-2.5 rounded-xl border border-emerald-500/20 space-y-1">
+                      <p className="font-bold flex items-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        Get it by Tomorrow, 5 PM to {pincode}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground">
+                        ✓ Cash on Delivery available • ✓ Easy 14-day hassle-free returns & exchange
+                      </p>
+                    </div>
                   )}
-                  <p className="text-[11px] text-muted-foreground">Inclusive of all taxes & instant checkout support</p>
                 </div>
 
-                {/* Description */}
-                <div className="space-y-1">
-                  <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                    About this product
-                  </p>
-                  <p className="text-xs text-foreground/80 leading-relaxed">
-                    {specs.cleanDescription || product.description}
-                  </p>
-                </div>
-              </>
-            );
-          })()}
+                {/* 7. PRODUCT SPECIFICATIONS & MATERIAL COMPOSITION CARD */}
+                {(() => {
+                  const hasAnySpecs =
+                    !!specs.brand ||
+                    !!specs.material ||
+                    !!specs.origin ||
+                    !!specs.warranty ||
+                    !!specs.fit ||
+                    !!specs.care ||
+                    (specs.customSpecs && specs.customSpecs.length > 0);
 
-          {/* Size / Variant Selector */}
-          {product.variants?.length > 0 && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold uppercase tracking-wider text-foreground">
-                  Select Size / Variant:
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setShowSizeGuide(true)}
-                  className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
-                >
-                  <Ruler className="w-3.5 h-3.5" /> Size Guide
-                </button>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                {product.variants.map((variant) => {
-                  const isSelected = selectedVariant?.id === variant.id;
-                  const isVarOutOfStock = variant.availableStock <= 0;
+                  if (!hasAnySpecs && !specs.cleanDescription && !product.description) return null;
 
                   return (
-                    <button
-                      key={variant.id}
-                      disabled={isVarOutOfStock}
-                      onClick={() => {
-                        setSelectedVariant(variant);
-                        setQuantity(1);
-                      }}
-                      className={`min-w-[48px] h-10 px-3.5 rounded-xl text-xs font-extrabold border transition-all flex items-center justify-center gap-1.5 ${
-                        isSelected
-                          ? 'border-primary bg-primary text-primary-foreground shadow-md scale-105'
-                          : isVarOutOfStock
-                          ? 'border-border/40 bg-muted/20 text-muted-foreground line-through opacity-50 cursor-not-allowed'
-                          : 'border-border bg-card hover:border-primary/50 text-foreground'
-                      }`}
-                    >
-                      <span>{variant.title}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Stock Indicator */}
-          <div className="flex items-center gap-2 text-xs font-medium pt-1">
-            {isOutOfStock ? (
-              <span className="flex items-center gap-1 text-destructive font-bold">
-                <AlertCircle className="w-4 h-4" /> Currently Out of Stock
-              </span>
-            ) : availableStock <= 5 ? (
-              <span className="flex items-center gap-1 text-amber-600 font-bold animate-pulse">
-                <AlertCircle className="w-4 h-4" /> Hurry! Only {availableStock} left in stock!
-              </span>
-            ) : (
-              <span className="flex items-center gap-1 text-emerald-600 font-bold">
-                <Check className="w-4 h-4" /> In Stock ({availableStock} units ready to dispatch)
-              </span>
-            )}
-          </div>
-
-          {/* Quantity & Dual CTA (Add to Cart + ⚡ Buy Now) */}
-          <div className="space-y-3 pt-2">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center border rounded-xl bg-muted/40 p-1 w-32 justify-between">
-                <button
-                  disabled={quantity <= 1 || isOutOfStock}
-                  onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                  className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-background disabled:opacity-40 text-sm font-bold"
-                >
-                  -
-                </button>
-                <span className="w-10 text-center text-sm font-bold">{quantity}</span>
-                <button
-                  disabled={quantity >= availableStock || isOutOfStock}
-                  onClick={() => setQuantity((q) => Math.min(availableStock, q + 1))}
-                  className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-background disabled:opacity-40 text-sm font-bold"
-                >
-                  +
-                </button>
-              </div>
-              <span className="text-xs text-muted-foreground">Total: <strong className="text-foreground font-bold">{formatPrice(currentPrice * quantity)}</strong></span>
-            </div>
-
-            {/* DUAL ACTION BUTTONS: Add to Cart & Buy Now */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Button
-                size="lg"
-                variant="outline"
-                disabled={isOutOfStock || isAdding || isBuyingNow}
-                onClick={handleAddToCart}
-                className="w-full rounded-2xl gap-2 font-bold h-12 text-sm border-2 border-primary/20 hover:bg-primary/5 hover:border-primary"
-              >
-                <ShoppingBag className="w-4 h-4 text-primary" />
-                {isAdding ? 'Adding to Bag...' : 'Add to Cart'}
-              </Button>
-
-              <Button
-                size="lg"
-                disabled={isOutOfStock || isAdding || isBuyingNow}
-                onClick={handleBuyNow}
-                className="w-full rounded-2xl gap-2 font-black shadow-lg shadow-primary/25 h-12 text-sm bg-primary hover:bg-primary/90 text-primary-foreground"
-              >
-                <Zap className="w-4 h-4 fill-current" />
-                {isBuyingNow ? 'Proceeding...' : '⚡ Buy Now'}
-              </Button>
-            </div>
-          </div>
-
-          {/* INDIAN PINCODE DELIVERY ESTIMATOR */}
-          <div className="rounded-2xl border bg-card p-4 space-y-2.5">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-foreground">
-              <MapPin className="w-4 h-4 text-primary" />
-              <span>Check Delivery & Cash on Delivery:</span>
-            </div>
-
-            <form onSubmit={handleCheckPincode} className="flex gap-2">
-              <input
-                type="text"
-                maxLength={6}
-                placeholder="Enter 6-Digit Pincode (e.g. 110001)"
-                value={pincode}
-                onChange={(e) => {
-                  setPincode(e.target.value.replace(/\D/g, ''));
-                  setPincodeChecked(false);
-                }}
-                className="flex-1 h-9 px-3 text-xs rounded-xl border bg-background font-mono"
-              />
-              <Button
-                type="submit"
-                size="sm"
-                variant="secondary"
-                disabled={pincode.length !== 6 || isCheckingPincode}
-                className="rounded-xl font-bold text-xs"
-              >
-                {isCheckingPincode ? 'Checking...' : 'Check'}
-              </Button>
-            </form>
-
-            {pincodeChecked && (
-              <div className="text-[11px] text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 p-2.5 rounded-xl border border-emerald-500/20 space-y-1">
-                <p className="font-bold flex items-center gap-1">
-                  <Truck className="w-3.5 h-3.5 text-emerald-600" />
-                  Free Delivery to {pincode} in 2-3 Business Days
-                </p>
-                <p className="text-[10px] text-muted-foreground">
-                  Cash on Delivery (COD) & Express Shipping available
-                </p>
-              </div>
-            )}
-          </div>
-
-          {/* PRODUCT SPECIFICATIONS & MATERIAL COMPOSITION CARD */}
-          {(() => {
-            const specs = parseProductSpecs(product.description, product.category?.name);
-            const hasAnySpecs =
-              !!specs.brand ||
-              !!specs.material ||
-              !!specs.origin ||
-              !!specs.warranty ||
-              !!specs.fit ||
-              !!specs.care ||
-              (specs.customSpecs && specs.customSpecs.length > 0);
-
-            if (!hasAnySpecs) return null;
-
-            return (
-              <div className="rounded-2xl border bg-muted/20 p-4 space-y-3">
-                <div className="flex items-center justify-between border-b border-border/80 pb-2">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5">
-                    <Building2 className="w-4 h-4 text-primary" /> Product Specifications
-                  </h4>
-                  <span className="text-[10px] font-bold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-full">
-                    ✓ 100% Genuine
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                  {specs.brand && (
-                    <div className="p-2.5 rounded-xl bg-card border border-border/60 space-y-0.5">
-                      <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
-                        🏢 Brand / Company
-                      </span>
-                      <p className="font-bold text-foreground text-xs">{specs.brand}</p>
-                    </div>
-                  )}
-
-                  {specs.material && (
-                    <div className="p-2.5 rounded-xl bg-card border border-border/60 space-y-0.5">
-                      <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
-                        🧵 Material & Fabric
-                      </span>
-                      <p className="font-bold text-foreground text-xs">{specs.material}</p>
-                    </div>
-                  )}
-
-                  {specs.origin && (
-                    <div className="p-2.5 rounded-xl bg-card border border-border/60 space-y-0.5">
-                      <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
-                        🌍 Country of Origin
-                      </span>
-                      <p className="font-bold text-foreground text-xs">{specs.origin}</p>
-                    </div>
-                  )}
-
-                  {specs.warranty && (
-                    <div className="p-2.5 rounded-xl bg-card border border-border/60 space-y-0.5">
-                      <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
-                        🛡️ Official Warranty
-                      </span>
-                      <p className="font-bold text-foreground text-xs">{specs.warranty}</p>
-                    </div>
-                  )}
-
-                  {specs.fit && (
-                    <div className="p-2.5 rounded-xl bg-card border border-border/60 space-y-0.5 sm:col-span-2">
-                      <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
-                        📐 Fit / Silhouette
-                      </span>
-                      <p className="font-bold text-foreground text-xs">{specs.fit}</p>
-                    </div>
-                  )}
-
-                  {specs.care && (
-                    <div className="p-2.5 rounded-xl bg-card border border-border/60 space-y-0.5 sm:col-span-2">
-                      <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
-                        🧼 Wash & Care Guide
-                      </span>
-                      <p className="text-muted-foreground text-xs">{specs.care}</p>
-                    </div>
-                  )}
-
-                  {/* Render Custom Specifications added by Admin */}
-                  {specs.customSpecs &&
-                    specs.customSpecs.map((cs, idx) => (
-                      <div key={idx} className="p-2.5 rounded-xl bg-card border border-border/60 space-y-0.5">
-                        <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
-                          ⚙️ {cs.key}
+                    <div className="rounded-2xl border bg-card p-5 space-y-4">
+                      <div className="flex items-center justify-between border-b pb-2.5">
+                        <h4 className="text-xs font-black uppercase tracking-wider text-foreground flex items-center gap-1.5">
+                          <Building2 className="w-4 h-4 text-primary" /> Product Details & Specifications
+                        </h4>
+                        <span className="text-[10px] font-bold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                          ✓ 100% Genuine
                         </span>
-                        <p className="font-bold text-foreground text-xs">{cs.value}</p>
                       </div>
-                    ))}
+
+                      {/* Product Overview Text */}
+                      {(specs.cleanDescription || product.description) && (
+                        <div className="space-y-1">
+                          <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                            Overview
+                          </p>
+                          <p className="text-xs text-foreground/80 leading-relaxed">
+                            {specs.cleanDescription || product.description}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Specifications Grid */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs pt-1">
+                        {specs.brand && (
+                          <div className="p-2.5 rounded-xl bg-muted/30 border border-border/60 space-y-0.5">
+                            <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
+                              🏢 Brand / Company
+                            </span>
+                            <p className="font-bold text-foreground text-xs">{specs.brand}</p>
+                          </div>
+                        )}
+
+                        {specs.material && (
+                          <div className="p-2.5 rounded-xl bg-muted/30 border border-border/60 space-y-0.5">
+                            <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
+                              🧵 Material & Fabric
+                            </span>
+                            <p className="font-bold text-foreground text-xs">{specs.material}</p>
+                          </div>
+                        )}
+
+                        {specs.origin && (
+                          <div className="p-2.5 rounded-xl bg-muted/30 border border-border/60 space-y-0.5">
+                            <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
+                              🌍 Country of Origin
+                            </span>
+                            <p className="font-bold text-foreground text-xs">{specs.origin}</p>
+                          </div>
+                        )}
+
+                        {specs.warranty && (
+                          <div className="p-2.5 rounded-xl bg-muted/30 border border-border/60 space-y-0.5">
+                            <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
+                              🛡️ Official Warranty
+                            </span>
+                            <p className="font-bold text-foreground text-xs">{specs.warranty}</p>
+                          </div>
+                        )}
+
+                        {specs.fit && (
+                          <div className="p-2.5 rounded-xl bg-muted/30 border border-border/60 space-y-0.5 sm:col-span-2">
+                            <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
+                              📐 Fit / Silhouette
+                            </span>
+                            <p className="font-bold text-foreground text-xs">{specs.fit}</p>
+                          </div>
+                        )}
+
+                        {specs.care && (
+                          <div className="p-2.5 rounded-xl bg-muted/30 border border-border/60 space-y-0.5 sm:col-span-2">
+                            <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
+                              🧼 Wash & Care Guide
+                            </span>
+                            <p className="text-muted-foreground text-xs">{specs.care}</p>
+                          </div>
+                        )}
+
+                        {/* Render Custom Specifications added by Admin */}
+                        {specs.customSpecs &&
+                          specs.customSpecs.map((cs, idx) => (
+                            <div key={idx} className="p-2.5 rounded-xl bg-muted/30 border border-border/60 space-y-0.5">
+                              <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
+                                ⚙️ {cs.key}
+                              </span>
+                              <p className="font-bold text-foreground text-xs">{cs.value}</p>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* 8. MYNTRA TRUST BADGES */}
+                <div className="grid grid-cols-3 gap-2 pt-1 text-center">
+                  <div className="p-3 rounded-2xl border bg-muted/10 space-y-1">
+                    <ShieldCheck className="w-5 h-5 text-primary mx-auto" />
+                    <p className="text-[10px] font-bold text-foreground">100% Genuine</p>
+                    <p className="text-[9px] text-muted-foreground">Direct Brand Sourced</p>
+                  </div>
+                  <div className="p-3 rounded-2xl border bg-muted/10 space-y-1">
+                    <RotateCcw className="w-5 h-5 text-primary mx-auto" />
+                    <p className="text-[10px] font-bold text-foreground">14-Day Returns</p>
+                    <p className="text-[9px] text-muted-foreground">Easy Doorstep Pickup</p>
+                  </div>
+                  <div className="p-3 rounded-2xl border bg-muted/10 space-y-1">
+                    <Truck className="w-5 h-5 text-primary mx-auto" />
+                    <p className="text-[10px] font-bold text-foreground">Express Delivery</p>
+                    <p className="text-[9px] text-muted-foreground">Fast Dispatch Across India</p>
+                  </div>
                 </div>
               </div>
             );
           })()}
-
-          {/* Trust Badges */}
-          <div className="grid grid-cols-3 gap-2 pt-2 text-center">
-            <div className="p-3 rounded-2xl border bg-muted/10 space-y-1">
-              <ShieldCheck className="w-5 h-5 text-primary mx-auto" />
-              <p className="text-[10px] font-bold text-foreground">100% Genuine</p>
-              <p className="text-[9px] text-muted-foreground">Direct Brand Source</p>
-            </div>
-            <div className="p-3 rounded-2xl border bg-muted/10 space-y-1">
-              <RotateCcw className="w-5 h-5 text-primary mx-auto" />
-              <p className="text-[10px] font-bold text-foreground">7-Day Returns</p>
-              <p className="text-[9px] text-muted-foreground">Hassle-Free Pickup</p>
-            </div>
-            <div className="p-3 rounded-2xl border bg-muted/10 space-y-1">
-              <Truck className="w-5 h-5 text-primary mx-auto" />
-              <p className="text-[10px] font-bold text-foreground">Free Delivery</p>
-              <p className="text-[9px] text-muted-foreground">On Orders ₹999+</p>
-            </div>
-          </div>
         </div>
       </div>
 

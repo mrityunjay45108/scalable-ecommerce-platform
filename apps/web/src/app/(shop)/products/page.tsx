@@ -132,13 +132,15 @@ function ProductsContent() {
   );
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-8">
+    <div className="container mx-auto px-4 py-8 space-y-6">
       {/* Header, Search & Sort */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight">Explore Catalog</h1>
+          <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-wider text-foreground">
+            Product Catalog
+          </h1>
           <p className="text-xs text-muted-foreground mt-0.5">
-            {meta?.total !== undefined ? `Showing ${products.length} of ${meta.total} products` : 'Browse all products'}
+            {meta?.total !== undefined ? `Showing ${products.length} of ${meta.total} styles` : 'Browse all styles'}
           </p>
         </div>
 
@@ -147,10 +149,10 @@ function ProductsContent() {
           <div className="relative min-w-[260px]">
             <input
               type="text"
-              placeholder="Search gear by keyword..."
+              placeholder="Search by brand, style, color..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full h-9 pl-9 pr-8 text-xs rounded-xl border bg-card focus:ring-1 focus:ring-primary shadow-sm"
+              className="w-full h-9 pl-9 pr-8 text-xs rounded-xl border bg-card focus:ring-1 focus:ring-primary shadow-xs"
             />
             <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-2.5" />
             {searchTerm && (
@@ -180,13 +182,13 @@ function ProductsContent() {
               }
               onChange={(e) => handleSortChange(e.target.value)}
               aria-label="Sort products"
-              className="h-9 px-3 rounded-xl border bg-card text-xs font-semibold focus:ring-1 focus:ring-primary cursor-pointer shadow-sm"
+              className="h-9 px-3 rounded-xl border bg-card text-xs font-bold focus:ring-1 focus:ring-primary cursor-pointer shadow-xs"
             >
-              <option value="newest">Newest Arrivals</option>
-              <option value="popularity">Popularity</option>
-              <option value="price_asc">Price: Low to High</option>
-              <option value="price_desc">Price: High to Low</option>
-              <option value="rating">Highest Rated</option>
+              <option value="newest">Sort by: Recommended</option>
+              <option value="popularity">Sort by: Popularity</option>
+              <option value="price_asc">Sort by: Price (Low to High)</option>
+              <option value="price_desc">Sort by: Price (High to Low)</option>
+              <option value="rating">Sort by: Customer Rating</option>
             </select>
           </div>
         </div>
@@ -195,40 +197,40 @@ function ProductsContent() {
       {/* Active Filter Chips */}
       {hasActiveFilters && (
         <div className="flex flex-wrap items-center gap-2 pt-1">
-          <span className="text-xs font-semibold text-muted-foreground">Active Filters:</span>
+          <span className="text-xs font-bold text-muted-foreground">Active Filters:</span>
           {initialSearch && (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold">
               Search: "{initialSearch}"
               <button onClick={() => removeFilter('search')} className="hover:text-primary/70"><X className="w-3.5 h-3.5" /></button>
             </span>
           )}
           {currentCategory && (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold">
               Category: {currentCategory}
               <button onClick={() => removeFilter('categorySlug')} className="hover:text-primary/70"><X className="w-3.5 h-3.5" /></button>
             </span>
           )}
           {(currentMinPrice || currentMaxPrice) && (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
-              Price: ${currentMinPrice || '0'} - ${currentMaxPrice || '∞'}
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold font-mono">
+              Price: ₹{currentMinPrice || '0'} - ₹{currentMaxPrice || '∞'}
               <button onClick={() => { removeFilter('minPrice'); removeFilter('maxPrice'); }} className="hover:text-primary/70"><X className="w-3.5 h-3.5" /></button>
             </span>
           )}
           {currentRating && (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold">
               Rating: {currentRating}★+
               <button onClick={() => removeFilter('rating')} className="hover:text-primary/70"><X className="w-3.5 h-3.5" /></button>
             </span>
           )}
           {inStockOnly && (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold">
               In Stock Only
               <button onClick={() => removeFilter('inStockOnly')} className="hover:text-primary/70"><X className="w-3.5 h-3.5" /></button>
             </span>
           )}
           <button
             onClick={handleClearFilters}
-            className="text-xs text-primary font-bold hover:underline ml-2"
+            className="text-xs text-rose-600 font-black hover:underline ml-2 uppercase tracking-wide"
           >
             Clear All
           </button>
@@ -236,32 +238,32 @@ function ProductsContent() {
       )}
 
       {/* Main Layout */}
-      <div className="flex flex-col lg:flex-row gap-8 items-start">
+      <div className="flex flex-col lg:flex-row gap-6 items-start">
         {/* Sidebar Filter */}
         <FilterSidebar categories={categories} />
 
         {/* Product Grid & Pagination */}
         <div className="flex-1 w-full space-y-8">
           {isLoading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="h-84 rounded-3xl border bg-card p-4 animate-pulse bg-muted/40" />
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="aspect-[3/4] rounded-2xl border bg-card p-4 animate-pulse bg-muted/40" />
               ))}
             </div>
           ) : hasError ? (
             <div className="text-center py-20 border rounded-3xl bg-destructive/5 space-y-3">
               <AlertCircle className="w-8 h-8 mx-auto text-destructive" />
-              <h3 className="text-base font-semibold">Failed to load products</h3>
+              <h3 className="text-base font-bold">Failed to load products</h3>
               <p className="text-xs text-muted-foreground max-w-sm mx-auto">
                 An error occurred while fetching the product catalog. Please try again.
               </p>
-              <Button onClick={fetchCatalog} size="sm" variant="outline" className="gap-1.5 rounded-xl">
+              <Button onClick={fetchCatalog} size="sm" variant="outline" className="gap-1.5 rounded-xl font-bold">
                 <RefreshCw className="w-3.5 h-3.5" /> Retry
               </Button>
             </div>
           ) : products.length > 0 ? (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {products.map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
