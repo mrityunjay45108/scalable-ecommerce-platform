@@ -4,6 +4,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { InventoryService } from '../inventory/inventory.service';
 import { CouponsService } from '../coupons/coupons.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { ShippingService } from '../shipping/shipping.service';
+import { ConfigService } from '@nestjs/config';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { PaymentProvider, OrderStatus, PaymentStatus } from '@ecommerce/types';
 
@@ -119,6 +121,18 @@ describe('OrdersService - Complete Order Lifecycle & Snapshot Integrity', () => 
     sendNotification: jest.fn().mockResolvedValue(undefined),
   };
 
+  const mockShippingService = {
+    checkServiceability: jest.fn().mockResolvedValue({ serviceable: true }),
+    getPricingQuote: jest.fn().mockResolvedValue({ shippingCost: 0 }),
+  };
+
+  const mockConfigService = {
+    get: jest.fn((key: string) => {
+      if (key === 'shipping.provider') return 'STANDARD_EXPRESS';
+      return undefined;
+    }),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -127,6 +141,8 @@ describe('OrdersService - Complete Order Lifecycle & Snapshot Integrity', () => 
         { provide: InventoryService, useValue: mockInventoryService },
         { provide: CouponsService, useValue: mockCouponsService },
         { provide: NotificationsService, useValue: mockNotificationsService },
+        { provide: ShippingService, useValue: mockShippingService },
+        { provide: ConfigService, useValue: mockConfigService },
       ],
     }).compile();
 
