@@ -93,6 +93,21 @@ async function main() {
   // 5. Create Admin & Customer Users
   const adminUser = await prisma.user.create({
     data: {
+      email: 'kumarmrityunjay5210@gmail.com',
+      passwordHash: await bcrypt.hash('Kumar@4568', 10),
+      firstName: 'Mrityunjay',
+      lastName: 'Kumar',
+      role: UserRole.ADMIN,
+      roleId: adminRole.id,
+      isActive: true,
+      isEmailVerified: true,
+      phone: '+91 9876543210',
+      avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+    },
+  });
+
+  const demoAdminUser = await prisma.user.create({
+    data: {
       email: 'admin@novastore.com',
       passwordHash,
       firstName: 'Alex',
