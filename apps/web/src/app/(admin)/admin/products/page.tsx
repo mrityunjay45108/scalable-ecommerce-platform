@@ -45,11 +45,11 @@ export default function AdminProductsPage() {
   const [isPublished, setIsPublished] = useState(true);
   const [isFeatured, setIsFeatured] = useState(false);
   const [imageUrl, setImageUrl] = useState('');
-  const [brand, setBrand] = useState('Roadster');
-  const [material, setMaterial] = useState('100% Cotton Denim');
-  const [countryOfOrigin, setCountryOfOrigin] = useState('India');
-  const [warranty, setWarranty] = useState('1 Year Brand Warranty');
-  const [washCare, setWashCare] = useState('Machine Wash Cold');
+  const [brand, setBrand] = useState('');
+  const [material, setMaterial] = useState('');
+  const [countryOfOrigin, setCountryOfOrigin] = useState('');
+  const [warranty, setWarranty] = useState('');
+  const [washCare, setWashCare] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
   const fetchProducts = async () => {
@@ -110,11 +110,11 @@ export default function AdminProductsPage() {
     setIsPublished(true);
     setIsFeatured(false);
     setImageUrl('https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800');
-    setBrand('Roadster');
-    setMaterial('100% Breathable Cotton Denim');
-    setCountryOfOrigin('India');
-    setWarranty('1 Year Brand Warranty');
-    setWashCare('Machine Wash Cold (30°C)');
+    setBrand('');
+    setMaterial('');
+    setCountryOfOrigin('');
+    setWarranty('');
+    setWashCare('');
     setShowModal(true);
   };
 
@@ -123,11 +123,11 @@ export default function AdminProductsPage() {
     setTitle(p.title);
     const specs = parseProductSpecs(p.description, p.category?.name);
     setDescription(specs.cleanDescription || p.description);
-    setBrand(specs.brand || 'Roadster');
-    setMaterial(specs.material || '100% Cotton Denim');
-    setCountryOfOrigin(specs.origin || 'India');
-    setWarranty(specs.warranty || '1 Year Brand Warranty');
-    setWashCare(specs.care || 'Machine Wash Cold');
+    setBrand(specs.brand || '');
+    setMaterial(specs.material || '');
+    setCountryOfOrigin(specs.origin || '');
+    setWarranty(specs.warranty || '');
+    setWashCare(specs.care || '');
     setCategoryId(p.categoryId);
     setBasePrice(String(p.basePrice));
     setComparePrice(p.comparePrice ? String(p.comparePrice) : '');
@@ -496,10 +496,9 @@ export default function AdminProductsPage() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="font-semibold block mb-1 text-[11px]">Brand / Company Name *</label>
+                    <label className="font-semibold block mb-1 text-[11px]">Brand / Company Name</label>
                     <input
-                      required
-                      placeholder="e.g. Roadster, Nike, Apple, Levi's"
+                      placeholder="e.g. Roadster, Nike, Apple, or blank"
                       value={brand}
                       onChange={(e) => setBrand(e.target.value)}
                       className="w-full h-8 px-2.5 rounded-lg border bg-background text-xs font-bold"
@@ -507,9 +506,8 @@ export default function AdminProductsPage() {
                   </div>
 
                   <div>
-                    <label className="font-semibold block mb-1 text-[11px]">Material / Fabric *</label>
+                    <label className="font-semibold block mb-1 text-[11px]">Material / Fabric</label>
                     <input
-                      required
                       placeholder="e.g. 100% Cotton Denim, Titanium"
                       value={material}
                       onChange={(e) => setMaterial(e.target.value)}
@@ -520,9 +518,8 @@ export default function AdminProductsPage() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="font-semibold block mb-1 text-[11px]">Country of Origin *</label>
+                    <label className="font-semibold block mb-1 text-[11px]">Country of Origin</label>
                     <input
-                      required
                       placeholder="e.g. India, Vietnam"
                       value={countryOfOrigin}
                       onChange={(e) => setCountryOfOrigin(e.target.value)}

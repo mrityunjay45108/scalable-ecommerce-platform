@@ -65,20 +65,23 @@ export default function CreateProductPage() {
   const [slug, setSlug] = useState('');
   const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState('');
-  const [basePrice, setBasePrice] = useState('1499');
-  const [comparePrice, setComparePrice] = useState('2499');
+  const [basePrice, setBasePrice] = useState('');
+  const [comparePrice, setComparePrice] = useState('');
   const [isPublished, setIsPublished] = useState(true);
   const [isFeatured, setIsFeatured] = useState(false);
 
-  // Brand & Material Specifications
-  const [brand, setBrand] = useState('Roadster');
-  const [material, setMaterial] = useState('100% Breathable Washed Cotton Denim');
-  const [countryOfOrigin, setCountryOfOrigin] = useState('India');
-  const [fit, setFit] = useState('Relaxed Comfort Fit');
-  const [washCare, setWashCare] = useState('Machine Wash Cold (30°C)');
-  const [warranty, setWarranty] = useState('1 Year Official Brand Warranty');
+  // Brand & Material Specifications (100% Optional)
+  const [brand, setBrand] = useState('');
+  const [material, setMaterial] = useState('');
+  const [countryOfOrigin, setCountryOfOrigin] = useState('');
+  const [fit, setFit] = useState('');
+  const [washCare, setWashCare] = useState('');
+  const [warranty, setWarranty] = useState('');
 
-  // Multiple Photos (2, 3, 5+ Images)
+  // Custom Specification Fields (Dynamic Key-Value pairs)
+  const [customSpecs, setCustomSpecs] = useState<{ id: string; key: string; value: string }[]>([]);
+
+  // Multiple Photos (Images)
   const [mediaList, setMediaList] = useState<MediaItem[]>([
     {
       id: 'media-1',
@@ -98,7 +101,7 @@ export default function CreateProductPage() {
       id: 'media-3',
       url: 'https://images.unsplash.com/photo-1584735935682-2f2b69dff9d2?w=800',
       type: 'image',
-      altText: 'Sole & Detail View',
+      altText: 'Detail View',
       isPrimary: false,
     },
   ]);
@@ -109,11 +112,7 @@ export default function CreateProductPage() {
   const [videoInput, setVideoInput] = useState('');
 
   // Variants (Sizes & Colors)
-  const [variants, setVariants] = useState<VariantForm[]>([
-    { sku: 'PROD-BLK-M', title: 'Black / M', size: 'M', color: 'Black', price: 1499, stockQuantity: 25 },
-    { sku: 'PROD-BLK-L', title: 'Black / L', size: 'L', color: 'Black', price: 1499, stockQuantity: 30 },
-    { sku: 'PROD-BLU-M', title: 'Navy Blue / M', size: 'M', color: 'Navy Blue', price: 1499, stockQuantity: 15 },
-  ]);
+  const [variants, setVariants] = useState<VariantForm[]>([]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -298,9 +297,30 @@ export default function CreateProductPage() {
     }
   };
 
+  const handleBasePriceChange = (val: string) => {
+    setBasePrice(val);
+    const numPrice = parseFloat(val) || 0;
+    if (variants.length > 0) {
+      setVariants(variants.map((v) => ({ ...v, price: numPrice })));
+    }
+  };
+
+  // Custom Specs Handlers
+  const handleAddCustomSpec = () => {
+    setCustomSpecs([...customSpecs, { id: `cs-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`, key: '', value: '' }]);
+  };
+
+  const handleRemoveCustomSpec = (id: string) => {
+    setCustomSpecs(customSpecs.filter((cs) => cs.id !== id));
+  };
+
+  const handleUpdateCustomSpec = (id: string, field: 'key' | 'value', val: string) => {
+    setCustomSpecs(customSpecs.map((cs) => (cs.id === id ? { ...cs, [field]: val } : cs)));
+  };
+
   // Quick Size Addition
   const handleQuickAddSize = (size: string) => {
-    const defaultPrice = parseFloat(basePrice) || 1499;
+    const defaultPrice = parseFloat(basePrice) || 0;
     const code = (slug || 'SKU').toUpperCase().slice(0, 8);
     const existing = variants.find((v) => v.size === size);
     if (existing) return;
@@ -320,15 +340,15 @@ export default function CreateProductPage() {
 
   const handleAddCustomVariant = () => {
     const num = variants.length + 1;
-    const defaultPrice = parseFloat(basePrice) || 1499;
+    const defaultPrice = parseFloat(basePrice) || 0;
     const code = (slug || 'SKU').toUpperCase().slice(0, 8);
     setVariants([
       ...variants,
       {
         sku: `${code}-VAR-${num}`,
-        title: `Size M / Variant ${num}`,
-        size: 'M',
-        color: 'Standard',
+        title: `Variant ${num}`,
+        size: 'Standard',
+        color: 'Default',
         price: defaultPrice,
         stockQuantity: 25,
       },
@@ -347,7 +367,6 @@ export default function CreateProductPage() {
   };
 
   const handleRemoveVariant = (index: number) => {
-    if (variants.length <= 1) return;
     setVariants(variants.filter((_, i) => i !== index));
   };
 
@@ -362,8 +381,16 @@ export default function CreateProductPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!title.trim()) {
+      setErrorMsg('Please enter a product title');
+      return;
+    }
     if (!categoryId) {
       setErrorMsg('Please select a valid category');
+      return;
+    }
+    if (!basePrice || parseFloat(basePrice) < 0) {
+      setErrorMsg('Please enter a valid Selling Price');
       return;
     }
     if (mediaList.length === 0) {
@@ -398,34 +425,55 @@ export default function CreateProductPage() {
       ];
 
       const fullDescription = formatDescriptionWithSpecs(description, {
-        brand,
-        material,
-        origin: countryOfOrigin,
-        fit,
-        care: washCare,
-        warranty,
+        brand: brand.trim() || undefined,
+        material: material.trim() || undefined,
+        origin: countryOfOrigin.trim() || undefined,
+        fit: fit.trim() || undefined,
+        care: washCare.trim() || undefined,
+        warranty: warranty.trim() || undefined,
+        customSpecs: customSpecs.filter((cs) => cs.key.trim() && cs.value.trim()),
       });
 
+      const numericBasePrice = parseFloat(basePrice) || 0;
+      const code = (slug || 'SKU').toUpperCase().slice(0, 8);
+
+      // Auto-generate default variant if none specified
+      const finalVariants =
+        variants.length > 0
+          ? variants.map((v) => ({
+              sku: v.sku || `${code}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`,
+              title: v.title || 'Standard',
+              price: Number(v.price) > 0 ? Number(v.price) : numericBasePrice,
+              stockQuantity: parseInt(String(v.stockQuantity), 10) || 20,
+              attributes: {
+                size: v.size || 'Standard',
+                color: v.color || 'Default',
+              },
+            }))
+          : [
+              {
+                sku: `${code}-STD`,
+                title: 'Standard',
+                price: numericBasePrice,
+                stockQuantity: 25,
+                attributes: {
+                  size: 'Standard',
+                  color: 'Default',
+                },
+              },
+            ];
+
       const payload = {
-        title,
+        title: title.trim(),
         slug: slug || undefined,
         description: fullDescription,
         categoryId,
-        basePrice: parseFloat(basePrice),
+        basePrice: numericBasePrice,
         comparePrice: comparePrice ? parseFloat(comparePrice) : undefined,
         isPublished,
         isFeatured,
         images: combinedImages,
-        variants: variants.map((v) => ({
-          sku: v.sku,
-          title: v.title,
-          price: Number(v.price),
-          stockQuantity: parseInt(String(v.stockQuantity), 10) || 0,
-          attributes: {
-            size: v.size,
-            color: v.color,
-          },
-        })),
+        variants: finalVariants,
       };
 
       await apiClient.post('/products', payload);
@@ -553,14 +601,19 @@ export default function CreateProductPage() {
             </div>
           </div>
 
-          {/* 🏢 2. BRAND, MATERIAL & PRODUCT SPECIFICATIONS */}
-          <div className="rounded-3xl border bg-card p-6 shadow-sm space-y-4">
+          {/* 🏢 2. BRAND, MATERIAL & PRODUCT SPECIFICATIONS (100% OPTIONAL) */}
+          <div className="rounded-3xl border bg-card p-6 shadow-sm space-y-5">
             <div className="flex items-center justify-between border-b pb-3">
-              <h2 className="text-base font-bold flex items-center gap-2">
-                <Building2 className="w-4 h-4 text-primary" /> 2. Brand, Materials & Product Specifications
-              </h2>
-              <span className="text-[11px] font-bold text-indigo-500 bg-indigo-500/10 px-2.5 py-0.5 rounded-full">
-                Appears on Product Page
+              <div>
+                <h2 className="text-base font-bold flex items-center gap-2">
+                  <Building2 className="w-4 h-4 text-primary" /> 2. Brand, Materials & Product Specifications
+                </h2>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Optional. Add brand name, material specs, or custom product specifications.
+                </p>
+              </div>
+              <span className="text-[11px] font-bold text-emerald-600 bg-emerald-500/10 px-2.5 py-0.5 rounded-full">
+                Optional
               </span>
             </div>
 
@@ -568,11 +621,21 @@ export default function CreateProductPage() {
               {/* Brand & Manufacturer */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block font-bold mb-1">Brand / Company Name *</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="font-bold">Brand / Company Name</label>
+                    {brand && (
+                      <button
+                        type="button"
+                        onClick={() => setBrand('')}
+                        className="text-[10px] text-destructive hover:underline font-semibold"
+                      >
+                        Clear Brand
+                      </button>
+                    )}
+                  </div>
                   <input
                     type="text"
-                    required
-                    placeholder="e.g. Roadster, Nike, Apple, Puma, Levi's, Zara"
+                    placeholder="e.g. Roadster, Nike, Apple, Puma, or leave blank"
                     value={brand}
                     onChange={(e) => setBrand(e.target.value)}
                     className="w-full h-10 px-3 rounded-xl border bg-background text-xs font-bold"
@@ -597,10 +660,9 @@ export default function CreateProductPage() {
                 </div>
 
                 <div>
-                  <label className="block font-bold mb-1">Material / Fabric / Composition *</label>
+                  <label className="block font-bold mb-1">Material / Fabric / Composition</label>
                   <input
                     type="text"
-                    required
                     placeholder="e.g. 100% Breathable Cotton Denim, Titanium Alloy, etc."
                     value={material}
                     onChange={(e) => setMaterial(e.target.value)}
@@ -631,10 +693,9 @@ export default function CreateProductPage() {
               {/* Country of Origin & Fit/Style */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block font-bold mb-1">Country of Origin / Made In *</label>
+                  <label className="block font-bold mb-1">Country of Origin / Made In</label>
                   <input
                     type="text"
-                    required
                     placeholder="e.g. India, Vietnam, USA, Germany"
                     value={countryOfOrigin}
                     onChange={(e) => setCountryOfOrigin(e.target.value)}
@@ -678,14 +739,74 @@ export default function CreateProductPage() {
                   />
                 </div>
               </div>
+
+              {/* ➕ CUSTOM SPECIFICATION FIELDS BUILDER */}
+              <div className="pt-2 border-t space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="font-bold text-xs text-foreground flex items-center gap-1.5">
+                      <Tag className="w-3.5 h-3.5 text-primary" /> Custom Specifications & Key-Value Details
+                    </span>
+                    <p className="text-[11px] text-muted-foreground">
+                      Add any custom fields (e.g. Weight, Battery Capacity, Storage, Dimensions, Processor, etc.)
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleAddCustomSpec}
+                    className="rounded-xl text-xs font-bold gap-1 h-8"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Add Custom Field
+                  </Button>
+                </div>
+
+                {customSpecs.length > 0 && (
+                  <div className="space-y-2">
+                    {customSpecs.map((cs) => (
+                      <div key={cs.id} className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          placeholder="Field Name (e.g. Weight, Battery, Color)"
+                          value={cs.key}
+                          onChange={(e) => handleUpdateCustomSpec(cs.id, 'key', e.target.value)}
+                          className="flex-1 h-9 px-3 rounded-xl border bg-background text-xs font-bold"
+                        />
+                        <span className="text-muted-foreground font-bold">:</span>
+                        <input
+                          type="text"
+                          placeholder="Specification Value (e.g. 250g, 5000 mAh, Midnight Red)"
+                          value={cs.value}
+                          onChange={(e) => handleUpdateCustomSpec(cs.id, 'value', e.target.value)}
+                          className="flex-1 h-9 px-3 rounded-xl border bg-background text-xs font-semibold"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveCustomSpec(cs.id)}
+                          className="p-2 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                          title="Remove Field"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
           {/* 3. Indian Pricing (₹ INR) */}
           <div className="rounded-3xl border bg-card p-6 shadow-sm space-y-4">
-            <h2 className="text-base font-bold flex items-center gap-2">
-              <IndianRupee className="w-4 h-4 text-primary" /> 3. Indian Pricing (₹ INR)
-            </h2>
+            <div>
+              <h2 className="text-base font-bold flex items-center gap-2">
+                <IndianRupee className="w-4 h-4 text-primary" /> 3. Indian Pricing (₹ INR)
+              </h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Set your product selling price. All variant prices will automatically stay synced in real-time.
+              </p>
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
               <div>
@@ -697,9 +818,9 @@ export default function CreateProductPage() {
                     step="1"
                     min="0"
                     required
-                    placeholder="1499"
+                    placeholder="e.g. 89 or 1499"
                     value={basePrice}
-                    onChange={(e) => setBasePrice(e.target.value)}
+                    onChange={(e) => handleBasePriceChange(e.target.value)}
                     className="w-full h-10 pl-7 pr-3 rounded-xl border bg-background font-bold text-sm text-foreground"
                   />
                 </div>
@@ -713,7 +834,7 @@ export default function CreateProductPage() {
                     type="number"
                     step="1"
                     min="0"
-                    placeholder="2499"
+                    placeholder="e.g. 199 or 2499"
                     value={comparePrice}
                     onChange={(e) => setComparePrice(e.target.value)}
                     className="w-full h-10 pl-7 pr-3 rounded-xl border bg-background text-xs font-semibold"

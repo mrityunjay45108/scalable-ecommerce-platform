@@ -28,6 +28,7 @@ import {
   Share2,
   Copy,
   MessageCircle,
+  Zap,
 } from 'lucide-react';
 import { ProductDto, ProductVariantDto, ReviewDto } from '@ecommerce/types';
 import { apiClient } from '@/lib/api-client';
@@ -54,6 +55,7 @@ export default function ProductDetailPage({
   const [quantity, setQuantity] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
+  const [isBuyingNow, setIsBuyingNow] = useState(false);
 
   // Share Modal State
   const [showShareModal, setShowShareModal] = useState(false);
@@ -343,6 +345,20 @@ const getFallbackProduct = (rawSlug: string): ProductDto => {
     }
   };
 
+  const handleBuyNow = async () => {
+    if (!selectedVariant || isOutOfStock) return;
+    setIsBuyingNow(true);
+    try {
+      await addToCart(selectedVariant.id, quantity);
+      router.push('/checkout');
+    } catch (err) {
+      console.error(err);
+      router.push('/checkout');
+    } finally {
+      setIsBuyingNow(false);
+    }
+  };
+
   const handleCheckPincode = (e: React.FormEvent) => {
     e.preventDefault();
     if (!pincode || pincode.length !== 6) return;
@@ -545,9 +561,11 @@ const getFallbackProduct = (rawSlug: string): ProductDto => {
                         {product.category.name}
                       </Badge>
                     )}
-                    <span className="inline-flex items-center gap-1 text-xs font-bold text-foreground bg-muted/60 px-2.5 py-0.5 rounded-md border">
-                      <Building2 className="w-3 h-3 text-primary" /> {specs.brand}
-                    </span>
+                    {specs.brand && (
+                      <span className="inline-flex items-center gap-1 text-xs font-bold text-foreground bg-muted/60 px-2.5 py-0.5 rounded-md border">
+                        <Building2 className="w-3 h-3 text-primary" /> {specs.brand}
+                      </span>
+                    )}
                   </div>
 
                   <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-foreground">
@@ -615,34 +633,44 @@ const getFallbackProduct = (rawSlug: string): ProductDto => {
                         {formatPrice(comparePrice)}
                       </span>
                     )}
-                    {hasDiscount && (
-                      <span className="text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded-md">
-                        Save {formatPrice(savingsAmount)} ({discountPercent}% OFF)
-                      </span>
+                    {discountPercent > 0 && (
+                      <Badge className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-extrabold px-2.5 py-0.5">
+                        {discountPercent}% OFF
+                      </Badge>
                     )}
                   </div>
-                  <p className="text-[11px] text-muted-foreground">
-                    Inclusive of all taxes (GST) • Free Delivery on orders above ₹999
-                  </p>
+                  {savingsAmount > 0 && (
+                    <p className="text-xs text-emerald-600 dark:text-emerald-400 font-bold">
+                      🎉 Special Savings: You save {formatPrice(savingsAmount)} on this order!
+                    </p>
+                  )}
+                  <p className="text-[11px] text-muted-foreground">Inclusive of all taxes & instant checkout support</p>
                 </div>
 
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  {specs.cleanDescription || product.description}
-                </p>
+                {/* Description */}
+                <div className="space-y-1">
+                  <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    About this product
+                  </p>
+                  <p className="text-xs text-foreground/80 leading-relaxed">
+                    {specs.cleanDescription || product.description}
+                  </p>
+                </div>
               </>
             );
           })()}
 
-          {/* SIZES / VARIANTS SELECTOR */}
-          {product.variants && product.variants.length > 0 && (
-            <div className="space-y-3 pt-2">
+          {/* Size / Variant Selector */}
+          {product.variants?.length > 0 && (
+            <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">
-                  Select Size / Option:
-                </h4>
+                <label className="text-xs font-bold uppercase tracking-wider text-foreground">
+                  Select Size / Variant:
+                </label>
                 <button
+                  type="button"
                   onClick={() => setShowSizeGuide(true)}
-                  className="text-primary hover:underline text-xs font-bold flex items-center gap-1"
+                  className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
                 >
                   <Ruler className="w-3.5 h-3.5" /> Size Guide
                 </button>
@@ -694,39 +722,52 @@ const getFallbackProduct = (rawSlug: string): ProductDto => {
             )}
           </div>
 
-          {/* Quantity and Actions */}
-          <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
-            <div className="flex items-center border rounded-xl bg-muted/40 p-1 w-full sm:w-auto justify-between sm:justify-center">
-              <button
-                disabled={quantity <= 1 || isOutOfStock}
-                onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-background disabled:opacity-40 text-sm font-bold"
-              >
-                -
-              </button>
-              <span className="w-12 text-center text-sm font-bold">{quantity}</span>
-              <button
-                disabled={quantity >= availableStock || isOutOfStock}
-                onClick={() => setQuantity((q) => Math.min(availableStock, q + 1))}
-                className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-background disabled:opacity-40 text-sm font-bold"
-              >
-                +
-              </button>
+          {/* Quantity & Dual CTA (Add to Cart + ⚡ Buy Now) */}
+          <div className="space-y-3 pt-2">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center border rounded-xl bg-muted/40 p-1 w-32 justify-between">
+                <button
+                  disabled={quantity <= 1 || isOutOfStock}
+                  onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                  className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-background disabled:opacity-40 text-sm font-bold"
+                >
+                  -
+                </button>
+                <span className="w-10 text-center text-sm font-bold">{quantity}</span>
+                <button
+                  disabled={quantity >= availableStock || isOutOfStock}
+                  onClick={() => setQuantity((q) => Math.min(availableStock, q + 1))}
+                  className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-background disabled:opacity-40 text-sm font-bold"
+                >
+                  +
+                </button>
+              </div>
+              <span className="text-xs text-muted-foreground">Total: <strong className="text-foreground font-bold">{formatPrice(currentPrice * quantity)}</strong></span>
             </div>
 
-            <Button
-              size="lg"
-              disabled={isOutOfStock || isAdding}
-              onClick={handleAddToCart}
-              className="flex-1 w-full rounded-2xl gap-2 font-bold shadow-lg h-12 text-sm"
-            >
-              <ShoppingBag className="w-4 h-4" />
-              {isAdding
-                ? 'Adding to Bag...'
-                : isOutOfStock
-                ? 'Sold Out'
-                : `Add to Bag • ${formatPrice(currentPrice * quantity)}`}
-            </Button>
+            {/* DUAL ACTION BUTTONS: Add to Cart & Buy Now */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Button
+                size="lg"
+                variant="outline"
+                disabled={isOutOfStock || isAdding || isBuyingNow}
+                onClick={handleAddToCart}
+                className="w-full rounded-2xl gap-2 font-bold h-12 text-sm border-2 border-primary/20 hover:bg-primary/5 hover:border-primary"
+              >
+                <ShoppingBag className="w-4 h-4 text-primary" />
+                {isAdding ? 'Adding to Bag...' : 'Add to Cart'}
+              </Button>
+
+              <Button
+                size="lg"
+                disabled={isOutOfStock || isAdding || isBuyingNow}
+                onClick={handleBuyNow}
+                className="w-full rounded-2xl gap-2 font-black shadow-lg shadow-primary/25 h-12 text-sm bg-primary hover:bg-primary/90 text-primary-foreground"
+              >
+                <Zap className="w-4 h-4 fill-current" />
+                {isBuyingNow ? 'Proceeding...' : '⚡ Buy Now'}
+              </Button>
+            </div>
           </div>
 
           {/* INDIAN PINCODE DELIVERY ESTIMATOR */}
@@ -775,11 +816,22 @@ const getFallbackProduct = (rawSlug: string): ProductDto => {
           {/* PRODUCT SPECIFICATIONS & MATERIAL COMPOSITION CARD */}
           {(() => {
             const specs = parseProductSpecs(product.description, product.category?.name);
+            const hasAnySpecs =
+              !!specs.brand ||
+              !!specs.material ||
+              !!specs.origin ||
+              !!specs.warranty ||
+              !!specs.fit ||
+              !!specs.care ||
+              (specs.customSpecs && specs.customSpecs.length > 0);
+
+            if (!hasAnySpecs) return null;
+
             return (
               <div className="rounded-2xl border bg-muted/20 p-4 space-y-3">
                 <div className="flex items-center justify-between border-b border-border/80 pb-2">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5">
-                    <Building2 className="w-4 h-4 text-primary" /> Product Specifications & Origin
+                    <Building2 className="w-4 h-4 text-primary" /> Product Specifications
                   </h4>
                   <span className="text-[10px] font-bold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-full">
                     ✓ 100% Genuine
@@ -787,33 +839,41 @@ const getFallbackProduct = (rawSlug: string): ProductDto => {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                  <div className="p-2.5 rounded-xl bg-card border border-border/60 space-y-0.5">
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
-                      🏢 Brand / Company
-                    </span>
-                    <p className="font-bold text-foreground text-xs">{specs.brand}</p>
-                  </div>
+                  {specs.brand && (
+                    <div className="p-2.5 rounded-xl bg-card border border-border/60 space-y-0.5">
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
+                        🏢 Brand / Company
+                      </span>
+                      <p className="font-bold text-foreground text-xs">{specs.brand}</p>
+                    </div>
+                  )}
 
-                  <div className="p-2.5 rounded-xl bg-card border border-border/60 space-y-0.5">
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
-                      🧵 Material & Fabric
-                    </span>
-                    <p className="font-bold text-foreground text-xs">{specs.material}</p>
-                  </div>
+                  {specs.material && (
+                    <div className="p-2.5 rounded-xl bg-card border border-border/60 space-y-0.5">
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
+                        🧵 Material & Fabric
+                      </span>
+                      <p className="font-bold text-foreground text-xs">{specs.material}</p>
+                    </div>
+                  )}
 
-                  <div className="p-2.5 rounded-xl bg-card border border-border/60 space-y-0.5">
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
-                      🇮🇳 Country of Origin
-                    </span>
-                    <p className="font-bold text-foreground text-xs">{specs.origin}</p>
-                  </div>
+                  {specs.origin && (
+                    <div className="p-2.5 rounded-xl bg-card border border-border/60 space-y-0.5">
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
+                        🌍 Country of Origin
+                      </span>
+                      <p className="font-bold text-foreground text-xs">{specs.origin}</p>
+                    </div>
+                  )}
 
-                  <div className="p-2.5 rounded-xl bg-card border border-border/60 space-y-0.5">
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
-                      🛡️ Official Warranty
-                    </span>
-                    <p className="font-bold text-foreground text-xs">{specs.warranty}</p>
-                  </div>
+                  {specs.warranty && (
+                    <div className="p-2.5 rounded-xl bg-card border border-border/60 space-y-0.5">
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
+                        🛡️ Official Warranty
+                      </span>
+                      <p className="font-bold text-foreground text-xs">{specs.warranty}</p>
+                    </div>
+                  )}
 
                   {specs.fit && (
                     <div className="p-2.5 rounded-xl bg-card border border-border/60 space-y-0.5 sm:col-span-2">
@@ -824,12 +884,25 @@ const getFallbackProduct = (rawSlug: string): ProductDto => {
                     </div>
                   )}
 
-                  <div className="p-2.5 rounded-xl bg-card border border-border/60 space-y-0.5 sm:col-span-2">
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
-                      🧼 Wash & Care Guide
-                    </span>
-                    <p className="text-muted-foreground text-xs">{specs.care}</p>
-                  </div>
+                  {specs.care && (
+                    <div className="p-2.5 rounded-xl bg-card border border-border/60 space-y-0.5 sm:col-span-2">
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
+                        🧼 Wash & Care Guide
+                      </span>
+                      <p className="text-muted-foreground text-xs">{specs.care}</p>
+                    </div>
+                  )}
+
+                  {/* Render Custom Specifications added by Admin */}
+                  {specs.customSpecs &&
+                    specs.customSpecs.map((cs, idx) => (
+                      <div key={idx} className="p-2.5 rounded-xl bg-card border border-border/60 space-y-0.5">
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
+                          ⚙️ {cs.key}
+                        </span>
+                        <p className="font-bold text-foreground text-xs">{cs.value}</p>
+                      </div>
+                    ))}
                 </div>
               </div>
             );

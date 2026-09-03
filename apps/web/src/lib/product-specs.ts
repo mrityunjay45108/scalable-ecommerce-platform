@@ -1,3 +1,8 @@
+export interface CustomSpec {
+  key: string;
+  value: string;
+}
+
 export interface ProductSpecs {
   brand?: string;
   material?: string;
@@ -5,6 +10,7 @@ export interface ProductSpecs {
   care?: string;
   warranty?: string;
   fit?: string;
+  customSpecs?: CustomSpec[];
   cleanDescription: string;
 }
 
@@ -17,16 +23,26 @@ export function formatDescriptionWithSpecs(
     care?: string;
     warranty?: string;
     fit?: string;
+    customSpecs?: CustomSpec[];
   },
 ): string {
   const cleanBase = baseDescription ? baseDescription.split('---')[0].trim() : '';
   const specLines: string[] = [];
-  if (specs.brand) specLines.push(`Brand: ${specs.brand}`);
-  if (specs.material) specLines.push(`Material: ${specs.material}`);
-  if (specs.origin) specLines.push(`Country of Origin: ${specs.origin}`);
-  if (specs.fit) specLines.push(`Fit / Style: ${specs.fit}`);
-  if (specs.care) specLines.push(`Care Instructions: ${specs.care}`);
-  if (specs.warranty) specLines.push(`Warranty: ${specs.warranty}`);
+
+  if (specs.brand?.trim()) specLines.push(`Brand: ${specs.brand.trim()}`);
+  if (specs.material?.trim()) specLines.push(`Material: ${specs.material.trim()}`);
+  if (specs.origin?.trim()) specLines.push(`Country of Origin: ${specs.origin.trim()}`);
+  if (specs.fit?.trim()) specLines.push(`Fit / Style: ${specs.fit.trim()}`);
+  if (specs.care?.trim()) specLines.push(`Care Instructions: ${specs.care.trim()}`);
+  if (specs.warranty?.trim()) specLines.push(`Warranty: ${specs.warranty.trim()}`);
+
+  if (specs.customSpecs && Array.isArray(specs.customSpecs)) {
+    for (const cs of specs.customSpecs) {
+      if (cs.key?.trim() && cs.value?.trim()) {
+        specLines.push(`${cs.key.trim()}: ${cs.value.trim()}`);
+      }
+    }
+  }
 
   if (specLines.length === 0) return cleanBase;
 
@@ -41,8 +57,10 @@ export function formatDescriptionWithSpecs(
 }
 
 export function parseProductSpecs(description: string, categoryName?: string): ProductSpecs {
+  const cleanDescription = description.includes('---') ? description.split('---')[0].trim() : description.trim();
   const result: ProductSpecs = {
-    cleanDescription: description.includes('---') ? description.split('---')[0].trim() : description.trim(),
+    cleanDescription,
+    customSpecs: [],
   };
 
   const brandMatch = description.match(/(?:Brand|Company|Manufacturer|Made By)[\s*:]+([^\n\-*]+)/i);
@@ -63,47 +81,21 @@ export function parseProductSpecs(description: string, categoryName?: string): P
   const warrantyMatch = description.match(/(?:Warranty|Guarantee)[\s*:]+([^\n\-*]+)/i);
   if (warrantyMatch) result.warranty = warrantyMatch[1].trim().replace(/^\*+|\*+$/g, '');
 
-  if (!result.brand) {
-    const dLower = description.toLowerCase();
-    if (dLower.includes('nike')) result.brand = 'Nike';
-    else if (dLower.includes('roadster')) result.brand = 'Roadster';
-    else if (dLower.includes('apple')) result.brand = 'Apple';
-    else if (dLower.includes('sony')) result.brand = 'Sony';
-    else if (dLower.includes('lumina')) result.brand = 'Lumina Studio';
-    else result.brand = 'Verified Brand Partner';
-  }
+  // Extract custom specification lines after ---
+  if (description.includes('---')) {
+    const specsSection = description.split('---')[1];
+    const lines = specsSection.split('\n');
+    const knownKeys = ['brand', 'company', 'manufacturer', 'material', 'fabric', 'country of origin', 'made in', 'origin', 'fit', 'fit / style', 'care', 'care instructions', 'wash care', 'warranty', 'guarantee'];
 
-  if (!result.material) {
-    const cat = (categoryName || '').toLowerCase();
-    if (cat.includes('footwear') || cat.includes('shoe')) {
-      result.material = 'Engineered Breathable Mesh, Carbon Plate & Nitrogen Foam';
-    } else if (cat.includes('apparel') || cat.includes('fashion') || cat.includes('jean') || cat.includes('hoodie')) {
-      result.material = '100% Breathable Cotton / Premium Washed Denim';
-    } else if (cat.includes('audio') || cat.includes('electron')) {
-      result.material = 'Anodized Aluminum Alloy, Memory Foam & Titanium Acoustic Drivers';
-    } else if (cat.includes('home') || cat.includes('living')) {
-      result.material = 'Precision Articulated Aluminum & Optical Spectrum Glass';
-    } else {
-      result.material = '100% Certified Premium Material';
-    }
-  }
-
-  if (!result.origin) {
-    result.origin = 'India';
-  }
-
-  if (!result.warranty) {
-    result.warranty = '1 Year Official Brand Warranty';
-  }
-
-  if (!result.care) {
-    const cat = (categoryName || '').toLowerCase();
-    if (cat.includes('apparel') || cat.includes('fashion')) {
-      result.care = 'Machine Wash Cold (30°C) with like colors. Do not bleach.';
-    } else if (cat.includes('footwear')) {
-      result.care = 'Wipe clean with a damp cloth. Air dry naturally.';
-    } else {
-      result.care = 'Wipe with a clean dry microfiber cloth.';
+    for (const line of lines) {
+      const match = line.match(/^\s*-\s*\*\*([^*]+)\*\*:\s*(.+)$/);
+      if (match) {
+        const key = match[1].trim();
+        const value = match[2].trim();
+        if (!knownKeys.includes(key.toLowerCase())) {
+          result.customSpecs?.push({ key, value });
+        }
+      }
     }
   }
 
