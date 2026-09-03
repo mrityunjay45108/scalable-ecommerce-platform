@@ -21,6 +21,7 @@ import {
   LogOut,
   ShieldCheck,
   PlusCircle,
+  KeyRound,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 
@@ -61,6 +62,12 @@ export function AdminSidebar() {
         { href: '/admin/coupons', label: 'Coupons & Promos', icon: Tag },
         { href: '/admin/reviews', label: 'Review Moderation', icon: MessageSquare },
         { href: '/admin/users', label: 'Users & Staff', icon: Users },
+      ],
+    },
+    {
+      title: 'SECURITY & SETTINGS',
+      links: [
+        { href: '/admin/settings', label: 'Admin Security & Email', icon: KeyRound },
       ],
     },
   ];

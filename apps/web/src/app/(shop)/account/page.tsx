@@ -14,6 +14,7 @@ export default function AccountPage() {
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [addresses, setAddresses] = useState<AddressDto[]>([]);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -52,6 +53,7 @@ export default function AccountPage() {
     if (user) {
       setFirstName(user.firstName || '');
       setLastName(user.lastName || '');
+      setEmail(user.email || '');
       setPhone(user.phone || '');
     }
 
@@ -85,10 +87,11 @@ export default function AccountPage() {
       const updated = await apiClient.put('/users/me', {
         firstName,
         lastName,
+        email: email.trim().toLowerCase(),
         phone,
       });
       updateUser(updated);
-      setSuccessMsg('Profile updated successfully!');
+      setSuccessMsg('Profile and email updated successfully!');
     } catch (err: any) {
       alert(err.message || 'Failed to update profile');
     } finally {
@@ -202,9 +205,11 @@ export default function AccountPage() {
             <div>
               <label className="font-semibold block mb-1">Email Address</label>
               <input
-                disabled
-                value={user?.email || ''}
-                className="w-full h-9 px-3 rounded-xl border bg-muted/40 text-muted-foreground"
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full h-9 px-3 rounded-xl border bg-background font-medium"
               />
             </div>
             <div className="grid grid-cols-2 gap-3">

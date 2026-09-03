@@ -26,9 +26,24 @@ export class UsersService {
   }
 
   async updateProfile(userId: string, dto: UpdateProfileDto) {
+    const dataToUpdate: any = { ...dto };
+
+    if (dto.email) {
+      const normalizedEmail = dto.email.toLowerCase().trim();
+      const existing = await this.prisma.user.findUnique({
+        where: { email: normalizedEmail },
+      });
+
+      if (existing && existing.id !== userId) {
+        throw new BadRequestException('This email address is already in use by another account');
+      }
+
+      dataToUpdate.email = normalizedEmail;
+    }
+
     const user = await this.prisma.user.update({
       where: { id: userId },
-      data: { ...dto },
+      data: dataToUpdate,
     });
 
     const { passwordHash, ...safeUser } = user;
