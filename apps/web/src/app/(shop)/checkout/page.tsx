@@ -69,10 +69,15 @@ function CheckoutContent() {
 
   const loadAddresses = useCallback(async () => {
     try {
-      const data: AddressDto[] = await apiClient.get('/users/me/addresses');
-      setAddresses(data);
-      if (data.length > 0) {
-        const defaultAddr = data.find((a) => a.isDefault) || data[0];
+      const res: any = await apiClient.get('/users/me/addresses');
+      const addressList: AddressDto[] = Array.isArray(res)
+        ? res
+        : Array.isArray(res?.data)
+          ? res.data
+          : [];
+      setAddresses(addressList);
+      if (addressList.length > 0) {
+        const defaultAddr = addressList.find((a) => a.isDefault) || addressList[0];
         setSelectedAddressId((prev) => prev || defaultAddr.id);
       } else {
         setShowNewAddress(true);
@@ -215,30 +220,35 @@ function CheckoutContent() {
 
     try {
       // 1. Create order & reserve stock via transaction
-      const order = await apiClient.post<{ id: string }>('/orders/checkout', {
+      const orderRes: any = await apiClient.post('/orders/checkout', {
         addressId: selectedAddressId,
         paymentProvider,
         couponCode: couponCode || cart?.coupon?.code || undefined,
       });
 
+      const orderId = orderRes?.id || orderRes?.data?.id;
+      if (!orderId) {
+        throw new Error('Order creation did not return a valid order ID');
+      }
+
       // 2. Process / Mock Payment
       if (paymentProvider === PaymentProvider.COD) {
         await refreshCart();
-        router.push(`/orders/${order.id}?success=true`);
+        router.push(`/orders/${orderId}?success=true`);
       } else {
         const paymentIntent = await apiClient.post('/payments/create-intent', {
-          orderId: order.id,
+          orderId,
           provider: paymentProvider,
         });
 
         await apiClient.post('/payments/confirm', {
-          orderId: order.id,
+          orderId,
           transactionId: `TXN-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
           paymentData: paymentIntent,
         });
 
         await refreshCart();
-        router.push(`/orders/${order.id}?success=true`);
+        router.push(`/orders/${orderId}?success=true`);
       }
     } catch (err: any) {
       setErrorMsg(err.message || 'Failed to complete order checkout');
