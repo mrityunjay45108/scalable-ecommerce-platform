@@ -3,9 +3,11 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
+    "predev": "node -e \"const fs = require('fs'); if (fs.existsSync('.next')) fs.rmSync('.next', { recursive: true, force: true });\"",
     "dev": "next dev --port 3000",
     "build": "pnpm --filter=@ecommerce/types build && pnpm --filter=@ecommerce/config build && next build",
     "start": "next start --port 3000",
+    "clean": "node -e \"const fs = require('fs'); if (fs.existsSync('.next')) fs.rmSync('.next', { recursive: true, force: true });\"",
     "lint": "echo '@ecommerce/web lint clean'",
     "type-check": "tsc --noEmit"
   },
