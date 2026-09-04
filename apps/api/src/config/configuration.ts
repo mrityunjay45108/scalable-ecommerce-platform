@@ -68,4 +68,23 @@ export default () => ({
       return !isNaN(parsed) && parsed > 0 ? parsed : 14;
     })(),
   },
+  kafka: {
+    enabled: process.env.KAFKA_ENABLED === 'true' || (!!process.env.KAFKA_BROKERS && process.env.KAFKA_ENABLED !== 'false'),
+    brokers: process.env.KAFKA_BROKERS
+      ? process.env.KAFKA_BROKERS.split(',').map((b) => b.trim())
+      : ['localhost:9092'],
+    clientId: process.env.KAFKA_CLIENT_ID || 'ecommerce-api',
+    groupId: process.env.KAFKA_GROUP_ID || 'ecommerce-service',
+    username: process.env.KAFKA_USERNAME || undefined,
+    password: process.env.KAFKA_PASSWORD || undefined,
+    ssl: process.env.KAFKA_SSL === 'true' || process.env.KAFKA_SSL === '1' || !!process.env.KAFKA_USERNAME,
+    saslMechanism: (process.env.KAFKA_SASL_MECHANISM as 'scram-sha-256' | 'plain') || (process.env.KAFKA_USERNAME ? 'scram-sha-256' : undefined),
+    connectionTimeout: parseInt(process.env.KAFKA_CONNECTION_TIMEOUT_MS || '10000', 10),
+    requestTimeout: parseInt(process.env.KAFKA_REQUEST_TIMEOUT_MS || '30000', 10),
+    outbox: {
+      batchSize: parseInt(process.env.KAFKA_OUTBOX_BATCH_SIZE || '50', 10),
+      pollIntervalMs: parseInt(process.env.KAFKA_OUTBOX_POLL_INTERVAL_MS || '2000', 10),
+      maxRetries: parseInt(process.env.KAFKA_OUTBOX_MAX_RETRIES || '5', 10),
+    },
+  },
 });

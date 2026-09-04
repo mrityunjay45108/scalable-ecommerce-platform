@@ -11,6 +11,7 @@ import { CouponsService } from '../coupons/coupons.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ShippingService } from '../shipping/shipping.service';
 import { ConfigService } from '@nestjs/config';
+import { KafkaEventPublisher } from '../kafka/services/kafka-event-publisher.service';
 import { CheckoutDto, CheckoutPreviewDto, UpdateOrderStatusDto, OrderQueryDto } from './orders.dto';
 import { OrderStatus, PaymentStatus, PaymentProvider } from '@ecommerce/types';
 import { NotificationType } from '@ecommerce/database';
@@ -30,6 +31,7 @@ export class OrdersService {
     private notificationsService: NotificationsService,
     @Optional() private shippingService?: ShippingService,
     @Optional() private configService?: ConfigService,
+    @Optional() private kafkaPublisher?: KafkaEventPublisher,
   ) {}
 
   async previewCheckout(userId: string, dto: CheckoutPreviewDto) {
@@ -384,6 +386,37 @@ export class OrdersService {
             },
           });
 
+          // Outbox: Publish order.created event to Kafka topics (ecommerce.order.events & ecommerce.order.created)
+          if (this.kafkaPublisher) {
+            try {
+              await this.kafkaPublisher.publishOrderCreated(tx, {
+                orderId: createdOrder.id,
+                orderNumber: createdOrder.orderNumber,
+                userId: createdOrder.userId,
+                totalAmount: Number(createdOrder.totalAmount),
+                subtotal: Number(createdOrder.subtotal),
+                tax: Number(createdOrder.tax),
+                shippingCost: Number(createdOrder.shippingCost),
+                discountAmount: Number(createdOrder.discountAmount),
+                currency: 'INR',
+                status: createdOrder.status,
+                paymentProvider: dto.paymentProvider,
+                shippingPostalCode: address.postalCode,
+                items: cart.items.map((i) => ({
+                  variantId: i.variantId,
+                  productTitle: i.variant.product.title,
+                  variantTitle: i.variant.title,
+                  sku: i.variant.sku,
+                  quantity: i.quantity,
+                  unitPrice: Number(i.variant.price),
+                  totalPrice: Number(i.variant.price) * i.quantity,
+                })),
+              });
+            } catch (kErr: any) {
+              this.logger.warn(`Failed to enqueue order.created outbox event: ${kErr.message}`);
+            }
+          }
+
           return createdOrder;
         },
         {
@@ -547,6 +580,22 @@ export class OrdersService {
         },
       });
 
+      if (this.kafkaPublisher) {
+        try {
+          await this.kafkaPublisher.publishOrderStatusChanged(tx, {
+            orderId: order.id,
+            orderNumber: order.orderNumber,
+            userId: order.userId,
+            previousStatus: order.status,
+            newStatus: OrderStatus.CANCELLED,
+            updatedBy: userId || order.userId,
+            reason: 'User / Admin Cancellation',
+          });
+        } catch (kErr: any) {
+          this.logger.warn(`Failed to enqueue order.cancelled outbox event: ${kErr.message}`);
+        }
+      }
+
       return orderUpdated;
     });
 
@@ -624,6 +673,22 @@ export class OrdersService {
             },
           },
         });
+      }
+
+      if (this.kafkaPublisher) {
+        try {
+          await this.kafkaPublisher.publishOrderStatusChanged(tx, {
+            orderId: order.id,
+            orderNumber: order.orderNumber,
+            userId: order.userId,
+            previousStatus: order.status,
+            newStatus: dto.status,
+            updatedBy: adminUserId,
+            trackingNumber: dto.trackingNumber ?? order.trackingNumber,
+          });
+        } catch (kErr: any) {
+          this.logger.warn(`Failed to enqueue order status outbox event: ${kErr.message}`);
+        }
       }
 
       return orderUpdated;

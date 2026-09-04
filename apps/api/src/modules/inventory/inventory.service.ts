@@ -3,9 +3,12 @@ import {
   BadRequestException,
   NotFoundException,
   Logger,
+  Optional,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
+import { KafkaEventPublisher } from '../kafka/services/kafka-event-publisher.service';
+import { KAFKA_EVENT_TYPES } from '../kafka/kafka.constants';
 import {
   AdjustStockDto,
   UpdateInventoryDto,
@@ -23,6 +26,7 @@ export class InventoryService {
   constructor(
     private prisma: PrismaService,
     private redisService: RedisService,
+    @Optional() private kafkaPublisher?: KafkaEventPublisher,
   ) {}
 
   // =========================================================================
@@ -69,6 +73,24 @@ export class InventoryService {
             reason: `Order ${orderNumber} checkout reservation`,
           },
         });
+
+        // Outbox: Publish inventory.reserved
+        if (this.kafkaPublisher) {
+          try {
+            await this.kafkaPublisher.publishInventoryEvent(tx, KAFKA_EVENT_TYPES.INVENTORY_RESERVED, {
+              variantId: item.variantId,
+              quantityChanged: item.quantity,
+              previousStock: variant.stockQuantity,
+              newStock: variant.stockQuantity,
+              reservedStock: variant.reservedStock + item.quantity,
+              availableStock: Math.max(0, available - item.quantity),
+              operation: 'RESERVE',
+              orderNumber,
+            });
+          } catch (kErr: any) {
+            this.logger.warn(`Failed to enqueue inventory.reserved outbox event: ${kErr.message}`);
+          }
+        }
       }
 
       // Store in Redis with TTL for fallback expiration
@@ -117,6 +139,34 @@ export class InventoryService {
               reason: `Payment confirmed for order ${orderNumber}`,
             },
           });
+
+          // Outbox: Publish inventory.committed & low_stock if applicable
+          if (this.kafkaPublisher) {
+            try {
+              await this.kafkaPublisher.publishInventoryEvent(tx, KAFKA_EVENT_TYPES.INVENTORY_COMMITTED, {
+                variantId: item.variantId,
+                quantityChanged: item.quantity,
+                previousStock,
+                newStock,
+                operation: 'COMMIT',
+                orderNumber,
+              });
+
+              if (newStock <= 5) {
+                await this.kafkaPublisher.publishInventoryEvent(tx, KAFKA_EVENT_TYPES.INVENTORY_LOW_STOCK, {
+                  variantId: item.variantId,
+                  quantityChanged: 0,
+                  previousStock,
+                  newStock,
+                  isLowStock: true,
+                  operation: 'COMMIT',
+                  orderNumber,
+                });
+              }
+            } catch (kErr: any) {
+              this.logger.warn(`Failed to enqueue inventory.committed outbox event: ${kErr.message}`);
+            }
+          }
         }
       }
     });
@@ -155,6 +205,22 @@ export class InventoryService {
               reason: `Order ${orderNumber} cancelled or timed out`,
             },
           });
+
+          // Outbox: Publish inventory.released
+          if (this.kafkaPublisher) {
+            try {
+              await this.kafkaPublisher.publishInventoryEvent(tx, KAFKA_EVENT_TYPES.INVENTORY_RELEASED, {
+                variantId: item.variantId,
+                quantityChanged: item.quantity,
+                previousStock: variant.stockQuantity,
+                newStock: variant.stockQuantity,
+                operation: 'RELEASE',
+                orderNumber,
+              });
+            } catch (kErr: any) {
+              this.logger.warn(`Failed to enqueue inventory.released outbox event: ${kErr.message}`);
+            }
+          }
         }
       }
     });
@@ -201,6 +267,24 @@ export class InventoryService {
           adminUserId,
         },
       });
+
+      // Outbox: Publish inventory.restocked or low_stock
+      if (this.kafkaPublisher) {
+        try {
+          const eventType = dto.quantityChange > 0 ? KAFKA_EVENT_TYPES.INVENTORY_RESTOCKED : (newStock <= 5 ? KAFKA_EVENT_TYPES.INVENTORY_LOW_STOCK : 'inventory.adjusted');
+          await this.kafkaPublisher.publishInventoryEvent(tx, eventType, {
+            variantId: updated.id,
+            sku: updated.sku,
+            quantityChanged: dto.quantityChange,
+            previousStock,
+            newStock,
+            operation: dto.quantityChange > 0 ? 'RESTOCK' : 'ADJUST',
+            reason: dto.reason,
+          });
+        } catch (kErr: any) {
+          this.logger.warn(`Failed to enqueue inventory adjustment outbox event: ${kErr.message}`);
+        }
+      }
 
       return {
         variantId: updated.id,

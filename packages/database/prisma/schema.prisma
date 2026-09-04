@@ -868,3 +868,73 @@ model Brand {
   @@index([deletedAt])
 }
 
+// ==========================================
+// KAFKA EVENT STREAMING & TRANSACTIONAL OUTBOX
+// ==========================================
+
+enum OutboxStatus {
+  PENDING
+  PUBLISHED
+  FAILED
+}
+
+model OutboxEvent {
+  id            String       @id @default(uuid())
+  topic         String
+  partitionKey  String
+  eventId       String       @unique
+  eventType     String
+  aggregateType String
+  aggregateId   String
+  correlationId String?
+  payload       Json
+  status        OutboxStatus @default(PENDING)
+  retryCount    Int          @default(0)
+  lastError     String?
+  scheduledFor  DateTime     @default(now())
+  publishedAt   DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@index([status, scheduledFor])
+  @@index([topic])
+  @@index([aggregateType, aggregateId])
+  @@index([createdAt])
+}
+
+model KafkaInboxEvent {
+  id            String    @id @default(uuid())
+  eventId       String    @unique
+  eventType     String
+  topic         String
+  consumerGroup String
+  status        String    @default("PROCESSED") // PROCESSED | FAILED
+  errorMessage  String?
+  processedAt   DateTime  @default(now())
+
+  @@index([eventId])
+  @@index([consumerGroup, topic])
+  @@index([processedAt])
+}
+
+model KafkaFailedEvent {
+  id            String    @id @default(uuid())
+  eventId       String    @unique
+  topic         String
+  consumerGroup String
+  partition     Int?
+  offset        String?
+  payload       Json
+  errorMessage  String
+  stackTrace    String?
+  retryCount    Int       @default(0)
+  resolved      Boolean   @default(false)
+  resolvedAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([topic, consumerGroup])
+  @@index([resolved])
+  @@index([createdAt])
+}
+

@@ -31,6 +31,8 @@ import {
   Role,
 } from '@ecommerce/types';
 import { NotificationType } from '@ecommerce/database';
+import { KafkaEventPublisher } from '../kafka/services/kafka-event-publisher.service';
+import { KAFKA_EVENT_TYPES } from '../kafka/kafka.constants';
 
 @Injectable()
 export class ShippingService {
@@ -43,6 +45,7 @@ export class ShippingService {
     private notificationsService: NotificationsService,
     private providerFactory: ShippingProviderFactory,
     @Optional() statusMappingService?: CourierStatusMappingService,
+    @Optional() private kafkaPublisher?: KafkaEventPublisher,
   ) {
     this.statusMappingService = statusMappingService || new CourierStatusMappingService();
   }
@@ -192,6 +195,27 @@ export class ShippingService {
             },
           },
         });
+
+        // Outbox: Publish shipment.created event
+        if (this.kafkaPublisher) {
+          try {
+            await this.kafkaPublisher.publishShipmentEvent(tx, KAFKA_EVENT_TYPES.SHIPMENT_CREATED, {
+              shipmentId: shipment.id,
+              orderId: order.id,
+              orderNumber: order.orderNumber,
+              courierProvider: shipmentResult.courierProvider,
+              awbNumber: shipmentResult.awbNumber,
+              status: shipment.status,
+              isCod,
+              codAmount: isCod ? Number(order.totalAmount) : 0,
+              weight: dto.weightKg,
+              trackingUrl: shipmentResult.trackingUrl,
+              labelUrl: shipmentResult.labelUrl,
+            });
+          } catch (kErr: any) {
+            this.logger.warn(`Failed to enqueue shipment.created outbox event: ${kErr.message}`);
+          }
+        }
 
         return shipment;
       },
@@ -581,7 +605,25 @@ export class ShippingService {
       'SYSTEM_COURIER_WEBHOOK',
     );
 
-    // 5. Cache eventId in Redis for 7 days
+    // 5. Outbox: Publish courier event to courier.shipment.events topic
+    if (this.kafkaPublisher) {
+      try {
+        await this.kafkaPublisher.publishCourierEvent(null, normalizedStatus.toLowerCase(), {
+          eventId,
+          awbNumber: awb || shipment.awbNumber || '',
+          orderNumber: externalOrderId || shipment.order?.orderNumber,
+          status: rawStatus,
+          courierProvider: shipment.courierProvider,
+          location,
+          activity,
+          timestamp: new Date().toISOString(),
+        });
+      } catch (kErr: any) {
+        this.logger.warn(`Failed to enqueue courier.shipment.events outbox event: ${kErr.message}`);
+      }
+    }
+
+    // 6. Cache eventId in Redis for 7 days
     await this.redisService.set(cacheKey, '1', 604800);
 
     return { received: true, eventId };
