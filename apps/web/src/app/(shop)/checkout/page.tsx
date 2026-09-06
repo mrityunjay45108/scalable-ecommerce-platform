@@ -278,9 +278,8 @@ function CheckoutContent() {
 
   const subtotal = preview?.subtotal ?? cart.subtotal ?? 0;
   const discountAmount = preview?.discountAmount ?? cart.discountAmount ?? 0;
-  const shippingCost = preview?.shippingCost ?? (subtotal >= 100 ? 0 : 10);
-  const tax = preview?.tax ?? Number(((subtotal - discountAmount) * 0.08).toFixed(2));
-  const total = preview?.totalAmount ?? Number((subtotal - discountAmount + tax + shippingCost).toFixed(2));
+  const shippingCost = preview?.shippingCost ?? (subtotal >= 999 || subtotal === 0 ? 0 : 99);
+  const total = preview?.totalAmount ?? Number((Math.max(0, subtotal - discountAmount) + shippingCost).toFixed(2));
 
   return (
     <div className="container mx-auto px-4 py-10 max-w-5xl space-y-8">
@@ -532,17 +531,20 @@ function CheckoutContent() {
           </div>
 
           <div className="space-y-3 max-h-56 overflow-y-auto pr-1">
-            {(preview?.items || cart.items).map((item: any) => (
-              <div key={item.id} className="flex justify-between items-center text-xs">
-                <div>
-                  <p className="font-semibold line-clamp-1">{item.productTitle || item.variant?.product?.title}</p>
-                  <p className="text-[10px] text-muted-foreground">
-                    {item.variantTitle || item.variant?.title} x {item.quantity}
-                  </p>
+            {(preview?.items || cart.items).map((item: any) => {
+              const uPrice = item.unitPrice || (item.totalPrice ? item.totalPrice / (item.quantity || 1) : 0);
+              return (
+                <div key={item.id} className="flex justify-between items-center text-xs">
+                  <div>
+                    <p className="font-semibold line-clamp-1">{item.productTitle || item.variant?.product?.title}</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {item.variantTitle || item.variant?.title} × {item.quantity} ({formatPrice(uPrice)} each)
+                    </p>
+                  </div>
+                  <span className="font-bold">{formatPrice(item.totalPrice)}</span>
                 </div>
-                <span className="font-bold">{formatPrice(item.totalPrice)}</span>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="space-y-2.5 pt-3 border-t text-xs">
@@ -552,7 +554,12 @@ function CheckoutContent() {
             </div>
             {discountAmount > 0 && (
               <div className="flex justify-between text-emerald-600 font-semibold">
-                <span>Discount ({preview?.coupon?.code || cart.coupon?.code})</span>
+                <span>
+                  Discount ({preview?.coupon?.code || cart.coupon?.code}
+                  {preview?.coupon?.discountType === 'PERCENTAGE' || preview?.coupon?.type === 'PERCENTAGE' || cart.coupon?.type === 'PERCENTAGE'
+                    ? ` • ${preview?.coupon?.discountValue || preview?.coupon?.value || cart.coupon?.value || 50}% OFF`
+                    : ''})
+                </span>
                 <span>-{formatPrice(discountAmount)}</span>
               </div>
             )}
@@ -563,8 +570,8 @@ function CheckoutContent() {
               </span>
             </div>
             <div className="flex justify-between text-muted-foreground">
-              <span>Tax (8%)</span>
-              <span className="font-medium text-foreground">{formatPrice(tax)}</span>
+              <span>Taxes</span>
+              <span className="font-semibold text-emerald-600">Inclusive of all taxes (GST)</span>
             </div>
             <div className="flex justify-between text-base font-extrabold text-foreground pt-3 border-t">
               <span>Grand Total</span>
