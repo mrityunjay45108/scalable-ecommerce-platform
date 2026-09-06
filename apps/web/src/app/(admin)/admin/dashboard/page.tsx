@@ -591,7 +591,7 @@ export default function AdminDashboardPage() {
             {activeMetrics.topSellingProducts && activeMetrics.topSellingProducts.length > 0 ? (
               activeMetrics.topSellingProducts.map((p, idx) => (
                 <div
-                  key={p.productId || idx}
+                  key={`${p.productId || 'product'}-${idx}`}
                   className="p-3.5 rounded-2xl bg-muted/20 border border-border/50 flex items-center justify-between gap-3 hover:border-primary/40 transition-all"
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
