@@ -27,7 +27,6 @@ import { formatPrice } from '@/lib/utils';
 import { apiClient } from '@/lib/api-client';
 
 const CONCIERGE_PHONE = '917324882119';
-const DISPLAY_PHONE = '+91 7324882119';
 
 interface ProductSuggestion {
   title: string;
@@ -111,7 +110,7 @@ export function StoreConciergeHub() {
   const handleOpenWhatsApp = (messageText?: string) => {
     const finalMsg = messageText || customWhatsAppMsg.trim() || 'Namaste! I would like to connect with SWADESH customer concierge.';
     const encoded = encodeURIComponent(finalMsg);
-    window.open(`https://wa.me/${CONCIERGE_PHONE}?text=${encoded}`, '_blank');
+    window.open(`https://api.whatsapp.com/send?phone=${CONCIERGE_PHONE}&text=${encoded}`, '_blank', 'noopener,noreferrer');
     setCustomWhatsAppMsg('');
     setActiveModal('none');
   };
@@ -197,7 +196,7 @@ export function StoreConciergeHub() {
       }
 
       return {
-        text: `📦 **Live Order Tracking:**\nAap apne order ka real-time GPS tracking dekhne ke liye **[My Orders](/orders)** page par visit kar sakte hain.\n\nAap humare 24x7 Customer Concierge (${DISPLAY_PHONE}) se WhatsApp par bhi apna Order ID bhejkar turant live status jaan sakte hain!`,
+        text: `📦 **Live Order Tracking:**\nAap apne order ka real-time GPS tracking dekhne ke liye **[My Orders](/orders)** page par visit kar sakte hain.\n\nAap humare 24x7 Customer Concierge se WhatsApp par bhi apna Order ID bhejkar turant live status jaan sakte hain!`,
         quickActions: [
           { label: '💬 WhatsApp Live Tracking', query: 'open_whatsapp_action' },
           { label: '📋 Go to My Orders', query: 'open orders' },
@@ -682,10 +681,10 @@ export function StoreConciergeHub() {
               <div>
                 <h4 className="font-black text-sm text-foreground flex items-center gap-1.5 flex-wrap">
                   <span>SWADESH Concierge</span>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-bold border border-emerald-500/20">
-                    {DISPLAY_PHONE}
+                  <span className="text-[10px] font-semibold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 flex items-center gap-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span>Official 24×7 Support</span>
                   </span>
-                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                 </h4>
                 <p className="text-[11px] text-amber-600 dark:text-amber-400 font-bold flex items-center gap-1">
                   <span>॥ अतिथिदेवो भवः ॥</span>
@@ -746,13 +745,13 @@ export function StoreConciergeHub() {
 
           {/* Direct WhatsApp Action Link */}
           <a
-            href={`https://wa.me/${CONCIERGE_PHONE}?text=${encodeURIComponent('Namaste! I would like to connect with SWADESH customer concierge.')}`}
+            href={`https://api.whatsapp.com/send?phone=${CONCIERGE_PHONE}&text=${encodeURIComponent('Namaste! I would like to connect with SWADESH customer concierge.')}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full h-8 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 font-bold text-[11px] flex items-center justify-center gap-1.5 border border-emerald-500/20 transition-colors"
+            className="w-full h-8.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 font-bold text-xs flex items-center justify-center gap-2 border border-emerald-500/20 transition-all active:scale-[0.98] cursor-pointer"
           >
-            <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Direct WhatsApp Chat ({DISPLAY_PHONE})</span>
+            <MessageCircle className="w-4 h-4 text-emerald-600" />
+            <span>Direct WhatsApp Chat</span>
           </a>
 
           {/* Preset Inquiries */}
