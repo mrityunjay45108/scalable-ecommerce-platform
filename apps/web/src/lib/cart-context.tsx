@@ -126,20 +126,84 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateCartItem = async (itemId: string, quantity: number) => {
+    // Instant optimistic update for smooth UI responsiveness
+    setCart((prev) => {
+      if (!prev) return prev;
+      const cleanId = itemId.replace(/^guest-/, '');
+      const newItems = (prev.items || []).map((it) => {
+        const matches =
+          it.id === itemId ||
+          it.variantId === itemId ||
+          it.variantId === cleanId ||
+          it.id === `guest-${cleanId}`;
+        if (matches) {
+          const unit =
+            it.unitPrice ||
+            (it.totalPrice ? it.totalPrice / (it.quantity || 1) : 0);
+          return {
+            ...it,
+            quantity,
+            totalPrice: Number((unit * quantity).toFixed(2)),
+          };
+        }
+        return it;
+      });
+      const newSubtotal = Number(
+        newItems.reduce((sum, it) => sum + (it.totalPrice || 0), 0).toFixed(2),
+      );
+      const newTotalItems = newItems.reduce((sum, it) => sum + (it.quantity || 0), 0);
+      return {
+        ...prev,
+        items: newItems,
+        subtotal: newSubtotal,
+        totalItems: newTotalItems,
+      };
+    });
+
     try {
       const updatedCart = await apiClient.patch(`/cart/items/${itemId}`, { quantity }, getHeaders());
-      setCart(updatedCart);
+      if (updatedCart && typeof updatedCart === 'object') {
+        setCart(updatedCart);
+      }
     } catch (e) {
-      console.error(e);
+      console.error('Failed to update cart item:', e);
+      await fetchCart();
     }
   };
 
   const removeFromCart = async (itemId: string) => {
+    // Instant optimistic removal for smooth UI responsiveness
+    setCart((prev) => {
+      if (!prev) return prev;
+      const cleanId = itemId.replace(/^guest-/, '');
+      const newItems = (prev.items || []).filter((it) => {
+        const matches =
+          it.id === itemId ||
+          it.variantId === itemId ||
+          it.variantId === cleanId ||
+          it.id === `guest-${cleanId}`;
+        return !matches;
+      });
+      const newSubtotal = Number(
+        newItems.reduce((sum, it) => sum + (it.totalPrice || 0), 0).toFixed(2),
+      );
+      const newTotalItems = newItems.reduce((sum, it) => sum + (it.quantity || 0), 0);
+      return {
+        ...prev,
+        items: newItems,
+        subtotal: newSubtotal,
+        totalItems: newTotalItems,
+      };
+    });
+
     try {
       const updatedCart = await apiClient.delete(`/cart/items/${itemId}`, getHeaders());
-      setCart(updatedCart);
+      if (updatedCart && typeof updatedCart === 'object') {
+        setCart(updatedCart);
+      }
     } catch (e) {
-      console.error(e);
+      console.error('Failed to remove cart item:', e);
+      await fetchCart();
     }
   };
 
