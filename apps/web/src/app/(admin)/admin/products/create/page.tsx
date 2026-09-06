@@ -81,30 +81,8 @@ export default function CreateProductPage() {
   // Custom Specification Fields (Dynamic Key-Value pairs)
   const [customSpecs, setCustomSpecs] = useState<{ id: string; key: string; value: string }[]>([]);
 
-  // Multiple Photos (Images)
-  const [mediaList, setMediaList] = useState<MediaItem[]>([
-    {
-      id: 'media-1',
-      url: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800',
-      type: 'image',
-      altText: 'Front View (Hero)',
-      isPrimary: true,
-    },
-    {
-      id: 'media-2',
-      url: 'https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=800',
-      type: 'image',
-      altText: 'Side Profile',
-      isPrimary: false,
-    },
-    {
-      id: 'media-3',
-      url: 'https://images.unsplash.com/photo-1584735935682-2f2b69dff9d2?w=800',
-      type: 'image',
-      altText: 'Detail View',
-      isPrimary: false,
-    },
-  ]);
+  // Multiple Photos (Images) - Starts empty, populated when admin uploads or selects preset
+  const [mediaList, setMediaList] = useState<MediaItem[]>([]);
   const [newImageUrl, setNewImageUrl] = useState('');
 
   // Dedicated Product Video (YouTube, MP4, Vimeo, Cloudinary)
@@ -867,9 +845,22 @@ export default function CreateProductPage() {
                   Upload multiple photos from your device or paste web URLs. Set cover photo and angle tags.
                 </p>
               </div>
-              <Badge variant="secondary" className="font-bold text-xs">
-                {mediaList.length} {mediaList.length === 1 ? 'Photo' : 'Photos'}
-              </Badge>
+              <div className="flex items-center gap-2">
+                {mediaList.length > 0 && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setMediaList([])}
+                    className="text-xs text-destructive hover:bg-destructive/10 h-7 px-2.5 font-bold"
+                  >
+                    Clear All
+                  </Button>
+                )}
+                <Badge variant="secondary" className="font-bold text-xs">
+                  {mediaList.length} {mediaList.length === 1 ? 'Photo' : 'Photos'}
+                </Badge>
+              </div>
             </div>
 
             {/* Upload Area & URL Input */}
@@ -1292,8 +1283,12 @@ export default function CreateProductPage() {
                       className="object-cover"
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
-                      No Image
+                    <div className="w-full h-full flex flex-col items-center justify-center text-xs text-muted-foreground p-4 text-center space-y-1.5 bg-muted/40">
+                      <ImagePlus className="w-10 h-10 opacity-30 text-muted-foreground" />
+                      <span className="font-bold text-foreground/70">No Photo Added Yet</span>
+                      <span className="text-[10px] text-muted-foreground">
+                        Upload or paste image URL in Section 3
+                      </span>
                     </div>
                   )}
 
