@@ -33,3 +33,16 @@ export const HTTP_STATUS = {
   UNPROCESSABLE_ENTITY: 422,
   INTERNAL_SERVER_ERROR: 500,
 } as const;
+
+export const GST_SLABS = {
+  EXEMPT: 0.00,
+  LOW: 0.05,
+  STANDARD: 0.18,
+  HIGH: 0.28,
+} as const;
+
+export const SUPPORT_CONFIG = {
+  email: 'support@novastore.com',
+  phone: '+91-800-NOVASTORE',
+  workingHours: '10:00 AM - 7:00 PM IST',
+} as const;
