@@ -101,23 +101,40 @@ export class AnalyticsService {
     const averageOrderValue = totalOrders > 0 ? Number((totalRevenue / totalOrders).toFixed(2)) : 0;
 
     // Fetch details for top products and categories
-    const topSellingProducts = await Promise.all(
-      topOrderItems.map(async (item) => {
-        const variant = await this.prisma.productVariant.findUnique({
-          where: { id: item.variantId },
-          include: { product: { include: { category: true } } },
-        });
+    const productMap = new Map<string, {
+      productId: string;
+      title: string;
+      slug: string;
+      categoryName: string;
+      totalSold: number;
+      revenue: number;
+    }>();
 
-        return {
-          productId: variant?.product.id || '',
-          title: variant?.product.title || 'Product',
-          slug: variant?.product.slug || '',
-          categoryName: variant?.product.category?.name || 'General',
+    for (const item of topOrderItems) {
+      const variant = await this.prisma.productVariant.findUnique({
+        where: { id: item.variantId },
+        include: { product: { include: { category: true } } },
+      });
+
+      if (!variant) continue;
+      const prodId = variant.product.id;
+      const existing = productMap.get(prodId);
+      if (existing) {
+        existing.totalSold += item._sum.quantity || 0;
+        existing.revenue += Number(item._sum.totalPrice || 0);
+      } else {
+        productMap.set(prodId, {
+          productId: prodId,
+          title: variant.product.title || 'Product',
+          slug: variant.product.slug || '',
+          categoryName: variant.product.category?.name || 'General',
           totalSold: item._sum.quantity || 0,
           revenue: Number(item._sum.totalPrice || 0),
-        };
-      }),
-    );
+        });
+      }
+    }
+
+    const topSellingProducts = Array.from(productMap.values()).sort((a, b) => b.totalSold - a.totalSold);
 
     // Group categories
     const categoryMap: Record<string, { name: string; revenue: number; volume: number }> = {};
