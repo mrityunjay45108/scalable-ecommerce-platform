@@ -25,3 +25,24 @@ export function formatDate(date: string | Date | undefined): string {
     year: 'numeric',
   });
 }
+
+/**
+ * Truncate text to a specified character length with ellipsis
+ */
+export function truncateText(text: string, maxLength: number): string {
+  if (!text || text.length <= maxLength) return text;
+  return `${text.slice(0, maxLength).trim()}...`;
+}
+
+/**
+ * Extract user initials for avatars
+ */
+export function getInitials(name: string): string {
+  if (!name) return 'U';
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0].toUpperCase())
+    .join('');
+}
