@@ -125,7 +125,7 @@ export class CartService {
   }
 
   async updateItemQuantity(userId: string, itemId: string, dto: UpdateCartItemDto) {
-    const item = await this.prisma.cartItem.findUnique({
+    let item = await this.prisma.cartItem.findUnique({
       where: { id: itemId },
       include: {
         cart: true,
@@ -133,8 +133,34 @@ export class CartService {
       },
     });
 
+    if (!item) {
+      const cleanId = itemId.replace(/^guest-/, '');
+      const userCart = await this.prisma.cart.findUnique({ where: { userId } });
+      if (userCart) {
+        item = await this.prisma.cartItem.findUnique({
+          where: {
+            cartId_variantId: {
+              cartId: userCart.id,
+              variantId: cleanId,
+            },
+          },
+          include: {
+            cart: true,
+            variant: true,
+          },
+        });
+      }
+    }
+
     if (!item || item.cart.userId !== userId) {
       throw new NotFoundException('Cart item not found');
+    }
+
+    if (dto.quantity <= 0) {
+      await this.prisma.cartItem.delete({
+        where: { id: item.id },
+      });
+      return this.getOrCreateCart(userId);
     }
 
     const availableStock = Math.max(0, item.variant.stockQuantity - item.variant.reservedStock);
@@ -143,7 +169,7 @@ export class CartService {
     }
 
     await this.prisma.cartItem.update({
-      where: { id: itemId },
+      where: { id: item.id },
       data: { quantity: dto.quantity },
     });
 
@@ -151,17 +177,33 @@ export class CartService {
   }
 
   async removeItem(userId: string, itemId: string) {
-    const item = await this.prisma.cartItem.findUnique({
+    let item = await this.prisma.cartItem.findUnique({
       where: { id: itemId },
       include: { cart: true },
     });
+
+    if (!item) {
+      const cleanId = itemId.replace(/^guest-/, '');
+      const userCart = await this.prisma.cart.findUnique({ where: { userId } });
+      if (userCart) {
+        item = await this.prisma.cartItem.findUnique({
+          where: {
+            cartId_variantId: {
+              cartId: userCart.id,
+              variantId: cleanId,
+            },
+          },
+          include: { cart: true },
+        });
+      }
+    }
 
     if (!item || item.cart.userId !== userId) {
       throw new NotFoundException('Cart item not found');
     }
 
     await this.prisma.cartItem.delete({
-      where: { id: itemId },
+      where: { id: item.id },
     });
 
     return this.getOrCreateCart(userId);
@@ -200,11 +242,26 @@ export class CartService {
       throw new BadRequestException('Coupon usage limit has been reached');
     }
 
+    // Check per-user limit (e.g. 1 time per customer)
+    const perUserLimit = coupon.perUserLimit ?? 1;
+    const userUsageCount = await this.prisma.couponUsage.count({
+      where: {
+        couponId: coupon.id,
+        userId,
+      },
+    });
+
+    if (userUsageCount >= perUserLimit) {
+      throw new BadRequestException(
+        `You have already used this coupon. Each customer can only redeem it ${perUserLimit} time${perUserLimit > 1 ? 's' : ''}.`,
+      );
+    }
+
     // Verify minimum order amount against current cart
     const cart = await this.getOrCreateCart(userId);
     if (coupon.minOrderValue && cart.subtotal < Number(coupon.minOrderValue)) {
       throw new BadRequestException(
-        `Minimum cart total of $${Number(coupon.minOrderValue).toFixed(2)} required for this coupon`,
+        `Minimum cart total of ₹${Number(coupon.minOrderValue).toFixed(2)} required for this coupon`,
       );
     }
 
@@ -349,7 +406,7 @@ export class CartService {
         const itemTotal = price * item.quantity;
 
         return {
-          id: `guest-${variant.id}`,
+          id: variant.id,
           variantId: variant.id,
           quantity: item.quantity,
           unitPrice: price,
@@ -381,14 +438,18 @@ export class CartService {
   }
 
   async addGuestItem(guestId: string, dto: AddToCartDto) {
+    const cleanVariantId = dto.variantId.replace(/^guest-/, '');
     const rawData = await this.redisService.get(`guest_cart:${guestId}`);
     let items: Array<{ variantId: string; quantity: number }> = rawData ? JSON.parse(rawData) : [];
 
-    const existingIndex = items.findIndex((i) => i.variantId === dto.variantId);
+    const existingIndex = items.findIndex(
+      (i) => i.variantId === cleanVariantId || i.variantId === dto.variantId,
+    );
     if (existingIndex > -1) {
       items[existingIndex].quantity += dto.quantity;
+      items[existingIndex].variantId = cleanVariantId;
     } else {
-      items.push({ variantId: dto.variantId, quantity: dto.quantity });
+      items.push({ variantId: cleanVariantId, quantity: dto.quantity });
     }
 
     await this.redisService.set(`guest_cart:${guestId}`, JSON.stringify(items), 604800); // 7 days
@@ -399,9 +460,32 @@ export class CartService {
     const rawData = await this.redisService.get(`guest_cart:${guestId}`);
     let items: Array<{ variantId: string; quantity: number }> = rawData ? JSON.parse(rawData) : [];
 
-    const item = items.find((i) => i.variantId === variantId);
-    if (item) {
-      item.quantity = quantity;
+    const cleanId = variantId.replace(/^guest-/, '');
+    const itemIndex = items.findIndex(
+      (i) => i.variantId === cleanId || i.variantId === variantId,
+    );
+
+    if (itemIndex > -1) {
+      if (quantity <= 0) {
+        items.splice(itemIndex, 1);
+      } else {
+        const variant = await this.prisma.productVariant.findUnique({
+          where: { id: cleanId },
+        });
+        if (variant) {
+          const availableStock = Math.max(
+            0,
+            variant.stockQuantity - (variant.reservedStock || 0),
+          );
+          if (quantity > availableStock) {
+            throw new BadRequestException(
+              `Only ${availableStock} units available in stock`,
+            );
+          }
+        }
+        items[itemIndex].quantity = quantity;
+        items[itemIndex].variantId = cleanId;
+      }
       await this.redisService.set(`guest_cart:${guestId}`, JSON.stringify(items), 604800);
     }
 
@@ -412,7 +496,10 @@ export class CartService {
     const rawData = await this.redisService.get(`guest_cart:${guestId}`);
     let items: Array<{ variantId: string; quantity: number }> = rawData ? JSON.parse(rawData) : [];
 
-    items = items.filter((i) => i.variantId !== variantId);
+    const cleanId = variantId.replace(/^guest-/, '');
+    items = items.filter(
+      (i) => i.variantId !== cleanId && i.variantId !== variantId,
+    );
     await this.redisService.set(`guest_cart:${guestId}`, JSON.stringify(items), 604800);
 
     return this.getGuestCart(guestId);
@@ -438,7 +525,8 @@ export class CartService {
 
     for (const item of itemsToMerge) {
       try {
-        await this.addItem(userId, { variantId: item.variantId, quantity: item.quantity });
+        const cleanVariantId = item.variantId.replace(/^guest-/, '');
+        await this.addItem(userId, { variantId: cleanVariantId, quantity: item.quantity });
       } catch {
         // Continue merging other items if one fails stock check
       }
@@ -503,13 +591,30 @@ export class CartService {
     let isFreeShipping = false;
 
     if (couponCode) {
-      const coupon = await this.prisma.coupon.findFirst({
+      let coupon = await this.prisma.coupon.findFirst({
         where: {
           code: couponCode.toUpperCase(),
           isActive: true,
           deletedAt: null,
         },
       });
+
+      if (coupon) {
+        // If logged-in user has already used this coupon, evict from Redis and skip
+        if (rawCart?.userId) {
+          const perUserLimit = coupon.perUserLimit ?? 1;
+          const userUsageCount = await this.prisma.couponUsage.count({
+            where: {
+              couponId: coupon.id,
+              userId: rawCart.userId,
+            },
+          });
+          if (userUsageCount >= perUserLimit) {
+            await this.redisService.del(`cart_coupon:${rawCart.userId}`);
+            coupon = null;
+          }
+        }
+      }
 
       if (coupon) {
         if (!coupon.minOrderValue || subtotal >= Number(coupon.minOrderValue)) {
@@ -534,15 +639,15 @@ export class CartService {
       }
     }
 
-    // Estimated Shipping ($10 if subtotal < $100, Free if >= $100 or coupon is FREE_SHIPPING)
-    const shippingAmount = subtotal === 0 || subtotal >= 100 || isFreeShipping ? 0 : 10.0;
+    // Estimated Shipping (₹99 if subtotal < ₹999, Free if >= ₹999 or coupon is FREE_SHIPPING)
+    const shippingAmount = subtotal === 0 || subtotal >= 999 || isFreeShipping ? 0 : 99.0;
 
-    // Estimated Tax (8%)
+    // Prices in India are inclusive of all taxes (GST included in subtotal)
     const taxableAmount = Math.max(0, subtotal - discountAmount);
-    const estimatedTax = Number((taxableAmount * 0.08).toFixed(2));
+    const estimatedTax = Number((taxableAmount - taxableAmount / 1.18).toFixed(2));
 
-    // Final Grand Total
-    const grandTotal = Number((taxableAmount + shippingAmount + estimatedTax).toFixed(2));
+    // Final Grand Total (Subtotal - Discount + Shipping)
+    const grandTotal = Number((taxableAmount + shippingAmount).toFixed(2));
 
     return {
       id: rawCart?.id || 'guest',
