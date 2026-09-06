@@ -10,6 +10,7 @@ import { InventoryService } from '../inventory/inventory.service';
 import { CouponsService } from '../coupons/coupons.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ShippingService } from '../shipping/shipping.service';
+import { RedisService } from '../redis/redis.service';
 import { ConfigService } from '@nestjs/config';
 import { KafkaEventPublisher } from '../kafka/services/kafka-event-publisher.service';
 import { CheckoutDto, CheckoutPreviewDto, UpdateOrderStatusDto, OrderQueryDto } from './orders.dto';
@@ -32,6 +33,7 @@ export class OrdersService {
     @Optional() private shippingService?: ShippingService,
     @Optional() private configService?: ConfigService,
     @Optional() private kafkaPublisher?: KafkaEventPublisher,
+    @Optional() private redisService?: RedisService,
   ) {}
 
   async previewCheckout(userId: string, dto: CheckoutPreviewDto) {
@@ -103,6 +105,7 @@ export class OrdersService {
     // 4. Coupon calculation
     let discountAmount = 0;
     let couponDetails: any = null;
+    let isCouponFreeShipping = false;
 
     if (dto.couponCode) {
       const couponResult = await this.couponsService.validateAndCalculate(userId, {
@@ -111,6 +114,9 @@ export class OrdersService {
       });
       discountAmount = couponResult.discountAmount;
       couponDetails = couponResult;
+      if (couponResult.isFreeShipping) {
+        isCouponFreeShipping = true;
+      }
     }
 
     // 5. Courier Serviceability & Shipping Quote
@@ -118,7 +124,7 @@ export class OrdersService {
       this.configService?.get<string>('shipping.provider') === 'COURIER_PLATFORM' ||
       this.configService?.get<boolean>('shipping.courierPlatform.enabled');
 
-    let shippingCost = subtotal >= 100 ? 0 : 10;
+    let shippingCost = (subtotal === 0 || subtotal >= 999 || isCouponFreeShipping) ? 0 : 99;
     let serviceabilityInfo: any = null;
     let carrierQuoteInfo: any = null;
 
@@ -150,7 +156,7 @@ export class OrdersService {
         );
 
         if (quote && typeof quote.shippingCost === 'number') {
-          shippingCost = subtotal >= 100 ? 0 : quote.shippingCost;
+          shippingCost = (subtotal >= 999 || isCouponFreeShipping) ? 0 : quote.shippingCost;
           carrierQuoteInfo = quote;
         }
       } catch (err: any) {
@@ -160,8 +166,9 @@ export class OrdersService {
     }
 
     const taxableAmount = Math.max(0, subtotal - discountAmount);
-    const tax = Number((taxableAmount * 0.08).toFixed(2));
-    const totalAmount = Number((taxableAmount + tax + shippingCost).toFixed(2));
+    // In India, product prices are all-inclusive of taxes (GST included)
+    const tax = Number((taxableAmount - taxableAmount / 1.18).toFixed(2));
+    const totalAmount = Number((taxableAmount + shippingCost).toFixed(2));
 
     return {
       items,
@@ -233,6 +240,7 @@ export class OrdersService {
     // 4. Coupon calculation
     let discountAmount = 0;
     let couponId: string | null = null;
+    let isCouponFreeShipping = false;
 
     if (dto.couponCode) {
       const couponResult = await this.couponsService.validateAndCalculate(userId, {
@@ -241,6 +249,9 @@ export class OrdersService {
       });
       discountAmount = couponResult.discountAmount;
       couponId = couponResult.couponId;
+      if (couponResult.isFreeShipping) {
+        isCouponFreeShipping = true;
+      }
     }
 
     // 5. Courier Dynamic Shipping calculation
@@ -248,7 +259,7 @@ export class OrdersService {
       this.configService?.get<string>('shipping.provider') === 'COURIER_PLATFORM' ||
       this.configService?.get<boolean>('shipping.courierPlatform.enabled');
 
-    let shippingCost = subtotal >= 100 ? 0 : 10;
+    let shippingCost = (subtotal === 0 || subtotal >= 999 || isCouponFreeShipping) ? 0 : 99;
     if (isCourierPlatform && address.postalCode && this.shippingService) {
       try {
         const totalItemsCount = cart.items.reduce((sum, i) => sum + i.quantity, 0);
@@ -268,15 +279,17 @@ export class OrdersService {
           'COURIER_PLATFORM',
         );
         if (quote && typeof quote.shippingCost === 'number') {
-          shippingCost = subtotal >= 100 ? 0 : quote.shippingCost;
+          shippingCost = (subtotal >= 999 || isCouponFreeShipping) ? 0 : quote.shippingCost;
         }
       } catch (err: any) {
         this.logger.warn(`Courier quote bypassed during checkout: ${err.message}`);
       }
     }
 
-    const tax = Number(((subtotal - discountAmount) * 0.08).toFixed(2));
-    const totalAmount = Number((subtotal - discountAmount + tax + shippingCost).toFixed(2));
+    const taxableAmount = Math.max(0, subtotal - discountAmount);
+    // In India, product prices are all-inclusive of taxes (GST included)
+    const tax = Number((taxableAmount - taxableAmount / 1.18).toFixed(2));
+    const totalAmount = Number((taxableAmount + shippingCost).toFixed(2));
 
     const orderNumber = `ORD-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
 
@@ -288,6 +301,23 @@ export class OrdersService {
       // 6. Create Order inside Prisma transaction with extended timeout for cloud DBs
       order = await this.prisma.$transaction(
         async (tx) => {
+          // Double-check coupon limit inside transaction to prevent race conditions
+          if (couponId) {
+            const couponRecord = await tx.coupon.findUnique({ where: { id: couponId } });
+            if (!couponRecord || !couponRecord.isActive || (couponRecord.usageLimit && couponRecord.usedCount >= couponRecord.usageLimit)) {
+              throw new BadRequestException('Coupon is no longer valid or has expired');
+            }
+            const perUserLimit = couponRecord.perUserLimit ?? 1;
+            const userUsageCount = await tx.couponUsage.count({
+              where: { couponId, userId },
+            });
+            if (userUsageCount >= perUserLimit) {
+              throw new BadRequestException(
+                `You have already used this coupon. Each customer can only redeem it ${perUserLimit} time${perUserLimit > 1 ? 's' : ''}.`,
+              );
+            }
+          }
+
           const createdOrder = await tx.order.create({
             data: {
               orderNumber,
@@ -436,6 +466,15 @@ export class OrdersService {
         await this.inventoryService.commitStock(orderNumber, reservationItems);
       } catch (err) {
         this.logger.error(`Error committing stock for COD order ${orderNumber}: ${err}`);
+      }
+    }
+
+    // Clear applied coupon from Redis session after successful order
+    if (this.redisService) {
+      try {
+        await this.redisService.del(`cart_coupon:${userId}`);
+      } catch (rErr: any) {
+        this.logger.warn(`Could not clear cart_coupon from redis: ${rErr.message}`);
       }
     }
 
