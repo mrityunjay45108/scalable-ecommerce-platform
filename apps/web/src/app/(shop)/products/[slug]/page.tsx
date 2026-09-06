@@ -217,7 +217,7 @@ const getFallbackProduct = (rawSlug: string): ProductDto => {
 
   return {
     id: `prod-${rawSlug}`,
-    title: formattedTitle || 'NovaStore Signature Product',
+    title: formattedTitle || 'SWADESH Luxe Signature Creation',
     slug: rawSlug,
     description:
       'Crafted with premium materials and engineered for maximum durability, performance, and everyday comfort.',
@@ -574,7 +574,7 @@ const getFallbackProduct = (rawSlug: string): ProductDto => {
         <div className="lg:col-span-5 space-y-5">
           {(() => {
             const specs = parseProductSpecs(product.description, product.category?.name);
-            const brandDisplay = specs.brand || product.category?.name || 'NovaStore';
+            const brandDisplay = specs.brand || product.category?.name || 'SWADESH Luxe';
             return (
               <div className="space-y-4">
                 {/* 1. MYNTRA BRAND & TITLE HEADER */}
@@ -604,7 +604,7 @@ const getFallbackProduct = (rawSlug: string): ProductDto => {
                             try {
                               await navigator.share({
                                 title: product.title,
-                                text: `Check out ${product.title} on NovaStore for ${formatPrice(currentPrice)}!`,
+                                text: `Check out ${product.title} on SWADESH Luxe for ${formatPrice(currentPrice)}!`,
                                 url: window.location.href,
                               });
                               return;
@@ -1082,7 +1082,7 @@ const getFallbackProduct = (rawSlug: string): ProductDto => {
               <div className="grid grid-cols-2 gap-2">
                 {/* WhatsApp */}
                 <a
-                  href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`Check out ${product.title} on NovaStore for ${formatPrice(currentPrice)}! \n${typeof window !== 'undefined' ? window.location.href : ''}`)}`}
+                  href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`Check out ${product.title} on SWADESH Luxe for ${formatPrice(currentPrice)}! \n${typeof window !== 'undefined' ? window.location.href : ''}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 p-2.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-xs font-bold transition-colors"
@@ -1092,7 +1092,7 @@ const getFallbackProduct = (rawSlug: string): ProductDto => {
 
                 {/* Telegram */}
                 <a
-                  href={`https://t.me/share/url?url=${encodeURIComponent(typeof window !== 'undefined' ? window.location.href : '')}&text=${encodeURIComponent(`Check out ${product.title} on NovaStore!`)}`}
+                  href={`https://t.me/share/url?url=${encodeURIComponent(typeof window !== 'undefined' ? window.location.href : '')}&text=${encodeURIComponent(`Check out ${product.title} on SWADESH Luxe!`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 p-2.5 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 text-sky-700 dark:text-sky-300 border border-sky-500/30 text-xs font-bold transition-colors"
@@ -1102,7 +1102,7 @@ const getFallbackProduct = (rawSlug: string): ProductDto => {
 
                 {/* Twitter / X */}
                 <a
-                  href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(typeof window !== 'undefined' ? window.location.href : '')}&text=${encodeURIComponent(`Check out ${product.title} on NovaStore for ${formatPrice(currentPrice)}!`)}`}
+                  href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(typeof window !== 'undefined' ? window.location.href : '')}&text=${encodeURIComponent(`Check out ${product.title} on SWADESH Luxe for ${formatPrice(currentPrice)}!`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 p-2.5 rounded-xl bg-zinc-500/10 hover:bg-zinc-500/20 text-foreground border border-zinc-500/30 text-xs font-bold transition-colors"
@@ -1118,7 +1118,7 @@ const getFallbackProduct = (rawSlug: string): ProductDto => {
                       try {
                         await navigator.share({
                           title: product.title,
-                          text: `Check out ${product.title} on NovaStore for ${formatPrice(currentPrice)}!`,
+                          text: `Check out ${product.title} on SWADESH Luxe for ${formatPrice(currentPrice)}!`,
                           url: window.location.href,
                         });
                       } catch (e) {}

@@ -702,7 +702,7 @@ function CreateProductContent() {
                   />
                   {/* Quick Brand presets */}
                   <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
-                    {['Roadster', 'Nike', 'Apple', "Levi's", 'Puma', 'Zara', 'NovaStore'].map((bName) => (
+                    {['Roadster', 'Nike', 'Apple', "Levi's", 'Puma', 'Zara', 'SWADESH Luxe'].map((bName) => (
                       <button
                         key={bName}
                         type="button"

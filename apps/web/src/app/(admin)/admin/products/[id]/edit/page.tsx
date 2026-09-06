@@ -791,7 +791,7 @@ export default function EditProductPage() {
                     className="w-full h-10 px-3 rounded-xl border bg-background text-xs font-bold"
                   />
                   <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
-                    {['Roadster', 'Nike', 'Apple', "Levi's", 'Puma', 'Zara', 'NovaStore'].map((bName) => (
+                    {['Roadster', 'Nike', 'Apple', "Levi's", 'Puma', 'Zara', 'SWADESH Luxe'].map((bName) => (
                       <button
                         key={bName}
                         type="button"

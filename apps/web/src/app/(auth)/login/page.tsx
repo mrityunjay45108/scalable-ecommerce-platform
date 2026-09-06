@@ -13,8 +13,8 @@ function LoginContent() {
   const callbackUrl = searchParams.get('callback') || searchParams.get('redirect') || '/';
 
   const { login, signInWithGoogle } = useAuth();
-  const [email, setEmail] = useState('customer@novastore.com');
-  const [password, setPassword] = useState('Password123!');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);

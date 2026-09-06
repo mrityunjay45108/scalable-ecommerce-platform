@@ -132,7 +132,7 @@ export default function WishlistPage() {
             'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600';
           const isBusy = actionLoadingId === product.id;
           const parsed = parseProductSpecs(product.description || '');
-          const brandName = parsed.brand || product.category?.name || 'NOVASTORE';
+          const brandName = parsed.brand || product.category?.name || 'SWADESH LUXE';
 
           const comparePrice = product.comparePrice || Math.round(product.basePrice * 1.4);
           const hasDiscount = comparePrice > product.basePrice;

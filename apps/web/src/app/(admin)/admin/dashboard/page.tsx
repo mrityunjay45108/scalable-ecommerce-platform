@@ -186,7 +186,7 @@ export default function AdminDashboardPage() {
               </span>
             </div>
             <p className="text-xs text-muted-foreground max-w-xl">
-              Real-time executive control center for NovaStore. Monitor gross revenue, order fulfillment, return inspections, and product catalog.
+              Real-time executive control center for SWADESH Luxe. Monitor gross revenue, order fulfillment, return inspections, and product catalog.
             </p>
           </div>
 

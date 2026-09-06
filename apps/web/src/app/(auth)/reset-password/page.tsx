@@ -49,13 +49,15 @@ function ResetPasswordContent() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-muted/20">
-      <div className="max-w-md w-full rounded-3xl border bg-card p-8 shadow-xl space-y-6">
+      <div className="max-w-md w-full rounded-3xl border bg-card p-6 sm:p-8 shadow-xl space-y-5 sm:space-y-6">
         <div className="text-center space-y-2">
-          <Link href="/" className="inline-flex items-center gap-2 font-bold text-2xl tracking-tight text-primary">
-            <span className="h-9 w-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center font-extrabold shadow">
-              N
+          <Link href="/" className="inline-flex items-center gap-2.5 font-bold text-2xl tracking-tight text-foreground justify-center">
+            <span className="h-9 w-9 rounded-2xl bg-gradient-to-tr from-amber-500 via-orange-600 to-rose-600 text-white flex items-center justify-center font-black text-lg shadow-md border border-white/20">
+              🇮🇳
             </span>
-            <span>NovaStore</span>
+            <span className="font-black text-2xl tracking-tight">
+              SWADESH<span className="text-amber-500 text-xs ml-1 font-extrabold uppercase px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/30">Luxe</span>
+            </span>
           </Link>
           <h2 className="text-2xl font-bold tracking-tight">Create New Password</h2>
           <p className="text-xs text-muted-foreground">Enter a strong, secure new password for your account</p>

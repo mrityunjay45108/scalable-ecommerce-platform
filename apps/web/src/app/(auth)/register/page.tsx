@@ -62,16 +62,18 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-muted/20">
-      <div className="max-w-md w-full rounded-3xl border bg-card p-8 shadow-xl space-y-6">
+      <div className="max-w-md w-full rounded-3xl border bg-card p-6 sm:p-8 shadow-xl space-y-5 sm:space-y-6">
         <div className="text-center space-y-2">
-          <Link href="/" className="inline-flex items-center gap-2 font-bold text-2xl tracking-tight text-primary">
-            <span className="h-9 w-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center font-extrabold shadow">
-              N
+          <Link href="/" className="inline-flex items-center gap-2.5 font-bold text-2xl tracking-tight text-foreground justify-center">
+            <span className="h-9 w-9 rounded-2xl bg-gradient-to-tr from-amber-500 via-orange-600 to-rose-600 text-white flex items-center justify-center font-black text-lg shadow-md border border-white/20">
+              🇮🇳
             </span>
-            <span>NovaStore</span>
+            <span className="font-black text-2xl tracking-tight">
+              SWADESH<span className="text-amber-500 text-xs ml-1 font-extrabold uppercase px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/30">Luxe</span>
+            </span>
           </Link>
           <h2 className="text-2xl font-bold tracking-tight">Create Account</h2>
-          <p className="text-xs text-muted-foreground">Join NovaStore for express checkout, order tracking, and rewards</p>
+          <p className="text-xs text-muted-foreground">Join SWADESH Luxe for express checkout, order tracking, and rewards • ॥ अतिथिदेवो भवः ॥</p>
         </div>
 
         {errorMsg && (
@@ -159,16 +161,24 @@ export default function RegisterPage() {
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs font-semibold block">Phone Number (Optional)</label>
-            <div className="relative">
+            <label className="text-xs font-semibold block text-foreground flex items-center justify-between">
+              <span>Mobile Number (मोबाइल नंबर)</span>
+              <span className="text-[10px] text-muted-foreground font-normal">Optional</span>
+            </label>
+            <div className="relative flex items-center">
+              <span className="absolute left-3 text-xs font-bold text-muted-foreground flex items-center gap-1 pointer-events-none">
+                🇮🇳 +91
+              </span>
               <input
                 type="tel"
-                placeholder="+1 (555) 000-0000"
+                name="phone"
+                autoComplete="tel"
+                maxLength={10}
+                placeholder="10-digit mobile (उदा. 9876543210)"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className="w-full h-10 pl-9 pr-3 text-xs rounded-xl border bg-background focus:ring-1 focus:ring-primary"
+                onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                className="w-full h-10 pl-16 pr-3 text-xs rounded-xl border bg-background font-mono focus:ring-1 focus:ring-primary"
               />
-              <Phone className="w-4 h-4 text-muted-foreground absolute left-3 top-3" />
             </div>
           </div>
 

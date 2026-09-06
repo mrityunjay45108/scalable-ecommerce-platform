@@ -207,7 +207,7 @@ export default function AdminSettingsPage() {
                 <label className="text-xs font-bold text-foreground flex items-center justify-between">
                   <span>Admin Login Email</span>
                   <span className="text-[10px] text-muted-foreground font-normal">
-                    (Used to log into NovaStore Admin)
+                    (Used to log into SWADESH Luxe Admin)
                   </span>
                 </label>
                 <div className="relative">

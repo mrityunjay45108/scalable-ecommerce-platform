@@ -156,7 +156,7 @@ export function AdminSidebar({ onClose, className = '' }: AdminSidebarProps) {
             </div>
             <div className="min-w-0">
               <p className="text-xs font-bold text-foreground truncate">{user?.firstName || 'Administrator'}</p>
-              <p className="text-[10px] text-muted-foreground truncate">{user?.email || 'admin@novastore.com'}</p>
+              <p className="text-[10px] text-muted-foreground truncate">{user?.email || 'admin@swadeshluxe.in'}</p>
             </div>
           </div>
         </div>
