@@ -12,6 +12,10 @@ import {
 import { Type, Transform } from 'class-transformer';
 
 export class ProductImageDto {
+  @IsOptional()
+  @IsString()
+  id?: string;
+
   @IsString()
   @IsNotEmpty()
   url!: string;
@@ -34,6 +38,10 @@ export class ProductImageDto {
 }
 
 export class ProductVariantInputDto {
+  @IsOptional()
+  @IsString()
+  id?: string;
+
   @IsString()
   @IsNotEmpty()
   sku!: string;

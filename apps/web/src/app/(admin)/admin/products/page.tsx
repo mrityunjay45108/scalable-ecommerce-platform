@@ -167,31 +167,46 @@ export default function AdminProductsPage() {
       });
 
       const existingImgs = editingProduct?.images || [];
+      const cleanExisting = existingImgs.map((img, idx) => ({
+        id: img.id,
+        url: img.url,
+        publicId: img.publicId || `novastore/photo-${idx}`,
+        altText: img.altText || title,
+        isPrimary: img.isPrimary ?? idx === 0,
+        sortOrder: img.sortOrder ?? idx,
+      }));
+
       const finalImages = imageUrl
-        ? existingImgs.length > 0 && imageUrl === existingImgs[0]?.url
-          ? existingImgs
+        ? cleanExisting.length > 0 && imageUrl === cleanExisting[0]?.url
+          ? cleanExisting
           : [
               {
                 url: imageUrl,
                 publicId: `novastore/manual-${Date.now()}`,
+                altText: title,
                 isPrimary: true,
                 sortOrder: 0,
               },
-              ...existingImgs.slice(1),
+              ...cleanExisting.slice(1),
             ]
-        : existingImgs;
+        : cleanExisting;
 
       const numStock = parseInt(stockQuantity, 10) || 50;
       const finalVariants =
         editingProduct?.variants && editingProduct.variants.length > 0
-          ? editingProduct.variants.map((v, i) =>
-              i === 0 ? { ...v, stockQuantity: numStock, sku: sku || v.sku } : v,
-            )
+          ? editingProduct.variants.map((v, i) => ({
+              id: v.id,
+              sku: (i === 0 ? (sku.trim() || v.sku) : v.sku) || `SKU-${i}`,
+              title: v.title || 'Standard',
+              price: Number(v.price) || parseFloat(basePrice) || 0,
+              stockQuantity: i === 0 ? numStock : (v.stockQuantity ?? 20),
+              attributes: (v.attributes as Record<string, string>) || { size: 'Standard', color: 'Default' },
+            }))
           : [
               {
-                sku: sku || `SKU-${Date.now().toString().slice(-6)}`,
+                sku: sku.trim() || `SKU-${Date.now().toString().slice(-6)}`,
                 title: 'Standard',
-                price: parseFloat(basePrice),
+                price: parseFloat(basePrice) || 0,
                 stockQuantity: numStock,
                 attributes: { size: 'Standard', color: 'Default' },
               },

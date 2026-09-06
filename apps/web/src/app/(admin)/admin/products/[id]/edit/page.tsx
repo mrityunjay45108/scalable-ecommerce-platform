@@ -104,6 +104,7 @@ export default function EditProductPage() {
 
   // 5. Variants Matrix
   const [variants, setVariants] = useState<VariantForm[]>([]);
+  const [singleVariantId, setSingleVariantId] = useState<string | undefined>(undefined);
   const [singleStock, setSingleStock] = useState('50');
   const [singleSku, setSingleSku] = useState('');
 
@@ -189,6 +190,7 @@ export default function EditProductPage() {
 
           // Populate variants
           if (prodData.variants && prodData.variants.length > 0) {
+            setSingleVariantId(prodData.variants[0].id);
             setSingleStock(String(prodData.variants[0].stockQuantity ?? 50));
             setSingleSku(prodData.variants[0].sku || '');
             setVariants(
@@ -459,6 +461,7 @@ export default function EditProductPage() {
       const finalVariants =
         variants.length > 0
           ? variants.map((v) => ({
+              id: v.id || undefined,
               sku: v.sku || `${code}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`,
               title: v.title || 'Standard',
               price: Number(v.price) > 0 ? Number(v.price) : numericBasePrice,
@@ -470,6 +473,7 @@ export default function EditProductPage() {
             }))
           : [
               {
+                id: singleVariantId || undefined,
                 sku: singleSku.trim() || `${code}-STD`,
                 title: 'Standard',
                 price: numericBasePrice,

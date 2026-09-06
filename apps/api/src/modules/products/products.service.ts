@@ -262,7 +262,7 @@ export class ProductsService {
       });
 
       return this.formatProduct(product);
-    });
+    }, { maxWait: 15000, timeout: 30000 });
   }
 
   async update(id: string, dto: UpdateProductDto) {
@@ -270,6 +270,15 @@ export class ProductsService {
       where: { id, deletedAt: null },
     });
     if (!existing) throw new NotFoundException('Product not found');
+
+    if (dto.categoryId && dto.categoryId !== existing.categoryId) {
+      const categoryExists = await this.prisma.category.findFirst({
+        where: { id: dto.categoryId, deletedAt: null },
+      });
+      if (!categoryExists) {
+        throw new BadRequestException('Selected category does not exist');
+      }
+    }
 
     const rawSlug = dto.slug || (dto.title ? this.slugify(dto.title) : existing.slug);
     const slug = await this.ensureUniqueSlug(rawSlug, id);
@@ -285,7 +294,7 @@ export class ProductsService {
 
         for (const v of dto.variants) {
           const match = existingVariants.find(
-            (ev) => ((v as any).id && ev.id === (v as any).id) || ev.sku === v.sku,
+            (ev) => (v.id && ev.id === v.id) || ev.sku === v.sku,
           );
 
           if (match) {
@@ -313,6 +322,44 @@ export class ProductsService {
               },
             });
           } else {
+            // Check if another variant with this SKU exists in DB
+            const existingSkuConflict = await tx.productVariant.findUnique({
+              where: { sku: v.sku },
+            });
+            if (existingSkuConflict) {
+              if (existingSkuConflict.deletedAt) {
+                await tx.productVariant.update({
+                  where: { id: existingSkuConflict.id },
+                  data: { sku: `${existingSkuConflict.sku}-deleted-${Date.now()}` },
+                });
+              } else if (existingSkuConflict.productId === id) {
+                await tx.productVariant.update({
+                  where: { id: existingSkuConflict.id },
+                  data: {
+                    title: v.title,
+                    price: v.price,
+                    stockQuantity: v.stockQuantity,
+                    attributes: v.attributes || {},
+                    deletedAt: null,
+                  },
+                });
+                await tx.inventory.upsert({
+                  where: { variantId: existingSkuConflict.id },
+                  update: { quantity: v.stockQuantity },
+                  create: {
+                    variantId: existingSkuConflict.id,
+                    quantity: v.stockQuantity,
+                    reserved: 0,
+                    lowStockAlert: 10,
+                  },
+                });
+                updatedVariantIds.add(existingSkuConflict.id);
+                continue;
+              } else {
+                throw new ConflictException(`Variant SKU "${v.sku}" already belongs to another product`);
+              }
+            }
+
             const createdVariant = await tx.productVariant.create({
               data: {
                 productId: id,
@@ -359,8 +406,8 @@ export class ProductsService {
           data: dto.images.map((img, index) => ({
             productId: id,
             url: img.url,
-            publicId: img.publicId,
-            altText: img.altText,
+            publicId: img.publicId || `novastore/img-${Date.now()}-${index}`,
+            altText: img.altText || dto.title || existing.title,
             isPrimary: img.isPrimary ?? index === 0,
             sortOrder: img.sortOrder ?? index,
           })),
@@ -387,7 +434,7 @@ export class ProductsService {
       });
 
       return this.formatProduct(updated);
-    });
+    }, { maxWait: 15000, timeout: 30000 });
   }
 
   async delete(id: string) {

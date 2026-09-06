@@ -25,6 +25,25 @@ export class AllExceptionsFilter implements ExceptionFilter {
       status = exception.getStatus();
       const res = exception.getResponse();
       message = typeof res === 'object' && 'message' in res ? (res as any).message : res;
+    } else if ((exception as any)?.code && typeof (exception as any).code === 'string' && (exception as any).code.startsWith('P')) {
+      const pCode = (exception as any).code;
+      if (pCode === 'P2002') {
+        status = HttpStatus.CONFLICT;
+        const target = (exception as any).meta?.target;
+        message = `Unique constraint conflict on: ${Array.isArray(target) ? target.join(', ') : target || 'field'}`;
+      } else if (pCode === 'P2025') {
+        status = HttpStatus.NOT_FOUND;
+        message = 'The requested database record was not found.';
+      } else if (pCode === 'P2028') {
+        status = HttpStatus.GATEWAY_TIMEOUT;
+        message = 'Database operation timed out. Please try again.';
+      } else if (pCode === 'P2003') {
+        status = HttpStatus.BAD_REQUEST;
+        message = 'Referenced related item does not exist.';
+      } else {
+        status = HttpStatus.BAD_REQUEST;
+        message = (exception as any).message || 'Database error occurred.';
+      }
     } else if (exception instanceof Error) {
       this.logger.error(`Unhandled Exception: ${exception.message}`, exception.stack);
       message =
