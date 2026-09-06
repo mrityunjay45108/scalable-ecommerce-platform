@@ -702,3 +702,13 @@ export interface CartFinancialSummary {
   isFreeShippingApplied: boolean;
   freeShippingGap: number;
 }
+
+// --- Iteration 27: Coupon Eligibility Types ---
+export interface CouponEligibilityVerification {
+  couponCode: string;
+  isEligible: boolean;
+  rejectionReason?: string;
+  hasBeenClaimedByUser: boolean;
+  minOrderValueRequired?: number;
+  discountCalculated: number;
+}
