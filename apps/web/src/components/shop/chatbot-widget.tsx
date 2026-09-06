@@ -319,6 +319,7 @@ export function ChatbotWidget() {
 
           <button
             onClick={() => setIsOpen(true)}
+            suppressHydrationWarning
             className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-primary hover:bg-primary/95 text-white shadow-2xl flex items-center justify-center transition-all duration-300 hover:scale-105 active:scale-95 ring-4 ring-primary/20"
             aria-label="Open AI Store Assistant"
           >
@@ -535,6 +536,7 @@ export function ChatbotWidget() {
               placeholder="Ask anything (e.g. delivery time, offers, shoes)..."
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
+              suppressHydrationWarning
               className="flex-1 h-10 px-3.5 text-xs rounded-xl border bg-background focus:outline-none focus:ring-1 focus:ring-primary font-medium"
             />
             <Button
