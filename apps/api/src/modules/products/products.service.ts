@@ -196,14 +196,8 @@ export class ProductsService {
   }
 
   async create(dto: CreateProductDto) {
-    const slug = dto.slug || this.slugify(dto.title);
-
-    const existing = await this.prisma.product.findFirst({
-      where: { slug, deletedAt: null },
-    });
-    if (existing) {
-      throw new ConflictException(`Product with slug '${slug}' already exists`);
-    }
+    const rawSlug = dto.slug || this.slugify(dto.title);
+    const slug = await this.ensureUniqueSlug(rawSlug);
 
     return this.prisma.$transaction(async (tx) => {
       const product = await tx.product.create({
@@ -277,39 +271,84 @@ export class ProductsService {
     });
     if (!existing) throw new NotFoundException('Product not found');
 
-    const slug = dto.slug || (dto.title ? this.slugify(dto.title) : existing.slug);
-
-    if (slug !== existing.slug) {
-      const slugConflict = await this.prisma.product.findFirst({
-        where: { slug, deletedAt: null },
-      });
-      if (slugConflict && slugConflict.id !== id) {
-        throw new ConflictException(`Product with slug '${slug}' already exists`);
-      }
-    }
+    const rawSlug = dto.slug || (dto.title ? this.slugify(dto.title) : existing.slug);
+    const slug = await this.ensureUniqueSlug(rawSlug, id);
 
     return this.prisma.$transaction(async (tx) => {
-      // If variants are provided, update/sync them
+      // If variants are provided, update/sync them safely without breaking foreign keys
       if (dto.variants && dto.variants.length > 0) {
-        await tx.productVariant.deleteMany({ where: { productId: id } });
+        const existingVariants = await tx.productVariant.findMany({
+          where: { productId: id },
+        });
+
+        const updatedVariantIds = new Set<string>();
+
         for (const v of dto.variants) {
-          await tx.productVariant.create({
-            data: {
-              productId: id,
-              sku: v.sku,
-              title: v.title,
-              price: v.price,
-              stockQuantity: v.stockQuantity,
-              attributes: v.attributes || {},
-              inventory: {
-                create: {
-                  quantity: v.stockQuantity,
-                  reserved: 0,
-                  lowStockAlert: 10,
+          const match = existingVariants.find(
+            (ev) => ((v as any).id && ev.id === (v as any).id) || ev.sku === v.sku,
+          );
+
+          if (match) {
+            updatedVariantIds.add(match.id);
+            await tx.productVariant.update({
+              where: { id: match.id },
+              data: {
+                sku: v.sku,
+                title: v.title,
+                price: v.price,
+                stockQuantity: v.stockQuantity,
+                attributes: v.attributes || {},
+                deletedAt: null,
+              },
+            });
+
+            await tx.inventory.upsert({
+              where: { variantId: match.id },
+              update: { quantity: v.stockQuantity },
+              create: {
+                variantId: match.id,
+                quantity: v.stockQuantity,
+                reserved: 0,
+                lowStockAlert: 10,
+              },
+            });
+          } else {
+            const createdVariant = await tx.productVariant.create({
+              data: {
+                productId: id,
+                sku: v.sku,
+                title: v.title,
+                price: v.price,
+                stockQuantity: v.stockQuantity,
+                attributes: v.attributes || {},
+                inventory: {
+                  create: {
+                    quantity: v.stockQuantity,
+                    reserved: 0,
+                    lowStockAlert: 10,
+                  },
                 },
               },
-            },
-          });
+            });
+            updatedVariantIds.add(createdVariant.id);
+          }
+        }
+
+        // Handle variants that were removed from the product
+        for (const ev of existingVariants) {
+          if (!updatedVariantIds.has(ev.id)) {
+            const hasOrderItems = await tx.orderItem.count({ where: { variantId: ev.id } });
+            if (hasOrderItems > 0) {
+              await tx.productVariant.update({
+                where: { id: ev.id },
+                data: { deletedAt: new Date() },
+              });
+            } else {
+              await tx.inventory.deleteMany({ where: { variantId: ev.id } });
+              await tx.cartItem.deleteMany({ where: { variantId: ev.id } });
+              await tx.productVariant.delete({ where: { id: ev.id } });
+            }
+          }
         }
       }
 
@@ -355,10 +394,13 @@ export class ProductsService {
     const product = await this.prisma.product.findUnique({ where: { id } });
     if (!product) throw new NotFoundException('Product not found');
 
-    // Soft delete
+    // Soft delete and release unique slug
     await this.prisma.product.update({
       where: { id },
-      data: { deletedAt: new Date() },
+      data: {
+        deletedAt: new Date(),
+        slug: `${product.slug}-deleted-${Date.now()}`,
+      },
     });
     return { message: 'Product deleted successfully' };
   }
@@ -465,6 +507,34 @@ export class ProductsService {
         availableStock: Math.max(0, v.stockQuantity - (v.reservedStock || 0)),
       })),
     };
+  }
+
+  private async ensureUniqueSlug(baseSlug: string, excludeProductId?: string): Promise<string> {
+    let candidate = baseSlug;
+    let counter = 1;
+
+    while (true) {
+      const conflict = await this.prisma.product.findUnique({
+        where: { slug: candidate },
+      });
+
+      if (!conflict || conflict.id === excludeProductId) {
+        return candidate;
+      }
+
+      // If conflicting product was soft-deleted, release its slug
+      if (conflict.deletedAt) {
+        await this.prisma.product.update({
+          where: { id: conflict.id },
+          data: { slug: `${conflict.slug}-deleted-${Date.now()}` },
+        });
+        return candidate;
+      }
+
+      // Conflicting active product exists, try with next counter
+      candidate = `${baseSlug}-${counter}`;
+      counter++;
+    }
   }
 
   private slugify(text: string): string {
