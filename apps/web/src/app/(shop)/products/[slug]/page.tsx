@@ -753,26 +753,26 @@ const getFallbackProduct = (rawSlug: string): ProductDto => {
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
                     <Button
-                      size="lg"
+                      type="button"
                       variant="outline"
                       disabled={isOutOfStock || isAdding || isBuyingNow}
                       onClick={handleAddToCart}
-                      className="w-full rounded-2xl gap-2 font-black h-13 text-sm border-2 border-primary/30 hover:bg-primary/5 hover:border-primary text-foreground uppercase tracking-wider"
+                      className="w-full h-14 rounded-xl gap-2.5 font-black text-sm border-2 border-primary/40 hover:border-primary bg-primary/5 hover:bg-primary/10 text-primary hover:text-primary active:scale-[0.98] uppercase tracking-wider transition-all shadow-sm cursor-pointer"
                     >
-                      <ShoppingBag className="w-4 h-4 text-primary" />
-                      {isAdding ? 'Adding to Bag...' : 'Add to Bag'}
+                      <ShoppingBag className="w-5 h-5 text-primary" />
+                      <span>{isAdding ? 'Adding to Bag...' : 'ADD TO BAG'}</span>
                     </Button>
 
                     <Button
-                      size="lg"
+                      type="button"
                       disabled={isOutOfStock || isAdding || isBuyingNow}
                       onClick={handleBuyNow}
-                      className="w-full rounded-2xl gap-2 font-black shadow-lg shadow-primary/25 h-13 text-sm bg-primary hover:bg-primary/90 text-primary-foreground uppercase tracking-wider"
+                      className="w-full h-14 rounded-xl gap-2.5 font-black text-sm bg-primary hover:bg-primary/90 text-white shadow-xl shadow-primary/25 active:scale-[0.98] uppercase tracking-wider transition-all cursor-pointer"
                     >
-                      <Zap className="w-4 h-4 fill-current" />
-                      {isBuyingNow ? 'Proceeding...' : '⚡ Buy Now'}
+                      <Zap className="w-5 h-5 fill-current" />
+                      <span>{isBuyingNow ? 'Proceeding...' : 'BUY NOW'}</span>
                     </Button>
                   </div>
                 </div>
