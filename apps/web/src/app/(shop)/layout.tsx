@@ -2,8 +2,7 @@ import React from 'react';
 import { Navbar } from '@/components/shared/navbar';
 import { Footer } from '@/components/shared/footer';
 import { CartDrawer } from '@/components/shop/cart-drawer';
-import { ChatbotWidget } from '@/components/shop/chatbot-widget';
-import { WhatsAppFloat } from '@/components/shop/whatsapp-float';
+import { StoreConciergeHub } from '@/components/shop/store-concierge-hub';
 
 export default function ShopLayout({
   children,
@@ -16,8 +15,7 @@ export default function ShopLayout({
       <main suppressHydrationWarning className="flex-1 w-full max-w-[100vw] overflow-x-hidden">{children}</main>
       <Footer />
       <CartDrawer />
-      <ChatbotWidget />
-      <WhatsAppFloat />
+      <StoreConciergeHub />
     </div>
   );
 }
