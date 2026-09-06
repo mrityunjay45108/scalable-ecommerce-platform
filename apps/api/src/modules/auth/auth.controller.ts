@@ -49,6 +49,7 @@ export class AuthController {
     return {
       user: result.user,
       accessToken: result.tokens.accessToken,
+      refreshToken: result.tokens.refreshToken,
       expiresIn: result.tokens.expiresIn,
     };
   }
@@ -70,6 +71,7 @@ export class AuthController {
     return {
       user: result.user,
       accessToken: result.tokens.accessToken,
+      refreshToken: result.tokens.refreshToken,
       expiresIn: result.tokens.expiresIn,
     };
   }
@@ -88,6 +90,7 @@ export class AuthController {
     return {
       user: result.user,
       accessToken: result.tokens.accessToken,
+      refreshToken: result.tokens.refreshToken,
       expiresIn: result.tokens.expiresIn,
     };
   }
@@ -109,6 +112,7 @@ export class AuthController {
     return {
       user: result.user,
       accessToken: result.tokens.accessToken,
+      refreshToken: result.tokens.refreshToken,
       expiresIn: result.tokens.expiresIn,
     };
   }
@@ -124,10 +128,11 @@ export class AuthController {
   ) {
     const refreshToken = req.cookies?.['refreshToken'];
     await this.authService.logout(refreshToken, userId);
+    const isProd = process.env.NODE_ENV === 'production';
     res.clearCookie('refreshToken', {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      secure: isProd,
+      sameSite: isProd ? 'none' : 'lax',
       path: '/',
     });
     return { message: 'Logged out successfully' };
@@ -191,10 +196,11 @@ export class AuthController {
   }
 
   private setRefreshTokenCookie(res: Response, token: string) {
+    const isProd = process.env.NODE_ENV === 'production';
     res.cookie('refreshToken', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      secure: isProd,
+      sameSite: isProd ? 'none' : 'lax',
       path: '/',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });

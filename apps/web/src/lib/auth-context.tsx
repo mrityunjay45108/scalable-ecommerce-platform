@@ -43,6 +43,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
       localStorage.removeItem('current_user');
       localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
     } finally {
       setIsLoading(false);
     }
@@ -65,12 +66,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [fetchCurrentUser]);
 
   const login = async (email: string, password: string): Promise<UserDto> => {
-    const res = await apiClient.post<{ user: UserDto; accessToken: string }>('/auth/login', {
+    const res = await apiClient.post<{ user: UserDto; accessToken: string; refreshToken?: string }>('/auth/login', {
       email,
       password,
     });
-    const { user: userData, accessToken } = res;
+    const { user: userData, accessToken, refreshToken } = res;
     localStorage.setItem('access_token', accessToken);
+    if (refreshToken) {
+      localStorage.setItem('refresh_token', refreshToken);
+    }
     localStorage.setItem('current_user', JSON.stringify(userData));
     setUser(userData);
     return userData;
@@ -83,9 +87,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     lastName: string;
     phone?: string;
   }): Promise<UserDto> => {
-    const res = await apiClient.post<{ user: UserDto; accessToken: string }>('/auth/register', data);
-    const { user: userData, accessToken } = res;
+    const res = await apiClient.post<{ user: UserDto; accessToken: string; refreshToken?: string }>('/auth/register', data);
+    const { user: userData, accessToken, refreshToken } = res;
     localStorage.setItem('access_token', accessToken);
+    if (refreshToken) {
+      localStorage.setItem('refresh_token', refreshToken);
+    }
     localStorage.setItem('current_user', JSON.stringify(userData));
     setUser(userData);
     return userData;
@@ -101,7 +108,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const firstName = nameParts[0] || 'User';
     const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : 'Customer';
 
-    const res = await apiClient.post<{ user: UserDto; accessToken: string }>('/auth/firebase-login', {
+    const res = await apiClient.post<{ user: UserDto; accessToken: string; refreshToken?: string }>('/auth/firebase-login', {
       idToken,
       email: fbUser.email,
       firstName,
@@ -109,8 +116,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       avatarUrl: fbUser.photoURL || undefined,
     });
 
-    const { user: userData, accessToken } = res;
+    const { user: userData, accessToken, refreshToken } = res;
     localStorage.setItem('access_token', accessToken);
+    if (refreshToken) {
+      localStorage.setItem('refresh_token', refreshToken);
+    }
     localStorage.setItem('current_user', JSON.stringify(userData));
     setUser(userData);
     return userData;
@@ -124,6 +134,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // ignore
     } finally {
       localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
       localStorage.removeItem('current_user');
       setUser(null);
     }
