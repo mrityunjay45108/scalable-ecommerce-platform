@@ -96,6 +96,8 @@ function CreateProductContent() {
 
   // Variants (Sizes & Colors)
   const [variants, setVariants] = useState<VariantForm[]>([]);
+  const [singleStock, setSingleStock] = useState('50');
+  const [singleSku, setSingleSku] = useState('');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -449,10 +451,10 @@ function CreateProductContent() {
             }))
           : [
               {
-                sku: `${code}-STD`,
+                sku: singleSku.trim() || `${code}-STD`,
                 title: 'Standard',
                 price: numericBasePrice,
-                stockQuantity: 25,
+                stockQuantity: parseInt(String(singleStock), 10) || 50,
                 attributes: {
                   size: 'Standard',
                   color: 'Default',

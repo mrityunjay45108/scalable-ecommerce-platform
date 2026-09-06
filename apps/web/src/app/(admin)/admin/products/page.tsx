@@ -6,6 +6,8 @@ import Link from 'next/link';
 import {
   Plus,
   Edit2,
+  ArrowRight,
+  UploadCloud,
   Trash2,
   Search,
   CheckCircle2,
@@ -55,6 +57,8 @@ export default function AdminProductsPage() {
   const [countryOfOrigin, setCountryOfOrigin] = useState('');
   const [warranty, setWarranty] = useState('');
   const [washCare, setWashCare] = useState('');
+  const [stockQuantity, setStockQuantity] = useState('50');
+  const [sku, setSku] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
   const fetchProducts = async () => {
@@ -122,6 +126,8 @@ export default function AdminProductsPage() {
     setWarranty('');
     setWashCare('');
     setHeritageRegion('');
+    setStockQuantity('50');
+    setSku('');
     setShowModal(true);
   };
 
@@ -142,6 +148,8 @@ export default function AdminProductsPage() {
     setIsPublished(p.isPublished);
     setIsFeatured(p.isFeatured);
     setImageUrl(p.images?.[0]?.url || '');
+    setStockQuantity(String(p.variants?.[0]?.stockQuantity ?? 50));
+    setSku(p.variants?.[0]?.sku || '');
     setShowModal(true);
   };
 
@@ -158,6 +166,37 @@ export default function AdminProductsPage() {
         care: washCare,
       });
 
+      const existingImgs = editingProduct?.images || [];
+      const finalImages = imageUrl
+        ? existingImgs.length > 0 && imageUrl === existingImgs[0]?.url
+          ? existingImgs
+          : [
+              {
+                url: imageUrl,
+                publicId: `novastore/manual-${Date.now()}`,
+                isPrimary: true,
+                sortOrder: 0,
+              },
+              ...existingImgs.slice(1),
+            ]
+        : existingImgs;
+
+      const numStock = parseInt(stockQuantity, 10) || 50;
+      const finalVariants =
+        editingProduct?.variants && editingProduct.variants.length > 0
+          ? editingProduct.variants.map((v, i) =>
+              i === 0 ? { ...v, stockQuantity: numStock, sku: sku || v.sku } : v,
+            )
+          : [
+              {
+                sku: sku || `SKU-${Date.now().toString().slice(-6)}`,
+                title: 'Standard',
+                price: parseFloat(basePrice),
+                stockQuantity: numStock,
+                attributes: { size: 'Standard', color: 'Default' },
+              },
+            ];
+
       const payload: any = {
         title,
         description: fullDescription,
@@ -166,16 +205,8 @@ export default function AdminProductsPage() {
         comparePrice: comparePrice ? parseFloat(comparePrice) : undefined,
         isPublished,
         isFeatured,
-        images: imageUrl
-          ? [
-              {
-                url: imageUrl,
-                publicId: 'novastore/manual-upload',
-                isPrimary: true,
-                sortOrder: 0,
-              },
-            ]
-          : [],
+        images: finalImages,
+        variants: finalVariants,
       };
 
       if (editingProduct) {
@@ -419,24 +450,25 @@ export default function AdminProductsPage() {
                     <span>{isToggling ? '...' : p.isFeatured ? 'Hero Drop' : 'Add Hero'}</span>
                   </button>
 
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <Link
+                      href={`/admin/products/${p.id}/edit`}
+                      className="p-1.5 px-3 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-800 dark:text-amber-300 font-bold text-xs flex items-center gap-1.5 border border-amber-500/30 shadow-2xs"
+                      title="Full Edit Studio (All Photos, Variants & Stock)"
+                    >
+                      <Edit2 className="w-3.5 h-3.5 text-amber-600" />
+                      <span>Edit Studio</span>
+                    </Link>
+
                     <button
                       type="button"
                       onClick={() => handleOpenEdit(p)}
-                      className="p-1.5 px-2.5 rounded-xl bg-amber-500/10 text-amber-700 dark:text-amber-400 font-bold text-xs flex items-center gap-1"
+                      className="p-1.5 px-2 rounded-xl bg-muted/60 text-muted-foreground hover:text-foreground font-bold text-xs flex items-center gap-1 border"
                       title="Quick Edit"
                     >
-                      <Edit2 className="w-3.5 h-3.5" />
-                      <span>Edit</span>
+                      <Zap className="w-3 h-3 text-amber-500" />
+                      <span>Quick</span>
                     </button>
-
-                    <Link
-                      href={`/admin/products/${p.id}/edit`}
-                      className="p-1.5 px-2 rounded-xl bg-muted text-muted-foreground hover:text-foreground font-bold text-xs flex items-center gap-1"
-                      title="Studio"
-                    >
-                      <SlidersHorizontal className="w-3.5 h-3.5" />
-                    </Link>
 
                     <button
                       type="button"
@@ -557,24 +589,25 @@ export default function AdminProductsPage() {
                           <ExternalLink className="w-3.5 h-3.5" />
                         </Link>
 
-                        {/* Quick In-Page Edit */}
+                        {/* Primary Full Edit Studio */}
+                        <Link
+                          href={`/admin/products/${p.id}/edit`}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-800 dark:text-amber-300 font-bold text-xs border border-amber-500/30 transition-all shadow-2xs"
+                          title="Full Edit Studio (Variants, Multi-Photos, Stock & All Specs)"
+                        >
+                          <Edit2 className="w-3.5 h-3.5 text-amber-600" />
+                          <span>Edit Studio</span>
+                        </Link>
+
+                        {/* Quick In-Page Tweak */}
                         <button
                           type="button"
                           onClick={() => handleOpenEdit(p)}
-                          className="p-1.5 rounded-lg hover:bg-amber-500/10 text-muted-foreground hover:text-amber-600 transition-colors"
-                          title="Quick Edit (Title, Price, Stock, Image)"
+                          className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground border"
+                          title="Quick Edit (Fast In-Page Price & Title Tweak)"
                         >
-                          <Edit2 className="w-3.5 h-3.5" />
+                          <Zap className="w-3.5 h-3.5 text-amber-500" />
                         </button>
-
-                        {/* Full Edit Studio */}
-                        <Link
-                          href={`/admin/products/${p.id}/edit`}
-                          className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground"
-                          title="Full Edit Studio (Variants, Multi-Photos & Specs)"
-                        >
-                          <SlidersHorizontal className="w-3.5 h-3.5" />
-                        </Link>
 
                         {/* Delete */}
                         <button
@@ -599,9 +632,41 @@ export default function AdminProductsPage() {
       {showModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-card rounded-3xl border p-6 max-w-lg w-full shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-bold">
-              {editingProduct ? 'Edit Product' : 'Add New Product'}
-            </h3>
+            <div className="flex items-center justify-between pb-2 border-b">
+              <h3 className="text-lg font-black text-foreground">
+                {editingProduct ? 'Quick Edit Product' : 'Add New Product'}
+              </h3>
+              {editingProduct && (
+                <Link
+                  href={`/admin/products/${editingProduct.id}/edit`}
+                  className="px-3 py-1 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-800 dark:text-amber-300 font-bold text-xs flex items-center gap-1 border border-amber-500/30"
+                >
+                  <span>Open Full Studio</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              )}
+            </div>
+
+            {editingProduct && (
+              <div className="p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-transparent border border-amber-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
+                <div>
+                  <p className="font-extrabold text-xs text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4 text-amber-600" />
+                    <span>Want to edit Multi-Photos, Sizes, Colors & Inventory?</span>
+                  </p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    The Full Studio allows configuring all photo angles, videos, size variants, and live inventory.
+                  </p>
+                </div>
+                <Link
+                  href={`/admin/products/${editingProduct.id}/edit`}
+                  className="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm shrink-0 transition-all active:scale-95"
+                >
+                  <span>Open Full Studio</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+            )}
 
             <form onSubmit={handleSave} className="space-y-4 text-xs">
               <div>
@@ -716,14 +781,59 @@ export default function AdminProductsPage() {
                 </div>
               </div>
 
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-semibold block mb-1">Available Stock Quantity</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={stockQuantity}
+                    onChange={(e) => setStockQuantity(e.target.value)}
+                    className="w-full h-9 px-3 rounded-xl border bg-background font-bold text-foreground"
+                  />
+                </div>
+                <div>
+                  <label className="font-semibold block mb-1">Product SKU / Code</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. SWD-PROD-001"
+                    value={sku}
+                    onChange={(e) => setSku(e.target.value)}
+                    className="w-full h-9 px-3 rounded-xl border bg-background font-mono text-xs"
+                  />
+                </div>
+              </div>
+
               <div>
-                <label className="font-semibold block mb-1">Image URL (Cloudinary / Unsplash)</label>
-                <input
-                  required
-                  value={imageUrl}
-                  onChange={(e) => setImageUrl(e.target.value)}
-                  className="w-full h-9 px-3 rounded-xl border bg-background"
-                />
+                <label className="font-semibold block mb-1">Image URL or Local Upload</label>
+                <div className="flex gap-2">
+                  <input
+                    required
+                    value={imageUrl}
+                    onChange={(e) => setImageUrl(e.target.value)}
+                    placeholder="https://images.unsplash.com/..."
+                    className="flex-1 h-9 px-3 rounded-xl border bg-background text-xs"
+                  />
+                  <label className="h-9 px-3 rounded-xl border bg-muted/40 hover:bg-muted font-bold text-xs flex items-center gap-1.5 cursor-pointer shrink-0">
+                    <UploadCloud className="w-3.5 h-3.5 text-primary" />
+                    <span>Upload PC</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = (evt) => {
+                            if (evt.target?.result) setImageUrl(evt.target.result as string);
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
               </div>
 
               {/* Regional Heritage Hub Selection */}

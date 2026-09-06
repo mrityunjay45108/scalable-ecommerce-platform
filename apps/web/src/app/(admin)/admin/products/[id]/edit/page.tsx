@@ -104,6 +104,8 @@ export default function EditProductPage() {
 
   // 5. Variants Matrix
   const [variants, setVariants] = useState<VariantForm[]>([]);
+  const [singleStock, setSingleStock] = useState('50');
+  const [singleSku, setSingleSku] = useState('');
 
   // Load product details and categories
   useEffect(() => {
@@ -187,6 +189,8 @@ export default function EditProductPage() {
 
           // Populate variants
           if (prodData.variants && prodData.variants.length > 0) {
+            setSingleStock(String(prodData.variants[0].stockQuantity ?? 50));
+            setSingleSku(prodData.variants[0].sku || '');
             setVariants(
               prodData.variants.map((v) => ({
                 id: v.id,
@@ -466,10 +470,10 @@ export default function EditProductPage() {
             }))
           : [
               {
-                sku: `${code}-STD`,
+                sku: singleSku.trim() || `${code}-STD`,
                 title: 'Standard',
                 price: numericBasePrice,
-                stockQuantity: 25,
+                stockQuantity: parseInt(String(singleStock), 10) || 50,
                 attributes: {
                   size: 'Standard',
                   color: 'Default',
@@ -1380,9 +1384,43 @@ export default function EditProductPage() {
                 </table>
               </div>
             ) : (
-              <div className="py-6 text-center border rounded-2xl bg-muted/10 text-muted-foreground text-xs">
-                <p className="font-semibold">Single default variant will be maintained automatically.</p>
-                <p className="text-[10px]">Click any size above to generate multi-size SKU matrix.</p>
+              <div className="p-4 rounded-2xl border bg-muted/20 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="font-bold text-xs text-foreground flex items-center gap-1.5">
+                    <span>📦</span>
+                    <span>Standard Product Inventory (Single Item):</span>
+                  </p>
+                  <span className="text-[10px] text-muted-foreground">Standard / Non-Sized Product</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-muted-foreground mb-1">
+                      Available Stock Quantity *
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={singleStock}
+                      onChange={(e) => setSingleStock(e.target.value)}
+                      className="w-full h-9 px-3 rounded-xl border bg-background font-bold text-sm text-foreground"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-muted-foreground mb-1">
+                      Product SKU / Barcode *
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. SWD-PROD-STD"
+                      value={singleSku}
+                      onChange={(e) => setSingleSku(e.target.value)}
+                      className="w-full h-9 px-3 rounded-xl border bg-background font-mono text-xs"
+                    />
+                  </div>
+                </div>
+                <p className="text-[10px] text-muted-foreground">
+                  💡 Want multi-size inventory (XS, S, M, L, XL)? Click any of the size buttons above to generate a size-specific SKU & inventory matrix!
+                </p>
               </div>
             )}
           </div>
