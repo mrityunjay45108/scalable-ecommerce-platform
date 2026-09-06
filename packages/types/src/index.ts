@@ -712,3 +712,13 @@ export interface CouponEligibilityVerification {
   minOrderValueRequired?: number;
   discountCalculated: number;
 }
+
+// --- Iteration 28: Inventory Stock Level Alerts ---
+export type StockLevelStatus = 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK' | 'DISCONTINUED';
+
+export interface ProductInventoryThreshold {
+  sku: string;
+  currentStock: number;
+  lowStockThreshold: number;
+  status: StockLevelStatus;
+}
