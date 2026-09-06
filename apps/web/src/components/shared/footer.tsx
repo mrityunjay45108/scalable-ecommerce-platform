@@ -1,3 +1,4 @@
+/** Global Footer Component with trust guarantee strips */
 import React from 'react';
 import Link from 'next/link';
 import { ShieldCheck, Truck, RotateCcw, Headphones, Sparkles, CheckCircle2, Award, Smartphone } from 'lucide-react';
