@@ -83,3 +83,70 @@
   animation-play-state: paused;
 }
 
+/* ==========================================
+   PRINT MEDIA STYLES (Single Page Invoice & Clean Print)
+   ========================================== */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 6mm 8mm;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* When printing an invoice modal */
+  #swadesh-invoice-modal-root {
+    position: static !important;
+    display: block !important;
+    background: #ffffff !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    z-index: auto !important;
+  }
+
+  #swadesh-invoice-modal-root > div {
+    border: none !important;
+    box-shadow: none !important;
+    max-height: none !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    border-radius: 0 !important;
+  }
+
+  #swadesh-invoice-modal-root > div > div:first-child {
+    display: none !important;
+  }
+
+  /* Hide background elements when invoice modal is open */
+  body:has(#swadesh-invoice-modal-root) > *:not(#swadesh-invoice-modal-root) {
+    display: none !important;
+  }
+
+  /* General elements to hide during print */
+  header,
+  footer,
+  nav,
+  aside,
+  .no-print,
+  #store-concierge-hub,
+  .store-concierge-hub {
+    display: none !important;
+  }
+}
+
+
