@@ -315,6 +315,7 @@ export default function HomePage() {
         {/* Slider Navigation Arrows */}
         <button
           onClick={() => setHeroIndex((prev) => (prev - 1 + HERO_SLIDES.length) % HERO_SLIDES.length)}
+          suppressHydrationWarning
           className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center transition-all z-20 backdrop-blur"
           aria-label="Previous Banner"
         >
@@ -322,6 +323,7 @@ export default function HomePage() {
         </button>
         <button
           onClick={() => setHeroIndex((prev) => (prev + 1) % HERO_SLIDES.length)}
+          suppressHydrationWarning
           className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center transition-all z-20 backdrop-blur"
           aria-label="Next Banner"
         >
@@ -334,6 +336,7 @@ export default function HomePage() {
             <button
               key={i}
               onClick={() => setHeroIndex(i)}
+              suppressHydrationWarning
               className={`h-1.5 sm:h-2 rounded-full transition-all ${
                 heroIndex === i ? 'w-6 sm:w-8 bg-white' : 'w-1.5 sm:w-2 bg-white/40 hover:bg-white/70'
               }`}
@@ -519,6 +522,7 @@ export default function HomePage() {
             <button
               type="button"
               onClick={() => setActiveCatalogTab('all')}
+              suppressHydrationWarning
               className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-[11px] sm:text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap ${
                 activeCatalogTab === 'all'
                   ? 'bg-rose-600 text-white shadow-md shadow-rose-600/30'
@@ -530,6 +534,7 @@ export default function HomePage() {
             <button
               type="button"
               onClick={() => setActiveCatalogTab('featured')}
+              suppressHydrationWarning
               className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-[11px] sm:text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap flex items-center gap-1.5 ${
                 activeCatalogTab === 'featured'
                   ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
@@ -542,6 +547,7 @@ export default function HomePage() {
             <button
               type="button"
               onClick={() => setActiveCatalogTab('deals')}
+              suppressHydrationWarning
               className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-[11px] sm:text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap flex items-center gap-1.5 ${
                 activeCatalogTab === 'deals'
                   ? 'bg-orange-600 text-white shadow-md shadow-orange-600/30'
@@ -556,6 +562,7 @@ export default function HomePage() {
                 key={cat.id}
                 type="button"
                 onClick={() => setActiveCatalogTab(cat.id)}
+                suppressHydrationWarning
                 className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-[11px] sm:text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap ${
                   activeCatalogTab === cat.id
                     ? 'bg-primary text-white shadow-md shadow-primary/30'
