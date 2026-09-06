@@ -41,6 +41,8 @@ interface AvailableOffer {
   discountValue: number;
   minOrderValue?: number | null;
   maxDiscount?: number | null;
+  perUserLimit?: number | null;
+  isUsed?: boolean;
 }
 
 interface RecommendedProduct {
@@ -94,8 +96,8 @@ export default function CartPage() {
   const totalMRP = Math.round(subtotal * 1.38);
   const mrpDiscount = totalMRP - subtotal;
   const totalSavings = mrpDiscount + discountAmount + (isFreeShipping && subtotal > 0 ? 99 : 0);
-  const estimatedTax = Number(((subtotal - discountAmount) * 0.18).toFixed(2));
-  const orderTotal = Number((subtotal - discountAmount + shippingCost + estimatedTax).toFixed(2));
+  const estimatedTax = Number(((subtotal - discountAmount) - ((subtotal - discountAmount) / 1.18)).toFixed(2));
+  const orderTotal = Number((Math.max(0, subtotal - discountAmount) + shippingCost).toFixed(2));
 
   // Fetch active store offers and recommendations
   useEffect(() => {
@@ -625,6 +627,50 @@ export default function CartPage() {
                     {couponError}
                   </p>
                 )}
+
+                {availableOffers.length > 0 && (
+                  <div className="flex gap-1.5 overflow-x-auto pt-1 pb-0.5 no-scrollbar">
+                    {availableOffers.map((off) => {
+                      const eligible = !off.minOrderValue || subtotal >= off.minOrderValue;
+                      const isDisabled = off.isUsed || !eligible || isApplyingCoupon;
+                      return (
+                        <button
+                          key={off.id}
+                          type="button"
+                          disabled={isDisabled}
+                          onClick={() => {
+                            setCouponCode(off.code);
+                            handleApplyCoupon(off.code);
+                          }}
+                          title={
+                            off.isUsed
+                              ? 'You have already redeemed this coupon'
+                              : !eligible
+                              ? `Minimum order value ₹${off.minOrderValue} required`
+                              : `Click to apply ${off.code}`
+                          }
+                          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[11px] font-extrabold whitespace-nowrap transition-all ${
+                            off.isUsed
+                              ? 'bg-muted/40 border-dashed border-border/70 text-muted-foreground/60 cursor-not-allowed line-through'
+                              : eligible
+                              ? 'bg-card border-[#ff3f6c]/30 text-[#ff3f6c] hover:bg-[#ff3f6c]/10 cursor-pointer shadow-2xs'
+                              : 'bg-muted/40 border-border text-muted-foreground opacity-60 cursor-not-allowed'
+                          }`}
+                        >
+                          <span>{off.code}</span>
+                          <span className="font-medium opacity-80">
+                            ({off.discountType === 'PERCENTAGE' ? `${off.discountValue}%` : formatPrice(off.discountValue)})
+                          </span>
+                          {off.isUsed && (
+                            <span className="ml-0.5 text-[9px] font-bold no-underline uppercase tracking-wider bg-muted text-muted-foreground px-1.5 py-0.5 rounded">
+                              Claimed
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </form>
             )}
           </div>
@@ -684,8 +730,8 @@ export default function CartPage() {
               </div>
 
               <div className="flex justify-between text-muted-foreground">
-                <span>Estimated GST (18%)</span>
-                <span className="font-semibold text-foreground">{formatPrice(estimatedTax)}</span>
+                <span>Taxes</span>
+                <span className="font-semibold text-emerald-600 dark:text-emerald-400">Inclusive of all taxes (GST)</span>
               </div>
 
               <div className="flex justify-between text-base font-black text-foreground pt-3 border-t border-border">
