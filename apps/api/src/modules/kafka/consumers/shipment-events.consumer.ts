@@ -1,19 +1,24 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RedisService } from '../../redis/redis.service';
 import { ShippingService } from '../../shipping/shipping.service';
+import { CourierStatusMappingService } from '../../shipping/courier-status-mapping.service';
 import { KafkaEventEnvelope, ShipmentEventData, CourierEventData } from '../interfaces/kafka-event.interface';
 import { KAFKA_EVENT_TYPES } from '../kafka.constants';
 
 @Injectable()
 export class ShipmentEventsConsumer {
   private readonly logger = new Logger(ShipmentEventsConsumer.name);
+  private readonly statusMappingService: CourierStatusMappingService;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly redisService: RedisService,
     private readonly shippingService: ShippingService,
-  ) {}
+    @Optional() statusMappingService?: CourierStatusMappingService,
+  ) {
+    this.statusMappingService = statusMappingService || new CourierStatusMappingService();
+  }
 
   async handleEvent(envelope: KafkaEventEnvelope): Promise<void> {
     const { eventType, eventId, correlationId, data } = envelope;
@@ -86,6 +91,54 @@ export class ShipmentEventsConsumer {
   }
 
   private async handleCourierMilestone(data: CourierEventData): Promise<void> {
-    this.logger.log(`Courier milestone received for AWB '${data.awbNumber}': ${data.status} (Location: ${data.location || 'N/A'})`);
+    const awb = data.awbNumber;
+    this.logger.log(`Courier milestone received for AWB '${awb}': ${data.status} (Location: ${data.location || 'N/A'})`);
+
+    if (!awb && !data.orderNumber) {
+      this.logger.warn('[ShipmentEventsConsumer] Milestone missing both AWB and orderNumber');
+      return;
+    }
+
+    try {
+      // 1. Locate shipment by AWB or orderNumber
+      const shipment = await this.prisma.shipment.findFirst({
+        where: {
+          OR: [
+            ...(awb ? [{ awbNumber: awb }] : []),
+            ...(data.orderNumber ? [{ order: { orderNumber: data.orderNumber } }] : []),
+          ],
+        },
+        include: { order: true },
+      });
+
+      if (!shipment) {
+        this.logger.warn(`No shipment found matching AWB '${awb}' or Order '${data.orderNumber}'`);
+        return;
+      }
+
+      // 2. Map courier status to ShipmentStatus enum
+      const targetStatus = this.statusMappingService.mapCourierToShipmentStatus(data.status);
+
+      // Skip duplicate transition
+      if (shipment.status === targetStatus) {
+        this.logger.log(`Shipment ${shipment.id} is already in status ${targetStatus}. Skipping duplicate transition.`);
+        return;
+      }
+
+      // 3. Atomically synchronize shipment status and order lifecycle
+      await this.shippingService.updateShipmentStatus(
+        shipment.id,
+        {
+          status: targetStatus,
+          location: data.location || 'Central Logistics Hub',
+          activity: data.activity || `Courier milestone update: ${data.status}`,
+        },
+        'SYSTEM_KAFKA_WORKER',
+      );
+
+      this.logger.log(`Shipment ${shipment.id} (AWB: ${awb}) successfully synced to ${targetStatus}`);
+    } catch (err: any) {
+      this.logger.error(`Failed processing courier milestone for AWB '${awb}': ${err.message}`);
+    }
   }
 }

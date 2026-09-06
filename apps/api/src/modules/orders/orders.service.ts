@@ -568,13 +568,17 @@ export class OrdersService {
     // Centralized State Machine Validation
     validateOrderTransition(order.status, OrderStatus.CANCELLED);
 
-    // Release stock reservation
+    // Release or restock inventory depending on order lifecycle stage
     const reservationItems = order.items.map((i) => ({
       variantId: i.variantId,
       quantity: i.quantity,
     }));
 
-    await this.inventoryService.releaseStock(order.orderNumber, reservationItems);
+    if (order.status === OrderStatus.PENDING_PAYMENT) {
+      await this.inventoryService.releaseStock(order.orderNumber, reservationItems);
+    } else {
+      await this.inventoryService.restockCommittedStock(order.orderNumber, reservationItems);
+    }
 
     const updated = await this.prisma.$transaction(async (tx) => {
       const orderUpdated = await tx.order.update({

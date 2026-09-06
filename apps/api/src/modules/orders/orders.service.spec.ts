@@ -111,6 +111,7 @@ describe('OrdersService - Complete Order Lifecycle & Snapshot Integrity', () => 
     reserveStock: jest.fn(),
     commitStock: jest.fn(),
     releaseStock: jest.fn(),
+    restockCommittedStock: jest.fn(),
   };
 
   const mockCouponsService = {

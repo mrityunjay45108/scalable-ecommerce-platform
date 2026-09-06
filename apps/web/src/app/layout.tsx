@@ -3,8 +3,8 @@ import './globals.css';
 import { Providers } from '@/components/providers';
 
 export const metadata: Metadata = {
-  title: 'NovaStore | Modern Scalable E-Commerce',
-  description: 'Production-grade scalable modular e-commerce platform built with Next.js & NestJS',
+  title: 'SWADESH Luxe | The Indian Store • ॥ अतिथिदेवो भवः ॥',
+  description: "India's most trusted luxury store for authentic handlooms, certified organics, and Make-In-India innovations.",
 };
 
 export default function RootLayout({

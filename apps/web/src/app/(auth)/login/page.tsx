@@ -58,14 +58,16 @@ function LoginContent() {
     <div className="min-h-screen flex items-center justify-center p-4 bg-muted/20">
       <div className="max-w-md w-full rounded-3xl border bg-card p-8 shadow-xl space-y-6">
         <div className="text-center space-y-2">
-          <Link href="/" className="inline-flex items-center gap-2 font-bold text-2xl tracking-tight text-primary">
-            <span className="h-9 w-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center font-extrabold shadow">
-              N
+          <Link href="/" className="inline-flex items-center gap-2.5 font-bold text-2xl tracking-tight text-foreground justify-center">
+            <span className="h-9 w-9 rounded-2xl bg-gradient-to-tr from-amber-500 via-orange-600 to-rose-600 text-white flex items-center justify-center font-black text-lg shadow-md border border-white/20">
+              🇮🇳
             </span>
-            <span>NovaStore</span>
+            <span className="font-black text-2xl tracking-tight">
+              SWADESH<span className="text-amber-500 text-xs ml-1 font-extrabold uppercase px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/30">Luxe</span>
+            </span>
           </Link>
           <h2 className="text-2xl font-bold tracking-tight">Welcome Back</h2>
-          <p className="text-xs text-muted-foreground">Sign in to manage orders, wishlist, and profile</p>
+          <p className="text-xs text-muted-foreground">Sign in to manage catalog, orders, wishlist, and profile</p>
         </div>
 
         {errorMsg && (
@@ -152,19 +154,53 @@ function LoginContent() {
             </div>
           </div>
 
-          <Button type="submit" size="lg" disabled={isLoading} className="w-full rounded-xl font-bold shadow-md">
+          <Button type="submit" size="lg" disabled={isLoading} className="w-full rounded-xl font-bold shadow-md bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white">
             {isLoading ? 'Signing In...' : 'Sign In'}
             <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
         </form>
 
-        <div className="p-3.5 rounded-xl bg-muted/40 text-[11px] text-muted-foreground space-y-1.5 border">
-          <div className="flex items-center gap-1.5 font-semibold text-foreground">
-            <ShieldCheck className="w-4 h-4 text-primary" />
-            <span>Demo Test Credentials:</span>
+        <div className="p-4 rounded-2xl bg-muted/40 text-[11px] text-muted-foreground space-y-3 border">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5 font-bold text-foreground">
+              <ShieldCheck className="w-4 h-4 text-amber-600" />
+              <span>Demo Test Credentials:</span>
+            </div>
+            <span className="text-[10px] text-muted-foreground font-semibold">1-Click Auto Fill</span>
           </div>
-          <p>• Admin: <span className="font-mono text-foreground font-medium">admin@novastore.com</span> (Password123!)</p>
-          <p>• Customer: <span className="font-mono text-foreground font-medium">customer@novastore.com</span> (Password123!)</p>
+
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setEmail('admin@novastore.com');
+                setPassword('Password123!');
+              }}
+              className="p-2.5 rounded-xl border bg-amber-500/10 border-amber-500/30 hover:bg-amber-500/20 text-amber-800 dark:text-amber-300 font-bold text-left transition-all space-y-0.5 group"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-black">🔑 Admin / Manager</span>
+                <span className="text-[10px] opacity-0 group-hover:opacity-100 transition-opacity">Fill &rarr;</span>
+              </div>
+              <p className="text-[10px] text-muted-foreground font-mono">admin@novastore.com</p>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setEmail('customer@novastore.com');
+                setPassword('Password123!');
+              }}
+              className="p-2.5 rounded-xl border bg-card hover:bg-muted font-bold text-left transition-all space-y-0.5 group"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-black text-foreground">👤 Customer / Buyer</span>
+                <span className="text-[10px] opacity-0 group-hover:opacity-100 transition-opacity">Fill &rarr;</span>
+              </div>
+              <p className="text-[10px] text-muted-foreground font-mono">customer@novastore.com</p>
+            </button>
+          </div>
+          <p className="text-[10px] text-center text-muted-foreground">Default password: <span className="font-mono font-bold text-foreground">Password123!</span></p>
         </div>
 
         <div className="text-center text-xs text-muted-foreground pt-2 border-t">

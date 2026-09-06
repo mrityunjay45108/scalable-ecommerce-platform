@@ -10,6 +10,7 @@ export interface ProductSpecs {
   care?: string;
   warranty?: string;
   fit?: string;
+  region?: string;
   customSpecs?: CustomSpec[];
   cleanDescription: string;
 }
@@ -23,12 +24,14 @@ export function formatDescriptionWithSpecs(
     care?: string;
     warranty?: string;
     fit?: string;
+    region?: string;
     customSpecs?: CustomSpec[];
   },
 ): string {
   const cleanBase = baseDescription ? baseDescription.split('---')[0].trim() : '';
   const specLines: string[] = [];
 
+  if (specs.region?.trim()) specLines.push(`Regional Heritage: ${specs.region.trim()}`);
   if (specs.brand?.trim()) specLines.push(`Brand: ${specs.brand.trim()}`);
   if (specs.material?.trim()) specLines.push(`Material: ${specs.material.trim()}`);
   if (specs.origin?.trim()) specLines.push(`Country of Origin: ${specs.origin.trim()}`);
@@ -63,6 +66,9 @@ export function parseProductSpecs(description: string, categoryName?: string): P
     customSpecs: [],
   };
 
+  const regionMatch = description.match(/(?:Regional Heritage|Virasat-e-Hind|Heritage Region|Virasat|Region)[\s*:]+([^\n\-*]+)/i);
+  if (regionMatch) result.region = regionMatch[1].trim().replace(/^\*+|\*+$/g, '');
+
   const brandMatch = description.match(/(?:Brand|Company|Manufacturer|Made By)[\s*:]+([^\n\-*]+)/i);
   if (brandMatch) result.brand = brandMatch[1].trim().replace(/^\*+|\*+$/g, '');
 
@@ -85,7 +91,7 @@ export function parseProductSpecs(description: string, categoryName?: string): P
   if (description.includes('---')) {
     const specsSection = description.split('---')[1];
     const lines = specsSection.split('\n');
-    const knownKeys = ['brand', 'company', 'manufacturer', 'material', 'fabric', 'country of origin', 'made in', 'origin', 'fit', 'fit / style', 'care', 'care instructions', 'wash care', 'warranty', 'guarantee'];
+    const knownKeys = ['regional heritage', 'virasat-e-hind', 'heritage region', 'virasat', 'region', 'brand', 'company', 'manufacturer', 'material', 'fabric', 'country of origin', 'made in', 'origin', 'fit', 'fit / style', 'care', 'care instructions', 'wash care', 'warranty', 'guarantee'];
 
     for (const line of lines) {
       const match = line.match(/^\s*-\s*\*\*([^*]+)\*\*:\s*(.+)$/);

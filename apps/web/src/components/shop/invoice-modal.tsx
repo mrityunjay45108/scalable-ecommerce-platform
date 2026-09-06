@@ -81,15 +81,15 @@ export function InvoiceModal({ order, isOpen, onClose }: InvoiceModalProps) {
           <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pb-6 border-b border-border">
             <div>
               <div className="flex items-center gap-2">
-                <span className="h-8 w-8 rounded-xl bg-[#ff3f6c] text-white flex items-center justify-center font-black text-base shadow">
-                  N
+                <span className="h-8 w-8 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-600 text-white flex items-center justify-center font-black text-base shadow">
+                  🇮🇳
                 </span>
                 <span className="text-xl font-black tracking-tight text-foreground print:text-black">
-                  NovaStore
+                  SWADESH Luxe
                 </span>
               </div>
               <p className="text-[11px] font-bold text-muted-foreground mt-1">
-                NovaStore Retail Technologies Private Limited
+                SWADESH Retail Technologies Private Limited
               </p>
               <p className="text-[10px] text-muted-foreground max-w-xs leading-relaxed">
                 Registered Office: DLF Cyber City, Tower B, Phase 2, Gurugram, Haryana - 122002, India
@@ -98,7 +98,7 @@ export function InvoiceModal({ order, isOpen, onClose }: InvoiceModalProps) {
                 <strong>GSTIN:</strong> 07AABCN1234F1Z5 | <strong>CIN:</strong> U74999DL2024PTC123456
               </p>
               <p className="text-[10px] text-muted-foreground">
-                <strong>Email:</strong> support@novastore.com | <strong>Toll Free:</strong> 1800-123-9999
+                <strong>Email:</strong> support@swadeshluxe.in | <strong>Toll Free:</strong> 1800-SWADESH
               </p>
             </div>
 
@@ -245,7 +245,7 @@ export function InvoiceModal({ order, isOpen, onClose }: InvoiceModalProps) {
               {/* Terms & Return policy */}
               <div className="text-[10px] text-muted-foreground space-y-1">
                 <p className="font-bold text-foreground">Terms & Conditions:</p>
-                <p>1. Goods once sold are eligible for 7 to 14 days return/replacement as per NovaStore policy.</p>
+                <p>1. Goods once sold are eligible for 7 to 14 days return/replacement as per SWADESH Luxe policy.</p>
                 <p>2. This is a computer generated invoice and requires no physical signature.</p>
                 <p>3. All disputes are subject to Gurugram / Delhi jurisdiction only.</p>
               </div>
@@ -283,7 +283,7 @@ export function InvoiceModal({ order, isOpen, onClose }: InvoiceModalProps) {
               {/* Authorized Signatory Block */}
               <div className="p-3.5 rounded-2xl border border-border text-center space-y-1.5 bg-muted/10 relative">
                 <p className="font-extrabold text-[10px] text-muted-foreground uppercase tracking-wider">
-                  For NovaStore Retail Technologies Pvt Ltd
+                  For SWADESH Retail Technologies Pvt Ltd
                 </p>
                 <div className="h-14 flex items-center justify-center py-1 bg-white/95 rounded-xl px-3 border border-border/40 shadow-2xs">
                   <img
@@ -306,8 +306,8 @@ export function InvoiceModal({ order, isOpen, onClose }: InvoiceModalProps) {
 
           {/* Bottom Footer Note */}
           <div className="pt-4 border-t border-border flex items-center justify-between text-[10px] text-muted-foreground">
-            <span>Thank you for shopping with NovaStore!</span>
-            <span>www.novastore.com • Support 24x7</span>
+            <span>Thank you for shopping with SWADESH Luxe! • ॥ अतिथिदेवो भवः ॥</span>
+            <span>www.swadeshluxe.in • 24x7 Concierge</span>
           </div>
         </div>
 

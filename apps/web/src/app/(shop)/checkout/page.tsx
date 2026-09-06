@@ -50,7 +50,7 @@ function CheckoutContent() {
 
   const [addresses, setAddresses] = useState<AddressDto[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string>('');
-  const [paymentProvider, setPaymentProvider] = useState<PaymentProvider>(PaymentProvider.STRIPE);
+  const [paymentProvider, setPaymentProvider] = useState<PaymentProvider>(PaymentProvider.RAZORPAY);
   const [preview, setPreview] = useState<CheckoutPreview | null>(null);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -65,7 +65,7 @@ function CheckoutContent() {
   const [city, setCity] = useState('');
   const [state, setState] = useState('');
   const [postalCode, setPostalCode] = useState('');
-  const [country, setCountry] = useState('US');
+  const [country, setCountry] = useState('IN');
 
   const loadAddresses = useCallback(async () => {
     try {
@@ -201,7 +201,7 @@ function CheckoutContent() {
     setCity('');
     setState('');
     setPostalCode('');
-    setCountry('US');
+    setCountry('IN');
   };
 
   const handlePlaceOrder = async () => {
@@ -342,58 +342,58 @@ function CheckoutContent() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-semibold block mb-1">Recipient Name</label>
+                    <label className="text-xs font-semibold block mb-1">पूरा नाम (Recipient Name)</label>
                     <input
                       required
-                      placeholder="Jane Doe"
+                      placeholder="उदा. राहुल शर्मा / Mrityunjay Kumar"
                       value={recipientName}
                       onChange={(e) => setRecipientName(e.target.value)}
                       className="w-full h-9 px-3 text-xs rounded-xl border bg-background"
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold block mb-1">Phone Number</label>
+                    <label className="text-xs font-semibold block mb-1">मोबाइल नंबर (10-Digit Mobile Number)</label>
                     <input
                       required
-                      placeholder="+1 (555) 000-0000"
+                      placeholder="+91 98765 43210"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       className="w-full h-9 px-3 text-xs rounded-xl border bg-background"
                     />
                   </div>
                   <div className="sm:col-span-2">
-                    <label className="text-xs font-semibold block mb-1">Street Address</label>
+                    <label className="text-xs font-semibold block mb-1">मकान / फ्लैट नं., गली व लैंडमार्क (Street Address & Landmark)</label>
                     <input
                       required
-                      placeholder="123 Tech Lane, Suite 400"
+                      placeholder="मकान नं. 42, मेन रोड, निकट शिव मंदिर"
                       value={street}
                       onChange={(e) => setStreet(e.target.value)}
                       className="w-full h-9 px-3 text-xs rounded-xl border bg-background"
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold block mb-1">City</label>
+                    <label className="text-xs font-semibold block mb-1">शहर (City)</label>
                     <input
                       required
-                      placeholder="San Francisco"
+                      placeholder="उदा. नई दिल्ली / मुंबई / वाराणसी"
                       value={city}
                       onChange={(e) => setCity(e.target.value)}
                       className="w-full h-9 px-3 text-xs rounded-xl border bg-background"
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold block mb-1">State & Postal Code</label>
+                    <label className="text-xs font-semibold block mb-1">राज्य व पिन कोड (State & Pincode)</label>
                     <div className="flex gap-2">
                       <input
                         required
-                        placeholder="CA"
+                        placeholder="राज्य (उदा. UP, Delhi)"
                         value={state}
                         onChange={(e) => setState(e.target.value)}
                         className="w-1/2 h-9 px-3 text-xs rounded-xl border bg-background"
                       />
                       <input
                         required
-                        placeholder="94107"
+                        placeholder="6-अंक पिनकोड (110001)"
                         value={postalCode}
                         onChange={(e) => setPostalCode(e.target.value)}
                         className="w-1/2 h-9 px-3 text-xs rounded-xl border bg-background"
@@ -474,34 +474,20 @@ function CheckoutContent() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <button
                 type="button"
-                onClick={() => setPaymentProvider(PaymentProvider.STRIPE)}
-                className={`p-4 rounded-2xl border text-left flex flex-col justify-between h-24 transition-all ${
-                  paymentProvider === PaymentProvider.STRIPE
-                    ? 'border-primary bg-primary/5 ring-1 ring-primary'
-                    : 'hover:bg-muted/40'
-                }`}
-              >
-                <div className="flex items-center justify-between w-full">
-                  <span className="font-bold text-xs">Stripe / Card</span>
-                  {paymentProvider === PaymentProvider.STRIPE && <CheckCircle2 className="w-4 h-4 text-primary" />}
-                </div>
-                <p className="text-[10px] text-muted-foreground">Visa, Mastercard, Amex</p>
-              </button>
-
-              <button
-                type="button"
                 onClick={() => setPaymentProvider(PaymentProvider.RAZORPAY)}
                 className={`p-4 rounded-2xl border text-left flex flex-col justify-between h-24 transition-all ${
                   paymentProvider === PaymentProvider.RAZORPAY
-                    ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                    ? 'border-primary bg-primary/5 ring-1 ring-primary shadow-sm'
                     : 'hover:bg-muted/40'
                 }`}
               >
                 <div className="flex items-center justify-between w-full">
-                  <span className="font-bold text-xs">Razorpay</span>
+                  <span className="font-bold text-xs flex items-center gap-1">
+                    ⚡ UPI / RuPay
+                  </span>
                   {paymentProvider === PaymentProvider.RAZORPAY && <CheckCircle2 className="w-4 h-4 text-primary" />}
                 </div>
-                <p className="text-[10px] text-muted-foreground">UPI, NetBanking, Cards</p>
+                <p className="text-[10px] text-muted-foreground leading-tight">Google Pay, PhonePe, Paytm, RuPay, NetBanking</p>
               </button>
 
               <button
@@ -509,16 +495,42 @@ function CheckoutContent() {
                 onClick={() => setPaymentProvider(PaymentProvider.COD)}
                 className={`p-4 rounded-2xl border text-left flex flex-col justify-between h-24 transition-all ${
                   paymentProvider === PaymentProvider.COD
-                    ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                    ? 'border-primary bg-primary/5 ring-1 ring-primary shadow-sm'
                     : 'hover:bg-muted/40'
                 }`}
               >
                 <div className="flex items-center justify-between w-full">
-                  <span className="font-bold text-xs">Cash on Delivery</span>
+                  <span className="font-bold text-xs flex items-center gap-1">
+                    💵 Cash on Delivery
+                  </span>
                   {paymentProvider === PaymentProvider.COD && <CheckCircle2 className="w-4 h-4 text-primary" />}
                 </div>
-                <p className="text-[10px] text-muted-foreground">Pay upon receipt</p>
+                <p className="text-[10px] text-muted-foreground leading-tight">घर पर नकद (₹0 अग्रिम भुगतान)</p>
               </button>
+
+              <button
+                type="button"
+                onClick={() => setPaymentProvider(PaymentProvider.STRIPE)}
+                className={`p-4 rounded-2xl border text-left flex flex-col justify-between h-24 transition-all ${
+                  paymentProvider === PaymentProvider.STRIPE
+                    ? 'border-primary bg-primary/5 ring-1 ring-primary shadow-sm'
+                    : 'hover:bg-muted/40'
+                }`}
+              >
+                <div className="flex items-center justify-between w-full">
+                  <span className="font-bold text-xs">Debit / Credit Card</span>
+                  {paymentProvider === PaymentProvider.STRIPE && <CheckCircle2 className="w-4 h-4 text-primary" />}
+                </div>
+                <p className="text-[10px] text-muted-foreground leading-tight">Visa, Mastercard, Amex, International</p>
+              </button>
+            </div>
+
+            {/* RBI Trust Note */}
+            <div className="flex items-center gap-2 p-3 rounded-xl bg-muted/20 border text-[11px] text-muted-foreground">
+              <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>
+                <strong>100% सुरक्षित भुगतान:</strong> भारतीय रिज़र्व बैंक (RBI) द्वारा अधिकृत सुरक्षित पेमेंट गेटवे व 256-बिट एन्क्रिप्शन
+              </span>
             </div>
           </div>
         </div>

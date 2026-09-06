@@ -565,12 +565,36 @@ export default function OrderDetailPage() {
             <h3 className="text-sm font-bold">Payment Summary</h3>
             <div className="text-xs text-muted-foreground space-y-1">
               <p>
-                Method: <strong className="text-foreground">{order.payment?.provider || (order.shipment?.isCod ? 'COD' : 'ONLINE')}</strong>
+                Method: <strong className="text-foreground">{order.payment?.provider === 'COD' || order.shipment?.isCod ? 'Cash On Delivery (घर पर नकद)' : (order.payment?.provider || 'ONLINE UPI / CARDS')}</strong>
               </p>
               <p>
                 Status:{' '}
                 <span className="font-semibold text-emerald-600">{order.payment?.status || 'PAID'}</span>
               </p>
+            </div>
+          </div>
+
+          {/* Indian Safe Delivery & OTP Trust Card */}
+          <div className="rounded-3xl border bg-gradient-to-br from-amber-500/10 via-background to-emerald-500/10 p-5 shadow-sm space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">🛡️</span>
+              <h4 className="text-xs font-bold text-foreground">सुरक्षित डिलीवरी वादा (Safe Delivery Assurance)</h4>
+            </div>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              डिलीवरी पार्टनर के आने पर पैकेज की सील जांचें। केवल सामान सुरक्षित मिलने पर ही अपना डिलीवरी OTP साझा करें। कोई अतिरिक्त शुल्क न दें।
+            </p>
+            <div className="pt-2 border-t border-border/60 flex items-center justify-between text-[11px]">
+              <span className="font-semibold text-emerald-600 flex items-center gap-1">
+                ✓ 100% असली व प्रामाणिक
+              </span>
+              <a
+                href={`https://wa.me/919876543210?text=${encodeURIComponent(`नमस्ते भारत बाजार! मुझे मेरे ऑर्डर #${order.orderNumber} के बारे में सहायता चाहिए।`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary font-bold hover:underline"
+              >
+                सहायता प्राप्त करें →
+              </a>
             </div>
           </div>
         </div>

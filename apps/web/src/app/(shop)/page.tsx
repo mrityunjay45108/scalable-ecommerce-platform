@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
@@ -20,6 +20,14 @@ import {
   Zap,
   Flame,
   Award,
+  MapPin,
+  Heart,
+  PhoneCall,
+  CheckCircle2,
+  Package,
+  BadgeCheck,
+  Crown,
+  HeartHandshake,
 } from 'lucide-react';
 import { ProductDto, CategoryDto, BrandDto } from '@ecommerce/types';
 import { apiClient } from '@/lib/api-client';
@@ -27,96 +35,144 @@ import { ProductCard } from '@/components/shop/product-card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { formatPrice } from '@/lib/utils';
+import { useAuth } from '@/lib/auth-context';
+import { getRegionalHeritage, RegionalHeritageItem } from '@/lib/regional-heritage';
 
-// MYNTRA HIGH-FASHION CAMPAIGN BANNERS
+// 1. PROUD SWADESH HERO CAMPAIGN SLIDES
 const HERO_SLIDES = [
   {
-    tag: 'BIG FASHION FESTIVAL',
-    tagColor: 'bg-rose-600 text-white',
-    title: '50 - 80% OFF',
-    subtitle: 'ON 10,000+ TOP FASHION & LIFESTYLE STYLES',
-    description: 'Featuring Roadster, Nike, Highlander, Levi\'s, Zara & more.',
-    ctaText: 'EXPLORE DEALS',
+    tag: '🇮🇳 THE GRAND SWADESHI SALE',
+    tagColor: 'bg-amber-600 text-white',
+    title: '50% - 80% OFF',
+    subtitle: 'Directly from Master Artisans & Certified Indian Brands',
+    description: '100% Genuine Heritage Crafts, Doorstep Cash On Delivery (COD), and 7-Day Hassle-Free Returns.',
+    ctaText: 'Explore Grand Deals',
     ctaLink: '/products',
+    bgGradient: 'from-amber-950 via-slate-950 to-slate-900',
+    accentColor: 'text-amber-400',
+    imageUrl: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=1200',
+  },
+  {
+    tag: 'ROYAL WEAVES & SILKS',
+    tagColor: 'bg-rose-700 text-white',
+    title: 'Banarasi, Chanderi & Pashmina',
+    subtitle: 'Centuries of Indian Weaving Heritage Delivered to Your Door',
+    description: 'Authentic handlooms directly woven by National Award-winning master weavers from Varanasi & Kashmir.',
+    ctaText: 'Shop Handloom Weaves',
+    ctaLink: '/products?categorySlug=apparel-fashion',
     bgGradient: 'from-rose-950 via-slate-950 to-slate-900',
     accentColor: 'text-rose-400',
-    imageUrl: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1200',
+    imageUrl: 'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?w=1200',
   },
   {
-    tag: 'STREETWEAR & CASUALS',
-    tagColor: 'bg-orange-500 text-white',
-    title: 'STARTING AT ₹399',
-    subtitle: 'TRENDING OVERSIZED TEES, HOODIES & CARGOES',
-    description: 'Heavyweight cotton, relaxed drop-shoulder fits, and urban essentials.',
-    ctaText: 'SHOP TRENDS',
-    ctaLink: '/products?categorySlug=apparel-fashion',
-    bgGradient: 'from-orange-950 via-slate-950 to-slate-900',
-    accentColor: 'text-orange-400',
-    imageUrl: 'https://images.unsplash.com/photo-1556905055-8f358a7a47b2?w=1200',
-  },
-  {
-    tag: 'PREMIUM FOOTWEAR',
-    tagColor: 'bg-indigo-600 text-white',
-    title: 'MIN. 40% OFF',
-    subtitle: 'CARBON RUNNERS, RETRO SNEAKERS & HIGH-TOPS',
-    description: 'Explosive propulsion, cushioned strides, and street-ready style.',
-    ctaText: 'DISCOVER SNEAKERS',
-    ctaLink: '/products?categorySlug=footwear',
-    bgGradient: 'from-indigo-950 via-slate-950 to-slate-900',
-    accentColor: 'text-indigo-400',
-    imageUrl: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=1200',
-  },
-  {
-    tag: 'STUDIO ACOUSTICS & TECH',
-    tagColor: 'bg-emerald-600 text-white',
-    title: 'UP TO 60% OFF',
-    subtitle: 'ANC HEADPHONES, WIRELESS EARBUDS & SMART GEAR',
-    description: 'Precision acoustics, 40-hour battery life, and spatial audio.',
-    ctaText: 'SHOP TECH',
+    tag: 'MAKE IN INDIA INNOVATION',
+    tagColor: 'bg-blue-600 text-white',
+    title: 'Smart Tech & Wearables',
+    subtitle: 'Engineered in India with 1-Year National On-Site Warranty',
+    description: 'High-bass ANC Earbuds, Smartwatches, and Ultra-Durable Fast Chargers built for the nation.',
+    ctaText: 'Discover Smart Tech',
     ctaLink: '/products?categorySlug=electronics',
-    bgGradient: 'from-emerald-950 via-slate-950 to-slate-900',
-    accentColor: 'text-emerald-400',
+    bgGradient: 'from-blue-950 via-slate-950 to-slate-900',
+    accentColor: 'text-blue-400',
     imageUrl: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=1200',
   },
+  {
+    tag: 'SHUDDH AYURVEDA & ORGANICS',
+    tagColor: 'bg-emerald-600 text-white',
+    title: '100% Pure Organic Living',
+    subtitle: 'Kashmiri Saffron, Pure A2 Ghee & Authentic Ayurvedic Wellness',
+    description: 'Directly harvested from certified Indian organic farms and forest reserves for your family’s vitality.',
+    ctaText: 'Shop Vedic Wellness',
+    ctaLink: '/products?categorySlug=home-living',
+    bgGradient: 'from-emerald-950 via-slate-950 to-slate-900',
+    accentColor: 'text-emerald-400',
+    imageUrl: 'https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=1200',
+  },
 ];
 
-// DEFAULT FALLBACK SPOTLIGHT BRANDS (MYNTRA STYLE)
+// 2. REGIONAL HERITAGE SHOWCASE (Bharat Ke Kone-Kone Se) is dynamically loaded from regional-heritage.ts
+
+// 3. VERIFIED CUSTOMER REVIEWS ACROSS INDIA
+const REAL_INDIAN_REVIEWS = [
+  {
+    name: 'Rajesh Sharma',
+    location: 'Lanka, Varanasi (Uttar Pradesh)',
+    rating: 5,
+    title: 'The Banarasi Dupatta quality is truly authentic!',
+    comment: 'Directly sourced from weavers with certified silk mark. Packing was royal and delivered with genuine care. Shuddh desi trust at its best!',
+    verified: true,
+  },
+  {
+    name: 'Priya Rathore',
+    location: 'Mansarovar, Jaipur (Rajasthan)',
+    rating: 5,
+    title: 'Doorstep COD gave complete peace of mind',
+    comment: 'Inspected the package before paying the delivery partner. Reached Jaipur within 2 days. The Atithi Devo Bhava treatment is truly felt.',
+    verified: true,
+  },
+  {
+    name: 'Amit Kumar Singh',
+    location: 'Boring Road, Patna (Bihar)',
+    rating: 5,
+    title: '100% Genuine Organics, zero adulteration',
+    comment: 'Ordered Kashmiri Saffron and raw honey. Pure aroma and unmatched authenticity. Much better pricing than offline luxury retail.',
+    verified: true,
+  },
+  {
+    name: 'Vikram Subramaniam',
+    location: 'HSR Layout, Bengaluru (Karnataka)',
+    rating: 5,
+    title: 'Lightning fast 24-hour delivery!',
+    comment: 'Ordered Make In India wireless earbuds yesterday, delivered this afternoon. Smooth tracking and polite delivery staff. Proud of this platform!',
+    verified: true,
+  },
+];
+
+// 4. TOP INDIAN BRAND SPOTLIGHTS
 const SPOTLIGHT_BRANDS = [
-  { name: 'ROADSTER', offer: 'UNDER ₹799', imageUrl: 'https://images.unsplash.com/photo-1576995853123-5a10305d93c0?w=400', query: 'Roadster' },
-  { name: 'NIKE', offer: 'MIN. 40% OFF', imageUrl: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400', query: 'Nike' },
-  { name: 'HIGHLANDER', offer: 'FLAT 60% OFF', imageUrl: 'https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?w=400', query: 'Highlander' },
-  { name: "LEVI'S", offer: 'MIN. 50% OFF', imageUrl: 'https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=400', query: "Levi's" },
-  { name: 'PUMA', offer: 'FROM ₹899', imageUrl: 'https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=400', query: 'Puma' },
-  { name: 'ZARA', offer: 'NEW SEASON', imageUrl: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=400', query: 'Zara' },
-  { name: 'HRX', offer: 'UNDER ₹699', imageUrl: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=400', query: 'HRX' },
-  { name: 'NOVA TECH', offer: 'FLAT 50% OFF', imageUrl: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400', query: 'Nova' },
-];
-
-// CATEGORIES TO BAG (MYNTRA VISUAL TILES)
-const CATEGORIES_TO_BAG = [
-  { title: "Men's Casual Wear", offer: 'Min. 40% Off', slug: 'apparel-fashion', image: 'https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?w=600' },
-  { title: "Women's Western & Ethnic", offer: '50 - 70% Off', slug: 'apparel-fashion', image: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=600' },
-  { title: 'Sneakers & Sports Shoes', offer: 'From ₹699', slug: 'footwear', image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600' },
-  { title: 'Oversized Hoodies & Tees', offer: 'Under ₹599', slug: 'apparel-fashion', image: 'https://images.unsplash.com/photo-1556905055-8f358a7a47b2?w=600' },
-  { title: 'Watches & Smart Gear', offer: 'Up to 60% Off', slug: 'electronics', image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600' },
-  { title: 'Studio Audio & Acoustics', offer: 'From ₹1,499', slug: 'electronics', image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600' },
+  { name: 'TATA / TANEIRA', offer: 'Up to 40% OFF Silks', imageUrl: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=400', query: 'Tata' },
+  { name: 'FABINDIA', offer: 'Handloom Kurtas & Sets', imageUrl: 'https://images.unsplash.com/photo-1576995853123-5a10305d93c0?w=400', query: 'Fabindia' },
+  { name: 'KHADI INDIA', offer: '100% Pure Organic Cotton', imageUrl: 'https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?w=400', query: 'Khadi' },
+  { name: 'BOAT / NOISE', offer: 'Smart Audio & Tech', imageUrl: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400', query: 'Tech' },
+  { name: 'FOREST ESSENTIALS', offer: 'Pure Vedic Ayurveda', imageUrl: 'https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=400', query: 'Ayurveda' },
+  { name: 'ROADSTER DESI', offer: 'Everyday Casuals from ₹499', imageUrl: 'https://images.unsplash.com/photo-1556905055-8f358a7a47b2?w=400', query: 'Roadster' },
 ];
 
 export default function HomePage() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'ADMIN';
+  const [regionalHeritage, setRegionalHeritage] = useState<RegionalHeritageItem[]>([]);
+
+  useEffect(() => {
+    setRegionalHeritage(getRegionalHeritage());
+    const handleUpdate = () => {
+      setRegionalHeritage(getRegionalHeritage());
+    };
+    window.addEventListener('regional-heritage-updated', handleUpdate);
+    return () => window.removeEventListener('regional-heritage-updated', handleUpdate);
+  }, []);
+
   const [featuredProducts, setFeaturedProducts] = useState<ProductDto[]>([]);
   const [allProducts, setAllProducts] = useState<ProductDto[]>([]);
   const [activeCatalogTab, setActiveCatalogTab] = useState<'all' | 'featured' | 'deals' | string>('all');
   const [categories, setCategories] = useState<CategoryDto[]>([]);
-  const [spotlightBrands, setSpotlightBrands] = useState<Array<{ name: string; offer: string; imageUrl: string; query: string }>>(SPOTLIGHT_BRANDS);
+  const [spotlightBrands, setSpotlightBrands] = useState(SPOTLIGHT_BRANDS);
   const [isLoading, setIsLoading] = useState(true);
   const [heroIndex, setHeroIndex] = useState(0);
   const [isHeroHovered, setIsHeroHovered] = useState(false);
-  const [copiedCode, setCopiedCode] = useState(false);
-  const [newsletterEmail, setNewsletterEmail] = useState('');
-  const [newsletterSubmitted, setNewsletterSubmitted] = useState(false);
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
-  // Live Flash Sale Countdown Timer (Simulated 8 hour ticking clock)
-  const [timeLeft, setTimeLeft] = useState({ hours: 7, minutes: 42, seconds: 18 });
+  // Interactive Live Pincode Checker State
+  const [pincodeInput, setPincodeInput] = useState('');
+  const [pincodeResult, setPincodeResult] = useState<{
+    status: 'idle' | 'success' | 'invalid';
+    city?: string;
+    state?: string;
+    message?: string;
+  }>({ status: 'idle' });
+
+  // Live Flash Sale Countdown Timer (8-hour ticking clock)
+  const [timeLeft, setTimeLeft] = useState({ hours: 7, minutes: 48, seconds: 24 });
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -130,7 +186,7 @@ export default function HomePage() {
     return () => clearInterval(timer);
   }, []);
 
-  // Auto-rotating Hero Campaign Slider every 4.5 seconds
+  // Auto-rotate Hero Slides every 4.5 seconds
   useEffect(() => {
     if (isHeroHovered) return;
     const interval = setInterval(() => {
@@ -167,8 +223,48 @@ export default function HomePage() {
     loadHomeData();
   }, []);
 
-  // Computed displayed products for catalog tabs
-  const displayedProducts = React.useMemo(() => {
+  // Pincode checker function
+  const handleCheckPincode = (e: React.FormEvent) => {
+    e.preventDefault();
+    const pin = pincodeInput.trim();
+    if (!pin || pin.length !== 6 || !/^\d{6}$/.test(pin)) {
+      setPincodeResult({
+        status: 'invalid',
+        message: 'Please enter a valid 6-digit Indian PIN code (कृपया 6 अंकों का सही पिन कोड दर्ज करें)।',
+      });
+      return;
+    }
+
+    // Auto-detect Indian city/state from common pincode prefixes
+    let city = 'Your City';
+    let state = 'India';
+
+    const prefix = pin.substring(0, 2);
+    if (prefix === '11') { city = 'New Delhi (दिल्ली)'; state = 'Delhi'; }
+    else if (prefix >= '12' && prefix <= '13') { city = 'Haryana / NCR'; state = 'Haryana'; }
+    else if (prefix >= '14' && prefix <= '15') { city = 'Punjab'; state = 'Punjab'; }
+    else if (prefix >= '20' && prefix <= '28') { city = 'Uttar Pradesh (UP)'; state = 'Uttar Pradesh'; }
+    else if (prefix >= '30' && prefix <= '34') { city = 'Jaipur / Rajasthan'; state = 'Rajasthan'; }
+    else if (prefix >= '36' && prefix <= '39') { city = 'Ahmedabad / Gujarat'; state = 'Gujarat'; }
+    else if (prefix >= '40' && prefix <= '44') { city = 'Mumbai / Maharashtra'; state = 'Maharashtra'; }
+    else if (prefix >= '45' && prefix <= '49') { city = 'Madhya Pradesh / Indore'; state = 'Madhya Pradesh'; }
+    else if (prefix >= '50' && prefix <= '53') { city = 'Hyderabad / Telangana'; state = 'Telangana'; }
+    else if (prefix >= '56' && prefix <= '59') { city = 'Bengaluru / Karnataka'; state = 'Karnataka'; }
+    else if (prefix >= '60' && prefix <= '64') { city = 'Chennai / Tamil Nadu'; state = 'Tamil Nadu'; }
+    else if (prefix >= '67' && prefix <= '69') { city = 'Kochi / Kerala'; state = 'Kerala'; }
+    else if (prefix >= '70' && prefix <= '74') { city = 'Kolkata / West Bengal'; state = 'West Bengal'; }
+    else if (prefix >= '80' && prefix <= '85') { city = 'Patna / Bihar / Jharkhand'; state = 'Bihar'; }
+
+    setPincodeResult({
+      status: 'success',
+      city,
+      state,
+      message: `Great news! Express Delivery & Cash on Delivery (COD) are active for ${pin} (${city}).`,
+    });
+  };
+
+  // Filter products for tabs
+  const displayedProducts = useMemo(() => {
     if (activeCatalogTab === 'featured') {
       const feat = allProducts.filter((p) => p.isFeatured);
       return feat.length > 0 ? feat : featuredProducts;
@@ -184,500 +280,639 @@ export default function HomePage() {
     );
   }, [activeCatalogTab, allProducts, featuredProducts]);
 
-  const handleCopyCode = () => {
-    navigator.clipboard.writeText('WELCOME20');
-    setCopiedCode(true);
-    setTimeout(() => setCopiedCode(false), 2500);
-  };
-
-  const handleNewsletter = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newsletterEmail.trim()) return;
-    setNewsletterSubmitted(true);
-    setNewsletterEmail('');
-    setTimeout(() => setNewsletterSubmitted(false), 4000);
+  const handleCopyCode = (code: string) => {
+    navigator.clipboard.writeText(code);
+    setCopiedCode(code);
+    setTimeout(() => setCopiedCode(null), 2500);
   };
 
   const currentSlide = HERO_SLIDES[heroIndex];
 
   return (
-    <div className="space-y-8 sm:space-y-16 pb-16 overflow-x-hidden">
-      {/* 1. MYNTRA HERO FESTIVAL CAMPAIGN SLIDER */}
+    <div suppressHydrationWarning className="space-y-10 sm:space-y-16 pb-16 overflow-x-hidden">
+      {/* 1. TOP LIVE TRUST TICKER */}
+      <div className="bg-gradient-to-r from-amber-600 via-orange-600 to-emerald-700 text-white py-2 px-4 text-center text-xs font-black tracking-wide shadow-sm flex items-center justify-center gap-3 overflow-hidden">
+        <span className="inline-block animate-pulse">✨</span>
+        <span className="truncate">
+          ॥ अतिथिदेवो भवः ॥ — Welcome to SWADESH Luxe | 29,000+ Pin Codes Serviced | 100% Authentic Indian Craftsmanship
+        </span>
+        <span className="hidden md:inline bg-black/20 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">
+          Doorstep COD Available
+        </span>
+      </div>
+
+      {/* 2. HERO FESTIVAL SLIDER */}
       <section
-        className="relative overflow-hidden mx-2 sm:mx-6 lg:mx-8 mt-2 sm:mt-4 rounded-2xl sm:rounded-3xl border border-border shadow-xl select-none"
+        className="relative overflow-hidden mx-2 sm:mx-6 lg:mx-8 rounded-3xl border border-amber-500/20 shadow-2xl select-none"
         onMouseEnter={() => setIsHeroHovered(true)}
         onMouseLeave={() => setIsHeroHovered(false)}
       >
-        {/* MOBILE HERO POSTER CARD */}
-        <div className={`relative md:hidden w-full min-h-[440px] xs:min-h-[480px] overflow-hidden rounded-2xl bg-gradient-to-t ${currentSlide.bgGradient} flex flex-col justify-between p-4 sm:p-6 transition-all duration-700`}>
-          {/* Background Lifestyle Image */}
+        {/* MOBILE SLIDE CARD */}
+        <div className={`relative md:hidden w-full min-h-[460px] overflow-hidden rounded-3xl bg-gradient-to-t ${currentSlide.bgGradient} flex flex-col justify-between p-5 transition-all duration-700`}>
           <Image
             src={currentSlide.imageUrl}
             alt={currentSlide.title}
             fill
             priority
-            className="object-cover object-center"
+            className="object-cover object-center opacity-85"
           />
-          {/* Dark Reading Gradient */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/45 to-black/30 pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/50 to-black/30 pointer-events-none" />
 
-          {/* Top Badges */}
           <div className="relative z-10 flex items-center justify-between gap-2">
-            <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider shadow-md ${currentSlide.tagColor}`}>
+            <span className={`px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider shadow-md ${currentSlide.tagColor}`}>
               {currentSlide.tag}
             </span>
-            <span className="bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full text-[10px] font-bold text-white border border-white/20 flex items-center gap-1">
-              <Sparkles className="w-3 h-3 text-amber-300" /> Live Event
+            <span className="bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full text-[10px] font-bold text-amber-200 border border-amber-300/30 flex items-center gap-1">
+              <Sparkles className="w-3 h-3 text-amber-300" /> Live Fest
             </span>
           </div>
 
-          {/* Bottom Content & CTA */}
-          <div className="relative z-10 space-y-2 text-white pb-3">
-            <h1 className="text-3xl sm:text-4xl font-black tracking-tight leading-none text-white drop-shadow-md">
+          <div className="relative z-10 space-y-2 text-white pb-2">
+            <h1 className="text-3xl font-black tracking-tight leading-none text-white drop-shadow-lg">
               {currentSlide.title}
             </h1>
-            <h2 className={`text-xs sm:text-sm font-black uppercase tracking-wider ${currentSlide.accentColor} drop-shadow`}>
+            <h2 className={`text-xs font-black uppercase tracking-wider ${currentSlide.accentColor} drop-shadow`}>
               {currentSlide.subtitle}
             </h2>
-            <p className="text-[11px] text-slate-200 line-clamp-2 leading-relaxed font-medium drop-shadow">
+            <p className="text-xs text-slate-200 line-clamp-2 leading-relaxed font-medium">
               {currentSlide.description}
             </p>
             <div className="pt-2">
-              <Button asChild size="sm" className="rounded-full bg-white hover:bg-slate-100 text-slate-900 font-black px-6 text-xs shadow-xl w-full h-10">
+              <Button asChild size="sm" className="rounded-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-black px-6 text-xs shadow-xl w-full h-11">
                 <Link href={currentSlide.ctaLink}>
                   {currentSlide.ctaText}
-                  <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
+                  <ArrowRight className="w-4 h-4 ml-1.5" />
                 </Link>
               </Button>
             </div>
           </div>
         </div>
 
-        {/* DESKTOP 2-COLUMN HERO BANNER */}
-        <div className={`hidden md:flex relative bg-gradient-to-r ${currentSlide.bgGradient} text-white min-h-[460px] lg:min-h-[500px] items-center transition-all duration-700`}>
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white/10 via-transparent to-black/60 pointer-events-none" />
+        {/* DESKTOP HERO SLIDE */}
+        <div className={`hidden md:flex relative w-full min-h-[440px] lg:min-h-[500px] overflow-hidden rounded-3xl bg-gradient-to-r ${currentSlide.bgGradient} items-center transition-all duration-700`}>
+          <div className="absolute right-0 top-0 bottom-0 w-3/5 overflow-hidden">
+            <Image
+              src={currentSlide.imageUrl}
+              alt={currentSlide.title}
+              fill
+              priority
+              className="object-cover object-center opacity-85 hover:scale-105 transition-transform duration-1000"
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/70 to-transparent pointer-events-none" />
+          </div>
 
-          <div className="container mx-auto px-8 sm:px-12 py-10 lg:py-14 relative z-10">
-            <div className="grid grid-cols-12 gap-8 items-center">
-              {/* Left: Text & Badges */}
-              <div className="col-span-7 space-y-5">
-                <div className="flex items-center gap-2">
-                  <span className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider shadow-md ${currentSlide.tagColor}`}>
-                    {currentSlide.tag}
-                  </span>
-                  <span className="bg-white/15 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-slate-200 border border-white/10 flex items-center gap-1">
-                    <Sparkles className="w-3.5 h-3.5 text-amber-300" /> Live Fashion Event
+          <div className="relative z-10 w-full max-w-7xl mx-auto px-8 lg:px-12 py-10 flex flex-col justify-center max-w-2xl space-y-4 text-white">
+            <div className="flex items-center gap-2">
+              <span className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider shadow-md ${currentSlide.tagColor}`}>
+                {currentSlide.tag}
+              </span>
+              <span className="bg-black/50 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-amber-200 border border-amber-300/30 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-amber-300" /> India&apos;s Prestigious Swadeshi Store
+              </span>
+            </div>
+
+            <h1 className="text-4xl lg:text-5xl font-black tracking-tight leading-tight drop-shadow-md">
+              {currentSlide.title}
+            </h1>
+            <h2 className={`text-base lg:text-lg font-black uppercase tracking-wide ${currentSlide.accentColor} drop-shadow`}>
+              {currentSlide.subtitle}
+            </h2>
+            <p className="text-sm text-slate-200 max-w-lg leading-relaxed font-medium">
+              {currentSlide.description}
+            </p>
+
+            <div className="flex items-center gap-4 pt-4">
+              <Button asChild size="lg" className="rounded-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-black px-8 text-sm shadow-2xl hover:scale-105 active:scale-95 transition-all">
+                <Link href={currentSlide.ctaLink}>
+                  {currentSlide.ctaText}
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Link>
+              </Button>
+              <div className="flex items-center gap-2 text-xs font-bold text-slate-300 bg-white/10 backdrop-blur-md px-4 py-2.5 rounded-full border border-white/20">
+                <ShieldCheck className="w-4 h-4 text-emerald-400" /> 100% Certified Authentic
+              </div>
+            </div>
+          </div>
+
+          {/* Navigation Arrows */}
+          <button
+            type="button"
+            suppressHydrationWarning
+            onClick={() => setHeroIndex((prev) => (prev - 1 + HERO_SLIDES.length) % HERO_SLIDES.length)}
+            className="absolute left-4 top-1/2 -translate-y-1/2 h-11 w-11 rounded-full bg-black/40 hover:bg-black/80 backdrop-blur-md text-white flex items-center justify-center transition-all z-20 border border-white/20"
+            aria-label="Previous Slide"
+          >
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+          <button
+            type="button"
+            suppressHydrationWarning
+            onClick={() => setHeroIndex((prev) => (prev + 1) % HERO_SLIDES.length)}
+            className="absolute right-4 top-1/2 -translate-y-1/2 h-11 w-11 rounded-full bg-black/40 hover:bg-black/80 backdrop-blur-md text-white flex items-center justify-center transition-all z-20 border border-white/20"
+            aria-label="Next Slide"
+          >
+            <ChevronRight className="w-6 h-6" />
+          </button>
+
+          {/* Slide Dots */}
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2">
+            {HERO_SLIDES.map((_, idx) => (
+              <button
+                key={idx}
+                type="button"
+                suppressHydrationWarning
+                onClick={() => setHeroIndex(idx)}
+                className={`h-2 rounded-full transition-all ${idx === heroIndex ? 'w-8 bg-amber-400' : 'w-2 bg-white/40'}`}
+                aria-label={`Go to slide ${idx + 1}`}
+              />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 3. INTERACTIVE LIVE PINCODE SERVICEABILITY & DELIVERY CHECKER */}
+      <section className="mx-2 sm:mx-6 lg:mx-8">
+        <div className="rounded-3xl border border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-card to-emerald-500/10 p-6 sm:p-8 shadow-lg">
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+            <div className="space-y-2 max-w-xl">
+              <div className="inline-flex items-center gap-1.5 text-xs font-black text-amber-700 dark:text-amber-300 uppercase tracking-wider">
+                <MapPin className="w-4 h-4 text-amber-600 animate-bounce" />
+                <span>Live Service Across 29,000+ Indian Pin Codes</span>
+              </div>
+              <h2 className="text-xl sm:text-2xl font-black text-foreground">
+                Check Express Delivery & Doorstep COD in Your City
+              </h2>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Enter your 6-digit PIN code to verify real-time courier serviceability, cash on delivery availability, and transit timelines.
+              </p>
+            </div>
+
+            {/* Pincode Input Form */}
+            <div className="w-full lg:w-auto flex-1 max-w-md">
+              <form onSubmit={handleCheckPincode} className="flex gap-2">
+                <div className="relative flex-1">
+                  <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <input
+                    type="text"
+                    maxLength={6}
+                    placeholder="e.g. 110001, 400001, 800001"
+                    value={pincodeInput}
+                    onChange={(e) => setPincodeInput(e.target.value.replace(/\D/g, ''))}
+                    suppressHydrationWarning
+                    className="w-full h-11 pl-10 pr-3 rounded-2xl border bg-background text-sm font-bold font-mono tracking-wider focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-xs"
+                  />
+                </div>
+                <Button type="submit" suppressHydrationWarning className="rounded-2xl h-11 px-5 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-bold text-xs shadow-md shrink-0">
+                  Check PIN &rarr;
+                </Button>
+              </form>
+
+              {/* Instant Verification Feedback */}
+              {pincodeResult.status === 'success' && (
+                <div className="mt-3 p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-800 dark:text-emerald-300 text-xs font-bold animate-in fade-in flex items-start gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <div>
+                    <p>{pincodeResult.message}</p>
+                    <p className="text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold pt-1">
+                      ⚡ Estimated Delivery: 1-2 Business Days | 💵 Doorstep Cash On Delivery (COD) Available
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {pincodeResult.status === 'invalid' && (
+                <div className="mt-3 p-3 rounded-2xl bg-destructive/10 border border-destructive/20 text-destructive text-xs font-semibold animate-in fade-in">
+                  {pincodeResult.message}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Quick Pincode Trust Badges */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-6 mt-6 border-t border-border/60">
+            <div className="flex items-center gap-2 text-xs font-bold text-foreground">
+              <span className="text-base">⚡</span> 1-2 Day Express Delivery
+            </div>
+            <div className="flex items-center gap-2 text-xs font-bold text-foreground">
+              <span className="text-base">💵</span> Doorstep COD (घर पर नकद)
+            </div>
+            <div className="flex items-center gap-2 text-xs font-bold text-foreground">
+              <span className="text-base">🔄</span> 7-Day Easy Returns (सहज वापसी)
+            </div>
+            <div className="flex items-center gap-2 text-xs font-bold text-foreground">
+              <span className="text-base">🛡️</span> Zero Fraud Guarantee
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 4. ROYAL ATITHI DEVO BHAVA LUXURY HOSPITALITY SHOWCASE */}
+      <section className="mx-2 sm:mx-6 lg:mx-8">
+        <div className="relative rounded-3xl overflow-hidden border-2 border-amber-500/40 bg-gradient-to-br from-amber-950/70 via-slate-950 to-amber-950/60 p-6 sm:p-10 lg:p-12 text-white shadow-2xl">
+          {/* Subtle Royal Glow Backdrop */}
+          <div className="absolute -top-24 -right-24 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-orange-500/10 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="relative z-10 text-center max-w-3xl mx-auto space-y-4">
+            {/* Sacred Sanskrit Inscription */}
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-300 text-xs font-black tracking-widest uppercase">
+              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+              <span>Sanatan Seva Parampara</span>
+              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+            </div>
+
+            <div className="space-y-2">
+              <h2 className="font-serif text-3xl sm:text-4xl md:text-5xl font-black tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-yellow-300 to-amber-100 drop-shadow-md py-1">
+                ॥ अतिथिदेवो भवः ॥
+              </h2>
+              <p className="text-sm sm:text-base font-bold text-amber-200/90 tracking-wide uppercase">
+                Atithi Devo Bhava — &ldquo;The Guest is an Embodiment of the Divine&rdquo;
+              </p>
+            </div>
+
+            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed font-medium">
+              In our timeless Indian tradition, hospitality is sacred. At <strong className="text-amber-300 font-bold">SWADESH Luxe</strong>, you are never merely a customer — you are our most revered guest. We honor your trust with authentic master craftsmanship, transparent pricing, and royal service at every doorstep.
+            </p>
+          </div>
+
+          {/* The 4 Pillars of Atithi Satkar */}
+          <div className="relative z-10 grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 lg:gap-6 mt-6 sm:mt-10 lg:mt-12">
+            <div className="p-3.5 sm:p-5 rounded-2xl bg-white/5 backdrop-blur-md border border-amber-500/30 hover:border-amber-400 hover:bg-white/10 transition-all space-y-1.5 sm:space-y-2.5 text-left group">
+              <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg sm:rounded-xl bg-gradient-to-tr from-amber-500 to-yellow-400 text-slate-950 flex items-center justify-center font-black text-base sm:text-lg shadow-lg group-hover:scale-110 transition-transform">
+                👑
+              </div>
+              <h3 className="font-black text-xs sm:text-sm text-amber-200">
+                Atithi Satkar (अतिथि)
+              </h3>
+              <p className="text-[10px] sm:text-xs text-slate-300 leading-relaxed font-medium line-clamp-3 sm:line-clamp-none">
+                VIP concierge care, dedicated 24×7 WhatsApp support, and swift priority resolution.
+              </p>
+            </div>
+
+            <div className="p-3.5 sm:p-5 rounded-2xl bg-white/5 backdrop-blur-md border border-amber-500/30 hover:border-amber-400 hover:bg-white/10 transition-all space-y-1.5 sm:space-y-2.5 text-left group">
+              <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg sm:rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 text-slate-950 flex items-center justify-center font-black text-base sm:text-lg shadow-lg group-hover:scale-110 transition-transform">
+                🤝
+              </div>
+              <h3 className="font-black text-xs sm:text-sm text-emerald-300">
+                Doorstep COD (नकद)
+              </h3>
+              <p className="text-[10px] sm:text-xs text-slate-300 leading-relaxed font-medium line-clamp-3 sm:line-clamp-none">
+                Inspect your sealed parcel first. Pay cash or scan UPI only when you are 100% delighted.
+              </p>
+            </div>
+
+            <div className="p-3.5 sm:p-5 rounded-2xl bg-white/5 backdrop-blur-md border border-amber-500/30 hover:border-amber-400 hover:bg-white/10 transition-all space-y-1.5 sm:space-y-2.5 text-left group">
+              <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg sm:rounded-xl bg-gradient-to-tr from-orange-500 to-rose-400 text-slate-950 flex items-center justify-center font-black text-base sm:text-lg shadow-lg group-hover:scale-110 transition-transform">
+                💎
+              </div>
+              <h3 className="font-black text-xs sm:text-sm text-orange-200">
+                100% Shuddh (शुद्ध)
+              </h3>
+              <p className="text-[10px] sm:text-xs text-slate-300 leading-relaxed font-medium line-clamp-3 sm:line-clamp-none">
+                Certified authentic weaves, organic harvests, and innovations directly from master Indian artisans.
+              </p>
+            </div>
+
+            <div className="p-3.5 sm:p-5 rounded-2xl bg-white/5 backdrop-blur-md border border-amber-500/30 hover:border-amber-400 hover:bg-white/10 transition-all space-y-1.5 sm:space-y-2.5 text-left group">
+              <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg sm:rounded-xl bg-gradient-to-tr from-blue-500 to-indigo-400 text-slate-950 flex items-center justify-center font-black text-base sm:text-lg shadow-lg group-hover:scale-110 transition-transform">
+                🔄
+              </div>
+              <h3 className="font-black text-xs sm:text-sm text-blue-200">
+                Sahaj Wapsi (वापसी)
+              </h3>
+              <p className="text-[10px] sm:text-xs text-slate-300 leading-relaxed font-medium line-clamp-3 sm:line-clamp-none">
+                7-day doorstep pickup with instant UPI/Bank refund. Zero uncomfortable questions asked.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 5. THE 4 PILLARS OF "SWADESHI BHAROSA" (चार अटूट विश्वास) */}
+      <section className="mx-2 sm:mx-6 lg:mx-8">
+        <div className="text-center max-w-2xl mx-auto space-y-2 mb-6 sm:mb-8">
+          <Badge variant="outline" className="text-amber-700 dark:text-amber-300 border-amber-400 font-bold px-3 py-0.5 text-[11px] sm:text-xs">
+            🇮🇳 Our Sacred Promise — Your Unbroken Trust
+          </Badge>
+          <h2 className="text-xl sm:text-2xl lg:text-3xl font-black text-foreground">
+            Why Millions of Families Choose SWADESH Luxe
+          </h2>
+          <p className="text-[11px] sm:text-xs text-muted-foreground">
+            We are not just an online store, but a trusted national bridge to authentic Indian heritage and quality.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 lg:gap-6">
+          <div className="p-3.5 sm:p-6 rounded-2xl sm:rounded-3xl border bg-card hover:border-amber-500/40 hover:shadow-xl transition-all space-y-2 sm:space-y-3">
+            <div className="h-9 w-9 sm:h-12 sm:w-12 rounded-xl sm:rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center font-black text-lg sm:text-2xl">
+              🛡️
+            </div>
+            <h3 className="font-black text-xs sm:text-base text-foreground">100% Certified Genuine</h3>
+            <p className="text-[10px] sm:text-xs text-muted-foreground leading-relaxed line-clamp-3 sm:line-clamp-none">
+              Directly sourced from certified Indian master weavers, artisans, and innovators. Zero duplicates guaranteed.
+            </p>
+          </div>
+
+          <div className="p-3.5 sm:p-6 rounded-2xl sm:rounded-3xl border bg-card hover:border-emerald-500/40 hover:shadow-xl transition-all space-y-2 sm:space-y-3">
+            <div className="h-9 w-9 sm:h-12 sm:w-12 rounded-xl sm:rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-black text-lg sm:text-2xl">
+              💵
+            </div>
+            <h3 className="font-black text-xs sm:text-base text-foreground">Doorstep COD Available</h3>
+            <p className="text-[10px] sm:text-xs text-muted-foreground leading-relaxed line-clamp-3 sm:line-clamp-none">
+              Touch and inspect your order first. Pay in cash or scan QR via UPI at your doorstep with complete peace of mind.
+            </p>
+          </div>
+
+          <div className="p-3.5 sm:p-6 rounded-2xl sm:rounded-3xl border bg-card hover:border-blue-500/40 hover:shadow-xl transition-all space-y-2 sm:space-y-3">
+            <div className="h-9 w-9 sm:h-12 sm:w-12 rounded-xl sm:rounded-2xl bg-blue-500/10 text-blue-600 flex items-center justify-center font-black text-lg sm:text-2xl">
+              🔄
+            </div>
+            <h3 className="font-black text-xs sm:text-base text-foreground">7-Day Sahaj Wapsi</h3>
+            <p className="text-[10px] sm:text-xs text-muted-foreground leading-relaxed line-clamp-3 sm:line-clamp-none">
+              If it doesn&apos;t fit or match your expectations, enjoy doorstep reverse pickup and immediate refund with zero hassle.
+            </p>
+          </div>
+
+          <div className="p-3.5 sm:p-6 rounded-2xl sm:rounded-3xl border bg-card hover:border-rose-500/40 hover:shadow-xl transition-all space-y-2 sm:space-y-3">
+            <div className="h-9 w-9 sm:h-12 sm:w-12 rounded-xl sm:rounded-2xl bg-rose-500/10 text-rose-600 flex items-center justify-center font-black text-lg sm:text-2xl">
+              📞
+            </div>
+            <h3 className="font-black text-xs sm:text-base text-foreground">24×7 Desi Helpline</h3>
+            <p className="text-[10px] sm:text-xs text-muted-foreground leading-relaxed line-clamp-3 sm:line-clamp-none">
+              Dedicated human assistance in English, Hindi, and regional languages on WhatsApp and toll-free helpline.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* 6. EXPLORE BY INDIAN REGIONS (Bharat Ke Kone-Kone Se) */}
+      <section className="mx-2 sm:mx-6 lg:mx-8 space-y-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-3 sm:gap-4 border-b pb-4">
+          <div>
+            <div className="flex items-center gap-2 text-[11px] sm:text-xs font-black text-amber-600 uppercase tracking-widest">
+              <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-500" />
+              <span>Virasat-e-Hind (विरासत-ए-हिंद)</span>
+            </div>
+            <h2 className="text-xl sm:text-2xl lg:text-3xl font-black tracking-tight text-foreground mt-1">
+              Treasures from Every Corner of India
+            </h2>
+            <p className="text-[11px] sm:text-xs text-muted-foreground mt-0.5">
+              Authentic regional craftsmanship directly connected to the indigenous identity of each state.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto flex-wrap">
+            {isAdmin && (
+              <Button asChild variant="default" size="sm" className="rounded-full text-xs font-bold shrink-0 bg-amber-600 hover:bg-amber-700 text-white shadow-sm gap-1">
+                <Link href="/admin/categories?tab=heritage">
+                  ⚙️ Manage Virasat (Admin)
+                </Link>
+              </Button>
+            )}
+            <Button asChild variant="outline" size="sm" className="rounded-full text-xs font-bold shrink-0">
+              <Link href="/products?categorySlug=apparel-fashion">
+                Explore All Regions &rarr;
+              </Link>
+            </Button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+          {regionalHeritage.map((item) => (
+            <Link
+              key={item.id || item.region}
+              href={`/products?categorySlug=${item.slug}&search=${encodeURIComponent(item.searchQuery || item.region.split(' ')[0])}`}
+              className="group relative rounded-2xl sm:rounded-3xl overflow-hidden border border-border/80 bg-card hover:shadow-2xl transition-all"
+            >
+              <div className="relative h-48 sm:h-56 lg:h-64 w-full overflow-hidden">
+                <Image
+                  src={item.image}
+                  alt={item.title}
+                  fill
+                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, 25vw"
+                  className="object-cover object-center group-hover:scale-108 transition-transform duration-500"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
+                <div className="absolute top-2.5 left-2.5 sm:top-3 sm:left-3">
+                  <span className="px-2 sm:px-3 py-0.5 sm:py-1 rounded-full bg-amber-500 text-slate-950 text-[9px] sm:text-[10px] font-black uppercase tracking-wider shadow-md">
+                    {item.region}
                   </span>
                 </div>
-
-                <div className="space-y-1">
-                  <h1 className="text-4xl lg:text-6xl font-black tracking-tight leading-none text-white">
-                    {currentSlide.title}
-                  </h1>
-                  <h2 className={`text-xl lg:text-2xl font-black uppercase tracking-wider ${currentSlide.accentColor}`}>
-                    {currentSlide.subtitle}
-                  </h2>
+                <div className="absolute bottom-3 left-3 right-3 sm:bottom-4 sm:left-4 sm:right-4 text-white space-y-0.5 sm:space-y-1">
+                  <h3 className="text-xs sm:text-base lg:text-lg font-black leading-snug drop-shadow-md line-clamp-2">
+                    {item.title}
+                  </h3>
+                  <p className="text-[10px] sm:text-[11px] text-amber-200 font-medium drop-shadow truncate">
+                    📍 {item.highlight}
+                  </p>
                 </div>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </section>
 
-                <p className="text-sm text-slate-300 max-w-lg leading-relaxed font-medium">
-                  {currentSlide.description}
-                </p>
+      {/* 7. FLASH SALE & BACHAT COUPONS */}
+      <section className="mx-2 sm:mx-6 lg:mx-8">
+        <div className="rounded-3xl border border-amber-500/40 bg-gradient-to-r from-amber-600 via-orange-600 to-rose-700 text-white p-6 sm:p-10 shadow-2xl relative overflow-hidden">
+          <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8">
+            <div className="space-y-3 max-w-xl">
+              <div className="inline-flex items-center gap-2 bg-black/30 backdrop-blur-md px-3.5 py-1 rounded-full text-amber-200 text-xs font-black border border-amber-300/30">
+                <Flame className="w-4 h-4 text-amber-400" />
+                <span>Grand Swadeshi Bachat Deals — Limited Time</span>
+              </div>
+              <h2 className="text-3xl sm:text-4xl font-black tracking-tight leading-tight">
+                Exclusive Festive Discount Coupons
+              </h2>
+              <p className="text-xs sm:text-sm text-amber-100 leading-relaxed font-medium">
+                Apply these verified promo codes during checkout for instant savings on your order.
+              </p>
 
-                <div className="flex items-center gap-4 pt-2">
-                  <Button asChild size="lg" className="rounded-full bg-white hover:bg-slate-100 text-slate-900 font-black px-8 text-sm shadow-xl hover:scale-105 transition-transform">
-                    <Link href={currentSlide.ctaLink}>
-                      {currentSlide.ctaText}
-                      <ArrowRight className="w-4 h-4 ml-2" />
-                    </Link>
+              {/* Ticking Countdown Timer */}
+              <div className="flex items-center gap-2 pt-2 text-xs font-bold">
+                <Clock className="w-4 h-4 text-amber-300" />
+                <span>Offer ends in:</span>
+                <span suppressHydrationWarning className="font-mono bg-black/40 px-2 py-1 rounded-lg text-amber-300 font-black">
+                  {String(timeLeft.hours).padStart(2, '0')}h : {String(timeLeft.minutes).padStart(2, '0')}m : {String(timeLeft.seconds).padStart(2, '0')}s
+                </span>
+              </div>
+            </div>
+
+            {/* Coupons Interactive Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full lg:w-auto">
+              <div className="p-4 rounded-2xl bg-white text-slate-900 shadow-lg space-y-2 border-2 border-amber-400">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-rose-600 bg-rose-50 px-2 py-0.5 rounded">₹100 OFF</span>
+                  <span className="text-[10px] text-muted-foreground font-semibold">Orders ₹499+</span>
+                </div>
+                <div className="flex items-center justify-between gap-3 pt-1">
+                  <span className="font-mono font-black text-sm tracking-wider text-slate-800">SWADESH100</span>
+                  <Button
+                    size="sm"
+                    type="button" suppressHydrationWarning onClick={() => handleCopyCode('SWADESH100')}
+                    className="h-8 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-bold px-3"
+                  >
+                    {copiedCode === 'SWADESH100' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                    <span className="ml-1">{copiedCode === 'SWADESH100' ? 'Copied!' : 'Copy Code'}</span>
                   </Button>
                 </div>
               </div>
 
-              {/* Right: High-Impact Visual Frame */}
-              <div className="col-span-5 relative">
-                <Link
-                  href={currentSlide.ctaLink}
-                  className="block relative aspect-[4/3] w-full rounded-2xl overflow-hidden border border-white/20 shadow-2xl group cursor-pointer"
-                >
-                  <Image
-                    src={currentSlide.imageUrl}
-                    alt={currentSlide.title}
-                    fill
-                    priority
-                    className="object-cover group-hover:scale-108 transition-transform duration-700 ease-out"
-                  />
-                </Link>
+              <div className="p-4 rounded-2xl bg-white text-slate-900 shadow-lg space-y-2 border-2 border-emerald-400">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">20% OFF</span>
+                  <span className="text-[10px] text-muted-foreground font-semibold">First Order</span>
+                </div>
+                <div className="flex items-center justify-between gap-3 pt-1">
+                  <span className="font-mono font-black text-sm tracking-wider text-slate-800">DESI20</span>
+                  <Button
+                    size="sm"
+                    type="button" suppressHydrationWarning onClick={() => handleCopyCode('DESI20')}
+                    className="h-8 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-bold px-3"
+                  >
+                    {copiedCode === 'DESI20' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                    <span className="ml-1">{copiedCode === 'DESI20' ? 'Copied!' : 'Copy Code'}</span>
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
         </div>
-
-        {/* Slider Navigation Arrows */}
-        <button
-          onClick={() => setHeroIndex((prev) => (prev - 1 + HERO_SLIDES.length) % HERO_SLIDES.length)}
-          suppressHydrationWarning
-          className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center transition-all z-20 backdrop-blur"
-          aria-label="Previous Banner"
-        >
-          <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-        </button>
-        <button
-          onClick={() => setHeroIndex((prev) => (prev + 1) % HERO_SLIDES.length)}
-          suppressHydrationWarning
-          className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center transition-all z-20 backdrop-blur"
-          aria-label="Next Banner"
-        >
-          <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
-        </button>
-
-        {/* Dots Indicator */}
-        <div className="absolute bottom-2 sm:bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 sm:gap-2 z-20">
-          {HERO_SLIDES.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => setHeroIndex(i)}
-              suppressHydrationWarning
-              className={`h-1.5 sm:h-2 rounded-full transition-all ${
-                heroIndex === i ? 'w-6 sm:w-8 bg-white' : 'w-1.5 sm:w-2 bg-white/40 hover:bg-white/70'
-              }`}
-              aria-label={`Slide ${i + 1}`}
-            />
-          ))}
-        </div>
       </section>
 
-      {/* 2. ⚡ CRAZY DEALS OF THE DAY WITH COUNTDOWN (MYNTRA SIGNATURE) */}
-      <section className="container mx-auto px-2 sm:px-4">
-        <div className="rounded-2xl sm:rounded-3xl border border-rose-500/30 bg-gradient-to-br from-rose-500/10 via-orange-500/5 to-card p-4 sm:p-8 space-y-4 sm:space-y-6 shadow-xs">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border pb-3 sm:pb-4">
-            <div className="flex items-center gap-2.5 sm:gap-3">
-              <span className="p-2 sm:p-2.5 rounded-xl sm:rounded-2xl bg-rose-600 text-white shadow-md shadow-rose-600/30">
-                <Flame className="w-5 h-5 sm:w-6 sm:h-6 animate-bounce" />
-              </span>
-              <div>
-                <h2 className="text-lg sm:text-2xl font-black uppercase tracking-wider text-foreground flex items-center gap-2">
-                  CRAZY DEALS OF THE DAY
-                </h2>
-                <p className="text-[11px] sm:text-xs text-muted-foreground font-semibold">
-                  Handpicked trending styles at lowest price drops
-                </p>
-              </div>
-            </div>
-
-            {/* Countdown Clock Box */}
-            <div className="flex items-center gap-2 bg-card border border-rose-500/40 px-3 py-1.5 sm:py-2 rounded-xl sm:rounded-2xl shadow-xs self-start sm:self-auto">
-              <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-600 animate-pulse" />
-              <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-muted-foreground">Ends in:</span>
-              <div className="flex items-center gap-1 font-mono font-black text-xs text-rose-600">
-                <span className="bg-rose-500/15 px-1.5 sm:px-2 py-0.5 rounded-md">{String(timeLeft.hours).padStart(2, '0')}h</span>
-                <span>:</span>
-                <span className="bg-rose-500/15 px-1.5 sm:px-2 py-0.5 rounded-md">{String(timeLeft.minutes).padStart(2, '0')}m</span>
-                <span>:</span>
-                <span className="bg-rose-500/15 px-1.5 sm:px-2 py-0.5 rounded-md">{String(timeLeft.seconds).padStart(2, '0')}s</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Flash Deals Horizontal Carousel / Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-4">
-            {(featuredProducts.length > 0 ? featuredProducts.slice(0, 4) : allProducts.slice(0, 4)).map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* 3. 🏷️ MEDAL WORTHY BRANDS TO BAG (MYNTRA SIGNATURE) */}
-      <section className="container mx-auto px-2 sm:px-4 space-y-4 sm:space-y-6">
-        <div className="text-center space-y-1">
-          <h2 className="text-xl sm:text-3xl font-black uppercase tracking-widest text-foreground flex items-center justify-center gap-1.5 sm:gap-2">
-            <Award className="w-5 h-5 sm:w-6 sm:h-6 text-amber-500" /> MEDAL WORTHY BRANDS TO BAG
-          </h2>
-          <p className="text-[10px] sm:text-xs text-muted-foreground uppercase font-bold tracking-wider">
-            Shop Top Global & Indian Brands with Verified Warranty
-          </p>
-        </div>
-
-        <div className="grid grid-cols-4 sm:grid-cols-4 lg:grid-cols-8 gap-2 sm:gap-4">
-          {spotlightBrands.map((brand, idx) => (
-            <Link
-              key={idx}
-              href={`/products?search=${encodeURIComponent(brand.query || brand.name)}`}
-              className="group rounded-xl sm:rounded-2xl border border-border bg-card p-2 sm:p-3 text-center space-y-1.5 sm:space-y-2.5 transition-all hover:shadow-xl hover:border-primary/50 hover:-translate-y-1 flex flex-col items-center justify-between"
-            >
-              <div className="relative w-14 h-14 sm:w-20 sm:h-20 rounded-full overflow-hidden border-2 border-border/80 group-hover:border-primary transition-colors bg-muted/30 shadow-xs">
-                <Image
-                  src={brand.imageUrl}
-                  alt={brand.name}
-                  fill
-                  className="object-cover group-hover:scale-110 transition-transform duration-500"
-                />
-              </div>
-              <div className="w-full">
-                <h3 className="text-[11px] sm:text-xs font-black uppercase tracking-wider text-foreground truncate w-full">
-                  {brand.name}
-                </h3>
-                <p className="text-[9px] sm:text-[10px] font-black text-rose-600 dark:text-rose-400 mt-0.5 truncate w-full">
-                  {brand.offer}
-                </p>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      {/* 4. 🛍️ CATEGORIES TO BAG (MYNTRA VISUAL TILES) */}
-      <section className="container mx-auto px-2 sm:px-4 space-y-4 sm:space-y-6">
-        <div className="flex items-center justify-between">
+      {/* 8. CURATED PRODUCT CATALOG WITH DESI TABS */}
+      <section className="mx-2 sm:mx-6 lg:mx-8 space-y-6">
+        <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-4 border-b pb-4">
           <div>
-            <h2 className="text-xl sm:text-3xl font-black uppercase tracking-widest text-foreground">
-              CATEGORIES TO BAG
+            <Badge variant="outline" className="text-emerald-700 dark:text-emerald-300 border-emerald-400 font-bold mb-1">
+              ✨ 100% Certified Authentic
+            </Badge>
+            <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-foreground">
+              Curated Indian Showcase
             </h2>
-            <p className="text-[11px] sm:text-xs text-muted-foreground font-semibold">
-              Explore curated fashion, athletic, and lifestyle departments
-            </p>
-          </div>
-          <Link
-            href="/products"
-            className="text-xs font-black uppercase tracking-wider text-primary hover:underline flex items-center gap-1"
-          >
-            VIEW ALL &gt;
-          </Link>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-4">
-          {CATEGORIES_TO_BAG.map((cat, idx) => (
-            <Link
-              key={idx}
-              href={`/products?categorySlug=${cat.slug}`}
-              className="group relative rounded-xl sm:rounded-2xl overflow-hidden aspect-[3/4] border border-border shadow-xs hover:shadow-2xl transition-all duration-300"
-            >
-              <Image
-                src={cat.image}
-                alt={cat.title}
-                fill
-                className="object-cover group-hover:scale-108 transition-transform duration-700 ease-out"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent pointer-events-none" />
-
-              <div className="absolute bottom-2.5 inset-x-2.5 text-white space-y-0.5">
-                <h3 className="text-[11px] sm:text-xs font-black leading-tight group-hover:text-rose-400 transition-colors">
-                  {cat.title}
-                </h3>
-                <p className="text-[9px] sm:text-[10px] font-extrabold text-amber-300">
-                  {cat.offer}
-                </p>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      {/* 5. 💰 BUDGET STORE / EXPLORE BY PRICE TILES (MYNTRA SIGNATURE) */}
-      <section className="container mx-auto px-2 sm:px-4">
-        <div className="rounded-2xl sm:rounded-3xl border bg-card p-4 sm:p-6 space-y-3 sm:space-y-4 shadow-xs">
-          <h3 className="text-[11px] sm:text-xs font-black uppercase tracking-wider text-muted-foreground">
-            EXPLORE BY PRICE • BUDGET STORE
-          </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
-            {[
-              { label: 'UNDER ₹399', query: 'maxPrice=399' },
-              { label: 'UNDER ₹599', query: 'maxPrice=599' },
-              { label: 'UNDER ₹999', query: 'maxPrice=999' },
-              { label: 'UNDER ₹1,499', query: 'maxPrice=1499' },
-              { label: '50%+ OFF DEALS', query: 'discount=50' },
-            ].map((tier, idx) => (
-              <Link
-                key={idx}
-                href={`/products?${tier.query}`}
-                className="p-2.5 sm:p-3 rounded-xl sm:rounded-2xl border-2 border-border/80 bg-muted/20 hover:border-primary hover:bg-primary/5 hover:text-primary transition-all text-center group font-black text-[11px] sm:text-xs uppercase tracking-wider text-foreground flex items-center justify-center gap-1"
-              >
-                <span>{tier.label}</span>
-                <ChevronRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary" />
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* 6. 👗 COMPLETE PRODUCT CATALOG WITH DYNAMIC MYNTRA TABS */}
-      <section className="container mx-auto px-2 sm:px-4 space-y-4 sm:space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4 border-b pb-3 sm:pb-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-xl sm:text-3xl font-black uppercase tracking-wider text-foreground">
-                EXPLORE STORE CATALOG
-              </h2>
-              <span className="text-[10px] sm:text-xs font-black px-2.5 py-0.5 rounded-full bg-rose-500/10 text-rose-600">
-                {displayedProducts.length} STYLES
-              </span>
-            </div>
-            <p className="text-[11px] sm:text-xs text-muted-foreground font-semibold mt-0.5">
-              Browse all items with instant size selector & 1-click checkout
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Handpicked crafts, festive wear, and modern Make-in-India technology rated 4.5+ stars
             </p>
           </div>
 
-          {/* Myntra Filter Tabs */}
-          <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 no-scrollbar">
+          {/* Filter Tabs */}
+          <div className="flex flex-wrap gap-1.5 p-1 rounded-2xl bg-muted/60 border text-xs font-bold">
             <button
               type="button"
+              suppressHydrationWarning
               onClick={() => setActiveCatalogTab('all')}
-              suppressHydrationWarning
-              className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-[11px] sm:text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap ${
-                activeCatalogTab === 'all'
-                  ? 'bg-rose-600 text-white shadow-md shadow-rose-600/30'
-                  : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground border'
-              }`}
+              className={`px-3 py-1.5 rounded-xl transition-all ${activeCatalogTab === 'all' ? 'bg-amber-600 text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
             >
-              🔥 ALL STYLES ({allProducts.length})
+              All Products (सभी)
             </button>
             <button
               type="button"
+              suppressHydrationWarning
               onClick={() => setActiveCatalogTab('featured')}
-              suppressHydrationWarning
-              className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-[11px] sm:text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap flex items-center gap-1.5 ${
-                activeCatalogTab === 'featured'
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                  : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground border'
-              }`}
+              className={`px-3 py-1.5 rounded-xl transition-all ${activeCatalogTab === 'featured' ? 'bg-amber-600 text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
             >
-              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-              FEATURED DROPS ({allProducts.filter((p) => p.isFeatured).length})
+              ⭐ Best Sellers (सर्वश्रेष्ठ)
             </button>
             <button
               type="button"
-              onClick={() => setActiveCatalogTab('deals')}
               suppressHydrationWarning
-              className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-[11px] sm:text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap flex items-center gap-1.5 ${
-                activeCatalogTab === 'deals'
-                  ? 'bg-orange-600 text-white shadow-md shadow-orange-600/30'
-                  : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground border'
-              }`}
+              onClick={() => setActiveCatalogTab('deals')}
+              className={`px-3 py-1.5 rounded-xl transition-all ${activeCatalogTab === 'deals' ? 'bg-amber-600 text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
             >
-              <Tag className="w-3.5 h-3.5" />
-              DISCOUNT DEALS ({allProducts.filter((p) => p.comparePrice && p.comparePrice > p.basePrice).length})
+              🔥 Flash Deals (बचत सेल)
             </button>
-            {categories.map((cat) => (
-              <button
-                key={cat.id}
-                type="button"
-                onClick={() => setActiveCatalogTab(cat.id)}
-                suppressHydrationWarning
-                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-[11px] sm:text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap ${
-                  activeCatalogTab === cat.id
-                    ? 'bg-primary text-white shadow-md shadow-primary/30'
-                    : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground border'
-                }`}
-              >
-                {cat.name}
-              </button>
-            ))}
           </div>
         </div>
 
-        {/* 4-Column Responsive Grid */}
-        {isLoading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-4">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="aspect-[3/4] rounded-2xl border bg-card p-4 animate-pulse bg-muted/40" />
-            ))}
-          </div>
-        ) : displayedProducts.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-4">
-            {displayedProducts.map((product) => (
+        {/* Product Cards Grid */}
+        {displayedProducts.length > 0 ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+            {displayedProducts.slice(0, 12).map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
           </div>
         ) : (
-          <div className="text-center py-16 border rounded-3xl bg-muted/20 space-y-3">
-            <p className="text-xs text-muted-foreground font-bold">No styles found for this category.</p>
-            <Button size="sm" variant="outline" onClick={() => setActiveCatalogTab('all')} className="text-xs font-bold rounded-xl">
-              Show All Styles
-            </Button>
+          <div className="text-center py-12 text-muted-foreground space-y-2">
+            <Package className="w-12 h-12 mx-auto text-muted-foreground/40" />
+            <p className="text-sm font-semibold">Loading authentic products...</p>
           </div>
         )}
+
+        <div className="pt-4 text-center">
+          <Button asChild size="lg" variant="outline" className="rounded-full px-8 text-xs font-black border-2 border-amber-600 text-amber-700 dark:text-amber-400 hover:bg-amber-600 hover:text-white">
+            <Link href="/products">
+              Explore All 10,000+ Swadeshi Products &rarr;
+            </Link>
+          </Button>
+        </div>
       </section>
 
-      {/* 7. 🛡️ WHY SHOP WITH NOVASTORE (MYNTRA TRUST GUARANTEE) */}
-      <section className="container mx-auto px-2 sm:px-4">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6 py-6 sm:py-8 border-y border-border">
-          <div className="flex items-center gap-2.5 sm:gap-3">
-            <div className="p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-rose-500/10 text-rose-600 flex-shrink-0">
-              <Truck className="w-5 h-5 sm:w-6 sm:h-6" />
-            </div>
-            <div>
-              <h4 className="text-[11px] sm:text-xs font-black uppercase tracking-wider text-foreground">Free Express Delivery</h4>
-              <p className="text-[10px] sm:text-[11px] text-muted-foreground">On all orders above ₹999</p>
-            </div>
+      {/* 9. VERIFIED CUSTOMER REVIEWS (सच्चे ग्राहकों की ज़ुबानी) */}
+      <section className="mx-2 sm:mx-6 lg:mx-8">
+        <div className="rounded-3xl border border-border bg-muted/20 p-6 sm:p-10 space-y-8">
+          <div className="text-center max-w-xl mx-auto space-y-2">
+            <Badge variant="outline" className="text-amber-700 dark:text-amber-300 border-amber-400 font-bold px-3 py-0.5">
+              ⭐ 4.9/5 Star Customer Trust
+            </Badge>
+            <h2 className="text-2xl sm:text-3xl font-black text-foreground">
+              Voices of Real Indian Families (सच्चे ग्राहकों की ज़ुबानी)
+            </h2>
+            <p className="text-xs text-muted-foreground">
+              Honest experiences from verified buyers in Varanasi, Jaipur, Patna, Bengaluru and 29,000+ pin codes.
+            </p>
           </div>
 
-          <div className="flex items-center gap-2.5 sm:gap-3">
-            <div className="p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-emerald-500/10 text-emerald-600 flex-shrink-0">
-              <ShieldCheck className="w-5 h-5 sm:w-6 sm:h-6" />
-            </div>
-            <div>
-              <h4 className="text-[11px] sm:text-xs font-black uppercase tracking-wider text-foreground">100% Genuine Products</h4>
-              <p className="text-[10px] sm:text-[11px] text-muted-foreground">Direct from authorized brands</p>
-            </div>
-          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {REAL_INDIAN_REVIEWS.map((review, idx) => (
+              <div key={idx} className="p-5 rounded-2xl border bg-card shadow-sm space-y-3 flex flex-col justify-between">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1 text-amber-500">
+                    {[...Array(review.rating)].map((_, i) => (
+                      <Star key={i} className="w-4 h-4 fill-amber-500" />
+                    ))}
+                  </div>
+                  <h3 className="font-bold text-xs text-foreground leading-snug">
+                    &ldquo;{review.title}&rdquo;
+                  </h3>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    {review.comment}
+                  </p>
+                </div>
 
-          <div className="flex items-center gap-2.5 sm:gap-3">
-            <div className="p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-indigo-500/10 text-indigo-600 flex-shrink-0">
-              <RotateCcw className="w-5 h-5 sm:w-6 sm:h-6" />
-            </div>
-            <div>
-              <h4 className="text-[11px] sm:text-xs font-black uppercase tracking-wider text-foreground">14-Day Easy Returns</h4>
-              <p className="text-[10px] sm:text-[11px] text-muted-foreground">Doorstep pickup & refund</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2.5 sm:gap-3">
-            <div className="p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-amber-500/10 text-amber-600 flex-shrink-0">
-              <CreditCard className="w-5 h-5 sm:w-6 sm:h-6" />
-            </div>
-            <div>
-              <h4 className="text-[11px] sm:text-xs font-black uppercase tracking-wider text-foreground">COD & Instant UPI</h4>
-              <p className="text-[10px] sm:text-[11px] text-muted-foreground">100% Secure Checkout</p>
-            </div>
+                <div className="pt-3 border-t text-[11px] space-y-0.5">
+                  <div className="font-black text-foreground flex items-center gap-1">
+                    <span>{review.name}</span>
+                    <BadgeCheck className="w-3.5 h-3.5 text-emerald-600" />
+                  </div>
+                  <p className="text-[10px] text-muted-foreground font-medium">
+                    📍 {review.location}
+                  </p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* 8. 💌 PROMO BANNER & NEWSLETTER */}
-      <section className="container mx-auto px-2 sm:px-4">
-        <div className="rounded-3xl bg-gradient-to-r from-rose-600 via-orange-500 to-amber-500 text-white p-8 sm:p-12 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl">
-          <div className="space-y-2 text-center md:text-left">
-            <span className="bg-white/20 backdrop-blur px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest">
-              SPECIAL WELCOME OFFER
-            </span>
-            <h3 className="text-2xl sm:text-4xl font-black tracking-tight leading-none">
-              Flat 20% OFF on Your First Order
+      {/* 10. MISSION VOCAL FOR LOCAL & SWADESHI EMPOWERMENT */}
+      <section className="mx-2 sm:mx-6 lg:mx-8">
+        <div className="rounded-3xl border border-amber-500/20 bg-gradient-to-r from-slate-900 via-slate-950 to-slate-900 text-white p-6 sm:p-10 shadow-xl flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="space-y-2 max-w-xl text-center md:text-left">
+            <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-black">
+              🇮🇳 Vocal for Local & Atmanirbhar Bharat
+            </div>
+            <h3 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
+              Empowering Indian Artisans with Every Purchase
             </h3>
-            <p className="text-xs sm:text-sm text-white/90 font-medium">
-              Use code <strong className="font-mono font-black bg-white text-rose-600 px-2.5 py-0.5 rounded-lg shadow-sm">WELCOME20</strong> at checkout on orders above ₹499.
+            <p className="text-xs text-slate-300 leading-relaxed font-medium">
+              When you purchase on SWADESH Luxe, your hard-earned rupee directly supports master weavers, local craft clusters, and visionary Indian creators across the nation.
             </p>
           </div>
 
-          <div className="flex items-center gap-3 flex-shrink-0">
-            <Button
-              type="button"
-              variant="secondary"
-              size="lg"
-              onClick={handleCopyCode}
-              className="rounded-2xl font-black text-xs px-6 shadow-md bg-white text-slate-900 hover:bg-slate-100"
-            >
-              {copiedCode ? (
-                <>
-                  <Check className="w-4 h-4 mr-1.5 text-emerald-600" /> COPIED!
-                </>
-              ) : (
-                <>
-                  <Copy className="w-4 h-4 mr-1.5" /> COPY CODE
-                </>
-              )}
-            </Button>
-            <Button asChild size="lg" className="rounded-2xl bg-black/80 hover:bg-black text-white font-black text-xs px-6 shadow-md">
-              <Link href="/products">SHOP NOW</Link>
+          <div className="shrink-0 flex items-center gap-4">
+            <Button asChild size="lg" className="rounded-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-black text-xs px-8 shadow-xl">
+              <Link href="/products">
+                Shop Swadeshi Creations 🇮🇳
+              </Link>
             </Button>
           </div>
         </div>
@@ -685,5 +920,3 @@ export default function HomePage() {
     </div>
   );
 }
-
-

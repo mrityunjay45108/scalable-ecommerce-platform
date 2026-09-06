@@ -74,12 +74,16 @@ export class PaymentsController {
     return this.paymentsService.getPaymentStatus(orderId);
   }
 
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.CUSTOMER, Role.STAFF)
   @Post('confirm')
-  @ApiOperation({ summary: 'Admin / Internal: Confirm online payment' })
+  @ApiOperation({ summary: 'Confirm online payment (Owner Customer or Admin)' })
   @ApiResponse({ status: 200, description: 'Payment confirmed' })
-  confirmPayment(@Body() dto: ConfirmPaymentDto) {
-    return this.paymentsService.confirmPayment(dto);
+  confirmPayment(
+    @CurrentUser('id') userId: string,
+    @CurrentUser('role') role: Role,
+    @Body() dto: ConfirmPaymentDto,
+  ) {
+    return this.paymentsService.confirmPayment(dto, userId, role);
   }
 
   // =========================================================================

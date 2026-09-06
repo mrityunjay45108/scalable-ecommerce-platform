@@ -1,12 +1,12 @@
 export const SITE_CONFIG = {
-  name: 'NovaStore',
-  tagline: 'Modern Quality & Convenience in India',
-  description: 'Shop top curated electronics, apparel, and lifestyle products with instant delivery across India.',
-  supportEmail: 'support@novastore.com',
+  name: 'SWADESH Luxe',
+  tagline: 'The Indian Store • ॥ अतिथिदेवो भवः ॥',
+  description: 'India’s most trusted luxury store for authentic handlooms, certified organics, and Make-In-India innovations.',
+  supportEmail: 'support@swadeshluxe.in',
   freeShippingThreshold: 999,
   socialLinks: {
-    twitter: 'https://twitter.com/novastore',
-    instagram: 'https://instagram.com/novastore',
+    twitter: 'https://twitter.com/swadeshluxe',
+    instagram: 'https://instagram.com/swadeshluxe',
     github: 'https://github.com/mrityunjay45108',
   },
 } as const;

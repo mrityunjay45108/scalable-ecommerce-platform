@@ -57,7 +57,7 @@ const FEATURED_PRODUCTS_KNOWLEDGE: ProductSuggestion[] = [
     price: 1899,
     slug: '450-gsm-heavyweight-oversized-hoodie',
     image: 'https://images.unsplash.com/photo-1556905055-8f358a7a47b2?w=600',
-    brand: 'NovaStore Streetwear',
+    brand: 'SWADESH Streetwear',
   },
   {
     title: 'Slim Fit Denim Jeans',
@@ -93,7 +93,7 @@ export function ChatbotWidget() {
     {
       id: 'msg-1',
       sender: 'bot',
-      text: 'Namaste! 🙏 Main NovaStore AI Assistant hoon. Main aapki kya madad kar sakta hoon?\n\nAap offers, products, delivery time, COD payment, ya order tracking ke bare me pooch sakte hain!',
+      text: 'Namaste! 🙏 Welcome to SWADESH Luxe (॥ अतिथिदेवो भवः ॥). Main aapka personal shopping concierge hoon. Main aapki kya madad kar sakta hoon?\n\nAap festive offers, verified products, delivery timeline, COD payment, ya order tracking ke bare me pooch sakte hain!',
       timestamp: 'Just now',
       quickActions: INITIAL_SUGGESTIONS.slice(0, 4),
     },
@@ -118,7 +118,7 @@ export function ChatbotWidget() {
     // 1. GREETINGS
     if (/^(hi|hello|hey|namaste|pranam|hola|kaisa|kaise)/i.test(q)) {
       return {
-        text: 'Hello! 👋 NovaStore par aapka swagat hai. Main aapko best products recommend karne aur store ki har inquiry resolve karne ke liye yahan hoon. Aap neeche diye options me se choose kar sakte hain ya kuch bhi pooch sakte hain:',
+        text: 'Namaste! 🙏 SWADESH Luxe par aapka hardik swagat hai (॥ अतिथिदेवो भवः ॥). Main aapko authentic Indian products recommend karne aur store ki har inquiry resolve karne ke liye yahan hoon. Aap neeche diye options me se choose kar sakte hain ya kuch bhi pooch sakte hain:',
         quickActions: INITIAL_SUGGESTIONS.slice(0, 4),
       };
     }
@@ -178,7 +178,7 @@ export function ChatbotWidget() {
     // 6. ALL PRODUCTS / STORE CATALOG
     if (/(all product|catalog|kya kya hai|kya bechte|store|collection|items|list)/i.test(q)) {
       return {
-        text: '🛍️ **NovaStore Catalog Highlights:**\n\nHamare paas Footwear, Apparel, Audio & Electronics, aur Home Lifestyle ke certified top products available hain. Aap homepage par directly saare products browse kar sakte hain!',
+        text: '🛍️ **SWADESH Luxe Catalog Highlights:**\n\nHamare paas Festive & Ethnic Weaves, Make In India Tech, Vedic Organics & Ayurveda, aur Master Handicrafts ke certified top products available hain. Aap homepage par directly saare products browse kar sakte hain!',
         products: FEATURED_PRODUCTS_KNOWLEDGE.slice(0, 3),
         quickActions: [
           { label: '👟 Running Shoes', query: 'show running shoes' },
@@ -246,7 +246,7 @@ export function ChatbotWidget() {
     // 12. CONTACT / SUPPORT / HELPLINE
     if (/(contact|support|phone|number|help|care|whatsapp|email|customer care|baat karni)/i.test(q)) {
       return {
-        text: '📞 **NovaStore Customer Support:**\n\n- **Email**: support@novastore.in\n- **Helpline / WhatsApp**: +91 98765 43210 (Mon - Sat, 9:00 AM - 8:00 PM)\n- **Address**: NovaStore HQ, Cyber City, Gurugram, India\n\nHum 2 ghante ke andar reply karte hain!',
+        text: '📞 **SWADESH Luxe Guest Concierge (॥ अतिथिदेवो भवः ॥):**\n\n- **Email**: support@swadeshluxe.in\n- **Helpline / WhatsApp**: +91 98765 43210 (Toll Free 24×7)\n- **Address**: SWADESH Luxe Heritage Hub, Cyber City, Gurugram, India\n\nHum 2 ghante ke andar reply karte hain!',
         quickActions: [
           { label: '🔥 View Best Offers', query: 'offers' },
           { label: '🔄 Return Policy', query: 'return policy' },
@@ -256,7 +256,7 @@ export function ChatbotWidget() {
 
     // DEFAULT SMART AI FALLBACK
     return {
-      text: 'Main aapke question "' + query + '" ko samajh gaya hoon!\n\nNovaStore par aapko 100% Genuine Brand products, 2-3 Din Express Delivery, 7-Day Easy Returns, aur Cash on Delivery ki suvidha milti hai. Naye orders par coupon code **WELCOME20** use karein!\n\nAap neeche diye quick options se bhi jaankari le sakte hain:',
+      text: 'Main aapke prashna "' + query + '" ko samajh gaya hoon!\n\nSWADESH Luxe (॥ अतिथिदेवो भवः ॥) par aapko 100% Certified Authentic products, 1-2 Din Express Delivery, 7-Day Sahaj Wapsi, aur Doorstep Cash on Delivery (COD) ki suvidha milti hai. Naye orders par coupon code **SWADESH100** use karein!\n\nAap neeche diye quick options se bhi jaankari le sakte hain:',
       quickActions: INITIAL_SUGGESTIONS,
       products: FEATURED_PRODUCTS_KNOWLEDGE.slice(0, 2),
     };

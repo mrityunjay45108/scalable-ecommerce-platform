@@ -18,19 +18,42 @@ export default function AdminLayout({
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   useEffect(() => {
-    if (!isLoading) {
-      if (!isAuthenticated) {
-        router.push('/login?callback=/admin/dashboard');
-      } else if (!isAdmin) {
-        router.push('/');
-      }
+    if (!isLoading && !isAuthenticated) {
+      router.push('/login?callback=/admin/products');
     }
-  }, [isAuthenticated, isAdmin, isLoading, router]);
+  }, [isAuthenticated, isLoading, router]);
 
-  if (isLoading || !isAdmin) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-muted/20">
         <p className="text-sm text-muted-foreground animate-pulse">Verifying administrative access...</p>
+      </div>
+    );
+  }
+
+  if (isAuthenticated && !isAdmin) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-muted/20 p-4">
+        <div className="max-w-md w-full p-8 rounded-3xl border bg-card shadow-xl text-center space-y-4">
+          <div className="h-14 w-14 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center mx-auto text-2xl">
+            🛡️
+          </div>
+          <h2 className="text-xl font-black text-foreground">Admin Privileges Required</h2>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            You are currently signed in as a customer (<span className="font-semibold text-foreground">{user?.email}</span>). To add, edit, or delete products and manage catalog operations, please sign in with an Administrator account.
+          </p>
+          <div className="p-3 rounded-2xl bg-muted/40 border text-[11px] text-muted-foreground">
+            <span className="font-bold text-foreground">Admin Credentials:</span> admin@novastore.com / Password123!
+          </div>
+          <div className="flex gap-2 pt-2">
+            <Button asChild variant="outline" className="w-full rounded-xl text-xs font-bold">
+              <Link href="/">Back to Store</Link>
+            </Button>
+            <Button asChild className="w-full rounded-xl text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white">
+              <Link href="/login?callback=/admin/products">Sign in as Admin</Link>
+            </Button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -75,12 +98,12 @@ export default function AdminLayout({
               <Menu className="w-5 h-5" />
             </Button>
             <div className="flex items-center gap-2">
-              <span className="h-7 w-7 rounded-xl bg-primary text-primary-foreground flex items-center justify-center font-black text-xs shadow-xs">
-                N
+              <span className="h-7 w-7 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-600 text-white flex items-center justify-center font-black text-xs shadow-xs border border-white/20">
+                🇮🇳
               </span>
               <div className="flex flex-col">
                 <span className="font-extrabold text-xs tracking-tight text-foreground flex items-center gap-1">
-                  NovaStore <ShieldCheck className="w-3 h-3 text-primary" />
+                  SWADESH <ShieldCheck className="w-3 h-3 text-amber-600" />
                 </span>
                 <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">
                   Admin Panel

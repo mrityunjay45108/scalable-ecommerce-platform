@@ -76,22 +76,71 @@ export default function OrdersPage() {
 
   return (
     <div className="container mx-auto px-4 py-10 max-w-4xl space-y-8">
-      <div className="flex items-center justify-between pb-6 border-b">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 border-b gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight">Order History</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">Live tracking, shipment status, returns & invoices</p>
+          <div className="flex items-center gap-2">
+            <span className="text-xl">🙏</span>
+            <h1 className="text-3xl font-extrabold tracking-tight">Order History | आपके ऑर्डर्स</h1>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            🇮🇳 SWADESH Luxe • 29,000+ Pin Codes Serviced | Live Tracking, GST Invoices & 7-Day Sahaj Wapsi
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <a
+            href={`https://wa.me/919876543210?text=${encodeURIComponent('Namaste SWADESH Luxe! I need assistance with my recent orders.')}`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Button variant="outline" size="sm" className="rounded-2xl gap-1.5 text-xs text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/10">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" /> 24×7 Concierge Care
+            </Button>
+          </a>
+        </div>
+      </div>
+
+      {/* Trust Assurance Strip */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-emerald-500/10 to-sky-500/10 border text-xs">
+        <div className="flex items-center gap-2">
+          <span className="text-base">🇮🇳</span>
+          <div>
+            <p className="font-bold text-[11px]">100% Shuddh Swadeshi</p>
+            <p className="text-[10px] text-muted-foreground">Certified Indian Creators</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-base">👑</span>
+          <div>
+            <p className="font-bold text-[11px]">॥ अतिथिदेवो भवः ॥</p>
+            <p className="text-[10px] text-muted-foreground">Honored Guest Care</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-base">🔄</span>
+          <div>
+            <p className="font-bold text-[11px]">7-Day Sahaj Wapsi</p>
+            <p className="text-[10px] text-muted-foreground">Free Doorstep Pickup</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-base">⚡</span>
+          <div>
+            <p className="font-bold text-[11px]">Express Shipping</p>
+            <p className="text-[10px] text-muted-foreground">Pan-India Network</p>
+          </div>
         </div>
       </div>
 
       {orders.length === 0 ? (
         <div className="text-center py-20 border rounded-3xl bg-muted/10 space-y-4">
           <Package className="w-10 h-10 text-muted-foreground mx-auto" />
-          <h3 className="text-lg font-bold">No orders found</h3>
+          <h3 className="text-lg font-bold">No orders placed yet</h3>
           <p className="text-xs text-muted-foreground max-w-xs mx-auto">
-            You have not placed any orders yet. Discover our collection today.
+            Discover authentic Indian handlooms, festive couture, and Make in India innovations.
           </p>
           <Link href="/products">
-            <Button size="sm" className="rounded-full px-6">Shop Catalog</Button>
+            <Button size="sm" className="rounded-full px-6 bg-primary font-bold">Explore Catalog (उत्पाद देखें)</Button>
           </Link>
         </div>
       ) : (
@@ -99,16 +148,26 @@ export default function OrdersPage() {
           {orders.map((order) => {
             const hasReturn = order.returnRequests && order.returnRequests.length > 0;
             const hasRefund = order.refunds && order.refunds.length > 0;
+            const isCod = order.payment?.provider === 'COD' || order.shipment?.isCod;
+            const encodedOrderMsg = encodeURIComponent(`Namaste SWADESH Luxe! I need assistance with Order #${order.orderNumber} (Amount: ₹${order.totalAmount}).`);
 
             return (
               <div
                 key={order.id}
-                className="rounded-3xl border bg-card p-6 shadow-sm space-y-4 hover:shadow-md transition-all"
+                className="rounded-3xl border bg-card p-6 shadow-sm space-y-4 hover:shadow-md transition-all relative overflow-hidden"
               >
+                {/* Desi Flag Ribbon */}
+                <div className="absolute top-0 right-0 left-0 h-1 bg-gradient-to-r from-orange-500 via-white to-green-600 opacity-60" />
+
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b">
                   <div>
-                    <span className="text-xs font-bold text-primary font-mono">{order.orderNumber}</span>
-                    <p className="text-[11px] text-muted-foreground">Placed on {formatDate(order.createdAt)}</p>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-primary font-mono">{order.orderNumber}</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-semibold">
+                        🇮🇳 स्वदेशी ऑर्डर
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">Placed on {formatDate(order.createdAt)}</p>
                   </div>
                   <div className="flex items-center gap-3">
                     {getStatusBadge(order)}
@@ -130,34 +189,58 @@ export default function OrdersPage() {
 
                 {/* Shipment AWB snippet */}
                 {order.shipment?.awbNumber && (
-                  <div className="flex items-center gap-2 text-xs bg-muted/20 p-2.5 rounded-xl border">
-                    <Truck className="w-4 h-4 text-primary" />
-                    <span className="text-muted-foreground">
-                      Courier: <strong>{order.shipment.courierProvider}</strong> • AWB:{' '}
-                      <span className="font-mono font-bold text-foreground">{order.shipment.awbNumber}</span>
+                  <div className="flex items-center justify-between gap-2 text-xs bg-muted/20 p-2.5 rounded-xl border">
+                    <div className="flex items-center gap-2">
+                      <Truck className="w-4 h-4 text-primary" />
+                      <span className="text-muted-foreground">
+                        कूरियर: <strong>{order.shipment.courierProvider}</strong> • AWB:{' '}
+                        <span className="font-mono font-bold text-foreground">{order.shipment.awbNumber}</span>
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-emerald-600 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded-lg">
+                      लाइव ट्रैकिंग सक्रिय
                     </span>
                   </div>
                 )}
 
                 {/* Card Footer Actions */}
                 <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t">
-                  <span className="text-[11px] text-muted-foreground">
-                    Payment: <strong className="text-foreground">{order.payment?.provider || (order.shipment?.isCod ? 'COD' : 'ONLINE')}</strong> ({order.payment?.status || 'PAID'})
-                  </span>
+                  <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                    <span>
+                      भुगतान प्रकार:{' '}
+                      <strong className="text-foreground">
+                        {isCod ? 'Cash on Delivery (घर पर नकद)' : (order.payment?.provider || 'ONLINE UPI / CARDS')}
+                      </strong>
+                    </span>
+                  </div>
                   
                   <div className="flex items-center gap-2">
+                    <a
+                      href={`https://wa.me/919876543210?text=${encodedOrderMsg}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="rounded-xl gap-1 text-xs font-semibold text-emerald-600 hover:bg-emerald-500/10"
+                      >
+                        व्हाट्सएप सहायता
+                      </Button>
+                    </a>
+
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => setInvoiceOrder(order)}
                       className="rounded-xl gap-1 text-xs font-semibold text-primary border-primary/20 hover:bg-primary/10"
                     >
-                      <FileText className="w-3.5 h-3.5" /> Invoice
+                      <FileText className="w-3.5 h-3.5" /> GST Invoice
                     </Button>
 
                     <Link href={`/orders/${order.id}`}>
-                      <Button variant="default" size="sm" className="rounded-xl gap-1 text-xs font-semibold">
-                        <Truck className="w-3.5 h-3.5 mr-0.5" /> Track & Manage <ArrowRight className="w-3.5 h-3.5" />
+                      <Button variant="default" size="sm" className="rounded-xl gap-1 text-xs font-semibold shadow-xs">
+                        <Truck className="w-3.5 h-3.5 mr-0.5" /> Track & Details <ArrowRight className="w-3.5 h-3.5" />
                       </Button>
                     </Link>
                   </div>

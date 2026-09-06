@@ -23,6 +23,7 @@ import {
   PlusCircle,
   KeyRound,
   Award,
+  Sparkles,
   X,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
@@ -49,7 +50,8 @@ export function AdminSidebar({ onClose, className = '' }: AdminSidebarProps) {
       links: [
         { href: '/admin/products', label: 'All Products', icon: Package },
         { href: '/admin/products/create', label: '+ Add Product', icon: PlusCircle, isHighlight: true },
-        { href: '/admin/categories', label: 'Categories', icon: Layers },
+        { href: '/admin/categories?tab=heritage', label: 'Virasat-e-Hind (विरासत)', icon: Sparkles },
+        { href: '/admin/categories?tab=taxonomies', label: 'Store Taxonomies', icon: Layers },
         { href: '/admin/inventory', label: 'Stock & Inventory', icon: Boxes },
       ],
     },
@@ -85,15 +87,15 @@ export function AdminSidebar({ onClose, className = '' }: AdminSidebarProps) {
       <div className="space-y-6 overflow-y-auto">
         {/* Brand Header */}
         <div className="flex items-center justify-between px-2 pt-1">
-          <div className="flex items-center gap-3">
-            <span className="h-9 w-9 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center font-black text-base shadow-md shadow-primary/20">
-              N
+          <div className="flex items-center gap-2.5">
+            <span className="h-9 w-9 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-600 text-white flex items-center justify-center font-black text-base shadow-md border border-white/20">
+              🇮🇳
             </span>
             <div className="min-w-0">
-              <h2 className="font-black text-sm tracking-tight text-foreground flex items-center gap-1.5">
-                NovaStore <ShieldCheck className="w-3.5 h-3.5 text-primary" />
+              <h2 className="font-black text-sm tracking-tight text-foreground flex items-center gap-1">
+                SWADESH <span className="text-amber-500 text-[9px] uppercase px-1 py-0.2 rounded bg-amber-500/10 border border-amber-500/30">Luxe</span>
               </h2>
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+              <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">
                 {user?.role || 'ADMIN'} CONSOLE
               </p>
             </div>

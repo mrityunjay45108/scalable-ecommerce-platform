@@ -18,11 +18,13 @@ import {
   Share2,
   Check,
   Copy,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { ProductDto, CategoryDto } from '@ecommerce/types';
 import { apiClient } from '@/lib/api-client';
 import { formatPrice } from '@/lib/utils';
 import { parseProductSpecs, formatDescriptionWithSpecs } from '@/lib/product-specs';
+import { getRegionalHeritage, RegionalHeritageItem } from '@/lib/regional-heritage';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
@@ -30,6 +32,9 @@ export default function AdminProductsPage() {
   const [products, setProducts] = useState<ProductDto[]>([]);
   const [categories, setCategories] = useState<CategoryDto[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedRegion, setSelectedRegion] = useState('all');
+  const [heritageList, setHeritageList] = useState<RegionalHeritageItem[]>([]);
+  const [heritageRegion, setHeritageRegion] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [togglingHeroId, setTogglingHeroId] = useState<string | null>(null);
   const [copiedSlug, setCopiedSlug] = useState<string | null>(null);
@@ -69,6 +74,7 @@ export default function AdminProductsPage() {
 
   useEffect(() => {
     fetchProducts();
+    setHeritageList(getRegionalHeritage());
   }, []);
 
   const handleToggleFeatured = async (p: ProductDto) => {
@@ -115,6 +121,7 @@ export default function AdminProductsPage() {
     setCountryOfOrigin('');
     setWarranty('');
     setWashCare('');
+    setHeritageRegion('');
     setShowModal(true);
   };
 
@@ -128,6 +135,7 @@ export default function AdminProductsPage() {
     setCountryOfOrigin(specs.origin || '');
     setWarranty(specs.warranty || '');
     setWashCare(specs.care || '');
+    setHeritageRegion(specs.region || '');
     setCategoryId(p.categoryId);
     setBasePrice(String(p.basePrice));
     setComparePrice(p.comparePrice ? String(p.comparePrice) : '');
@@ -142,6 +150,7 @@ export default function AdminProductsPage() {
     setIsSaving(true);
     try {
       const fullDescription = formatDescriptionWithSpecs(description, {
+        region: heritageRegion.trim() || undefined,
         brand,
         material,
         origin: countryOfOrigin,
@@ -194,9 +203,22 @@ export default function AdminProductsPage() {
     }
   };
 
-  const filteredProducts = products.filter((p) =>
-    p.title.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
+  const filteredProducts = products.filter((p) => {
+    const matchesSearch =
+      p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (p.description && p.description.toLowerCase().includes(searchQuery.toLowerCase()));
+    if (!matchesSearch) return false;
+
+    if (selectedRegion !== 'all') {
+      const specs = parseProductSpecs(p.description || '');
+      const reg = (specs.region || '').toLowerCase();
+      const target = selectedRegion.toLowerCase();
+      if (!reg.includes(target) && !(p.description || '').toLowerCase().includes(target)) {
+        return false;
+      }
+    }
+    return true;
+  });
 
   const heroFeaturedProducts = products.filter((p) => p.isFeatured);
 
@@ -210,15 +232,24 @@ export default function AdminProductsPage() {
             Create, edit, organize inventory, and manage Homepage Hero Showcase drops
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button asChild variant="outline" className="rounded-2xl gap-2 font-semibold text-xs">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button asChild variant="outline" size="sm" className="rounded-2xl gap-1.5 font-semibold text-xs h-9">
             <Link href="/" target="_blank">
               <ExternalLink className="w-3.5 h-3.5" /> View Live Store
             </Link>
           </Button>
-          <Button asChild className="rounded-2xl gap-2 font-bold shadow-md">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleOpenCreate}
+            className="rounded-2xl gap-1.5 font-bold text-xs h-9 bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30 hover:bg-amber-500/20"
+          >
+            <Plus className="w-3.5 h-3.5" /> Quick Add
+          </Button>
+          <Button asChild size="sm" className="rounded-2xl gap-1.5 font-bold shadow-md text-xs h-9 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white">
             <Link href="/admin/products/create">
-              <Plus className="w-4 h-4" /> Add New Product
+              <Sparkles className="w-3.5 h-3.5" /> Full Studio Add
             </Link>
           </Button>
         </div>
@@ -296,22 +327,139 @@ export default function AdminProductsPage() {
         )}
       </div>
 
-      {/* Search Filter */}
-      <div className="flex items-center gap-3">
-        <div className="relative max-w-sm w-full">
-          <input
-            type="text"
-            placeholder="Search by title..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full h-9 pl-9 pr-3 text-xs rounded-xl border bg-card focus:ring-1 focus:ring-primary"
-          />
-          <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-2.5" />
+      {/* Search & Region Filter Bar */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3 flex-1">
+          <div className="relative max-w-sm w-full">
+            <input
+              type="text"
+              placeholder="Search products by title or craft..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full h-9 pl-9 pr-3 text-xs rounded-xl border bg-card focus:ring-1 focus:ring-primary"
+            />
+            <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-2.5" />
+          </div>
+
+          <select
+            value={selectedRegion}
+            onChange={(e) => setSelectedRegion(e.target.value)}
+            className="h-9 px-3 rounded-xl border bg-card text-xs font-semibold text-foreground focus:ring-1 focus:ring-primary"
+          >
+            <option value="all">🏛️ All Indian Regions</option>
+            {heritageList.map((h) => (
+              <option key={h.id} value={h.region}>
+                {h.region}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="text-xs text-muted-foreground font-semibold text-right">
+          Showing <strong className="text-foreground">{filteredProducts.length}</strong> of {products.length} products
         </div>
       </div>
 
-      {/* Table */}
-      <div className="rounded-3xl border bg-card shadow-sm overflow-hidden">
+      {/* Mobile Product Cards (Optimized for Mobile Phones < sm) */}
+      <div className="sm:hidden space-y-3">
+        {filteredProducts.length > 0 ? (
+          filteredProducts.map((p) => {
+            const img = p.images?.[0]?.url || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=100';
+            const isToggling = togglingHeroId === p.id;
+
+            return (
+              <div key={p.id} className="p-4 rounded-2xl border bg-card shadow-xs space-y-3">
+                <div className="flex items-start gap-3">
+                  <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-muted/40 shrink-0 border border-border">
+                    <Image src={img} alt={p.title} fill className="object-cover" />
+                  </div>
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <div className="flex items-center justify-between gap-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider truncate">
+                          {p.category?.name || 'Unassigned'}
+                        </span>
+                        {(() => {
+                          const r = parseProductSpecs(p.description || '').region;
+                          return r ? (
+                            <span className="px-1.5 py-0.2 rounded bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 text-[9px] font-bold">
+                              🏛️ {r.split(' ')[0]}
+                            </span>
+                          ) : null;
+                        })()}
+                      </div>
+                      {p.isPublished ? (
+                        <Badge variant="success" className="text-[9px] px-1.5 py-0">Published</Badge>
+                      ) : (
+                        <Badge variant="secondary" className="text-[9px] px-1.5 py-0">Draft</Badge>
+                      )}
+                    </div>
+                    <h4 className="font-bold text-xs text-foreground line-clamp-2 leading-snug">{p.title}</h4>
+                    <div className="flex items-center gap-2">
+                      <span className="font-extrabold text-sm text-foreground">{formatPrice(p.basePrice)}</span>
+                      {p.comparePrice && (
+                        <span className="text-[10px] text-muted-foreground line-through">{formatPrice(p.comparePrice)}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t border-border/80 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleToggleFeatured(p)}
+                    disabled={isToggling}
+                    className={`px-2.5 py-1 rounded-xl text-[11px] font-bold flex items-center gap-1 transition-all ${
+                      p.isFeatured
+                        ? 'bg-indigo-600 text-white shadow-xs'
+                        : 'bg-muted/60 text-muted-foreground border'
+                    }`}
+                  >
+                    <Star className={`w-3 h-3 ${p.isFeatured ? 'fill-current text-amber-300' : ''}`} />
+                    <span>{isToggling ? '...' : p.isFeatured ? 'Hero Drop' : 'Add Hero'}</span>
+                  </button>
+
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEdit(p)}
+                      className="p-1.5 px-2.5 rounded-xl bg-amber-500/10 text-amber-700 dark:text-amber-400 font-bold text-xs flex items-center gap-1"
+                      title="Quick Edit"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                      <span>Edit</span>
+                    </button>
+
+                    <Link
+                      href={`/admin/products/${p.id}/edit`}
+                      className="p-1.5 px-2 rounded-xl bg-muted text-muted-foreground hover:text-foreground font-bold text-xs flex items-center gap-1"
+                      title="Studio"
+                    >
+                      <SlidersHorizontal className="w-3.5 h-3.5" />
+                    </Link>
+
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(p.id)}
+                      className="p-1.5 rounded-xl bg-destructive/10 text-destructive hover:bg-destructive/20 font-bold text-xs"
+                      title="Delete Product"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        ) : (
+          <div className="p-8 text-center bg-card rounded-2xl border text-muted-foreground text-xs">
+            No products match your search.
+          </div>
+        )}
+      </div>
+
+      {/* Desktop/Tablet Table (Hidden on small phones < sm) */}
+      <div className="hidden sm:block rounded-3xl border bg-card shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-muted/40 text-muted-foreground border-b uppercase tracking-wider font-bold">
@@ -342,7 +490,17 @@ export default function AdminProductsPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="p-4 font-semibold">{p.category?.name || 'Unassigned'}</td>
+                    <td className="p-4">
+                      <div className="font-semibold text-xs text-foreground">{p.category?.name || 'Unassigned'}</div>
+                      {(() => {
+                        const r = parseProductSpecs(p.description || '').region;
+                        return r ? (
+                          <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 text-[10px] font-bold">
+                            🏛️ {r.split(' ')[0]}
+                          </span>
+                        ) : null;
+                      })()}
+                    </td>
                     <td className="p-4 font-extrabold">{formatPrice(p.basePrice)}</td>
                     <td className="p-4">
                       <button
@@ -399,13 +557,23 @@ export default function AdminProductsPage() {
                           <ExternalLink className="w-3.5 h-3.5" />
                         </Link>
 
+                        {/* Quick In-Page Edit */}
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEdit(p)}
+                          className="p-1.5 rounded-lg hover:bg-amber-500/10 text-muted-foreground hover:text-amber-600 transition-colors"
+                          title="Quick Edit (Title, Price, Stock, Image)"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+
                         {/* Full Edit Studio */}
                         <Link
                           href={`/admin/products/${p.id}/edit`}
                           className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground"
-                          title="Full Edit Studio"
+                          title="Full Edit Studio (Variants, Multi-Photos & Specs)"
                         >
-                          <Edit2 className="w-3.5 h-3.5" />
+                          <SlidersHorizontal className="w-3.5 h-3.5" />
                         </Link>
 
                         {/* Delete */}
@@ -556,6 +724,26 @@ export default function AdminProductsPage() {
                   onChange={(e) => setImageUrl(e.target.value)}
                   className="w-full h-9 px-3 rounded-xl border bg-background"
                 />
+              </div>
+
+              {/* Regional Heritage Hub Selection */}
+              <div className="p-3 rounded-xl bg-amber-500/5 border border-amber-500/20 space-y-1.5">
+                <label className="font-bold text-[11px] text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
+                  <span>🏛️</span>
+                  <span>Virasat-e-Hind Regional Collection (Optional)</span>
+                </label>
+                <select
+                  value={heritageRegion}
+                  onChange={(e) => setHeritageRegion(e.target.value)}
+                  className="w-full h-8 px-2.5 rounded-lg border bg-background text-xs font-semibold"
+                >
+                  <option value="">None (Standard Pan-India Catalog)</option>
+                  {heritageList.map((h) => (
+                    <option key={h.id} value={h.region}>
+                      {h.region} — {h.title}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>

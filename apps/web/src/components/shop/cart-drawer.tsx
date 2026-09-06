@@ -319,8 +319,8 @@ export function CartDrawer() {
                       {/* Product Meta */}
                       <div className="flex-1 min-w-0 pr-6 space-y-1.5">
                         <div>
-                          <p className="text-[11px] font-extrabold text-[#ff3f6c] uppercase tracking-wider">
-                            NOVASTORE AUTHENTIC
+                          <p className="text-[11px] font-extrabold text-amber-600 uppercase tracking-wider">
+                            SWADESH AUTHENTIC
                           </p>
                           <Link
                             href={`/products/${product?.slug || ''}`}

@@ -373,8 +373,8 @@ export default function CartPage() {
                     {/* Meta Details */}
                     <div className="flex-1 min-w-0 pr-6 space-y-2">
                       <div>
-                        <p className="text-xs font-black text-[#ff3f6c] uppercase tracking-wider">
-                          NOVASTORE AUTHENTIC
+                        <p className="text-xs font-black text-amber-600 uppercase tracking-wider">
+                          SWADESH AUTHENTIC
                         </p>
                         <Link
                           href={`/products/${product?.slug || ''}`}

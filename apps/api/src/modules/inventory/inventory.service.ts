@@ -230,6 +230,62 @@ export class InventoryService {
   }
 
   // =========================================================================
+  // 3b. RESTOCK COMMITTED STOCK (UPON ORDER CANCELLATION AFTER CONFIRMATION)
+  // =========================================================================
+
+  async restockCommittedStock(orderNumber: string, items: ReserveStockItem[]) {
+    await this.prisma.$transaction(async (tx) => {
+      for (const item of items) {
+        const variant = await tx.productVariant.findUnique({
+          where: { id: item.variantId },
+        });
+
+        if (variant) {
+          const previousStock = variant.stockQuantity;
+          const newStock = variant.stockQuantity + item.quantity;
+
+          await tx.productVariant.update({
+            where: { id: item.variantId },
+            data: {
+              stockQuantity: { increment: item.quantity },
+            },
+          });
+
+          await tx.inventoryLog.create({
+            data: {
+              variantId: item.variantId,
+              previousStock,
+              newStock,
+              change: item.quantity,
+              type: InventoryLogType.RESTOCK,
+              orderNumber,
+              reason: `Order ${orderNumber} cancelled after confirmation/payment`,
+            },
+          });
+
+          if (this.kafkaPublisher) {
+            try {
+              await this.kafkaPublisher.publishInventoryEvent(tx, KAFKA_EVENT_TYPES.INVENTORY_RESTOCKED, {
+                variantId: item.variantId,
+                quantityChanged: item.quantity,
+                previousStock,
+                newStock,
+                operation: 'RESTOCK',
+                orderNumber,
+              });
+            } catch (kErr: any) {
+              this.logger.warn(`Failed to enqueue inventory.restocked outbox event: ${kErr.message}`);
+            }
+          }
+        }
+      }
+    });
+
+    await this.redisService.del(`stock_reservation:${orderNumber}`);
+    this.logger.log(`Restocked committed stock for cancelled order ${orderNumber}`);
+  }
+
+  // =========================================================================
   // 4. STOCK ADJUSTMENT & UPDATE
   // =========================================================================
 

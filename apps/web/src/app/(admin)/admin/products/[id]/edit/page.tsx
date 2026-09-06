@@ -33,6 +33,7 @@ import { CategoryDto, ProductDto } from '@ecommerce/types';
 import { apiClient } from '@/lib/api-client';
 import { formatPrice } from '@/lib/utils';
 import { formatDescriptionWithSpecs, parseProductSpecs } from '@/lib/product-specs';
+import { getRegionalHeritage, RegionalHeritageItem } from '@/lib/regional-heritage';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
@@ -67,6 +68,8 @@ export default function EditProductPage() {
 
   const [isLoadingProduct, setIsLoadingProduct] = useState(true);
   const [categories, setCategories] = useState<CategoryDto[]>([]);
+  const [heritageList, setHeritageList] = useState<RegionalHeritageItem[]>([]);
+  const [heritageRegion, setHeritageRegion] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -104,6 +107,7 @@ export default function EditProductPage() {
 
   // Load product details and categories
   useEffect(() => {
+    setHeritageList(getRegionalHeritage());
     if (!productId) return;
 
     const loadData = async () => {
@@ -128,6 +132,7 @@ export default function EditProductPage() {
           // Parse specifications from description
           const specs = parseProductSpecs(prodData.description || '', prodData.category?.name);
           setDescription(specs.cleanDescription || prodData.description || '');
+          if (specs.region) setHeritageRegion(specs.region);
           setBrand(specs.brand || '');
           setMaterial(specs.material || '');
           setCountryOfOrigin(specs.origin || '');
@@ -434,6 +439,7 @@ export default function EditProductPage() {
       ];
 
       const fullDescription = formatDescriptionWithSpecs(description, {
+        region: heritageRegion.trim() || undefined,
         brand: brand.trim() || undefined,
         material: material.trim() || undefined,
         origin: countryOfOrigin.trim() || undefined,
@@ -680,6 +686,69 @@ export default function EditProductPage() {
                   className="w-full p-3 rounded-xl border bg-background leading-relaxed font-medium focus:ring-1 focus:ring-primary focus:outline-none"
                 />
               </div>
+            </div>
+          </div>
+
+          {/* 🏛️ VIRASAT-E-HIND REGIONAL HERITAGE COLLECTION */}
+          <div className="rounded-3xl border-2 border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-transparent p-6 shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-amber-500/20 pb-3">
+              <div className="flex items-center gap-2.5">
+                <span className="text-2xl">🏛️</span>
+                <div>
+                  <h2 className="text-base font-black text-foreground">
+                    Virasat-e-Hind Regional Heritage (विरासत-ए-हिंद)
+                  </h2>
+                  <p className="text-xs text-muted-foreground">
+                    Tag this product to an authentic Indian regional craft collection (North, West, South, East India, etc.)
+                  </p>
+                </div>
+              </div>
+              <Badge variant="outline" className="border-amber-500 text-amber-700 dark:text-amber-300 text-[10px] font-black uppercase">
+                Regional Craft Hub
+              </Badge>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs pt-1">
+              <div>
+                <label className="block font-bold mb-1">Assign to Regional Heritage Collection</label>
+                <select
+                  value={heritageRegion}
+                  onChange={(e) => setHeritageRegion(e.target.value)}
+                  className="w-full h-10 px-3 rounded-xl border bg-background font-semibold text-xs"
+                >
+                  <option value="">None (Standard Pan-India Catalog)</option>
+                  {heritageList.map((h) => (
+                    <option key={h.id} value={h.region}>
+                      {h.region} — {h.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {heritageRegion ? (
+                <div className="p-3 rounded-xl bg-amber-500/15 border border-amber-500/30 text-xs flex items-center justify-between">
+                  <div>
+                    <p className="font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-amber-600" />
+                      <span>Tagged to {heritageRegion}</span>
+                    </p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                      Customers browsing this region will discover this product.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setHeritageRegion('')}
+                    className="text-[10px] font-bold text-destructive hover:underline ml-2"
+                  >
+                    Clear Tag
+                  </button>
+                </div>
+              ) : (
+                <div className="p-3 rounded-xl bg-muted/40 border text-[11px] text-muted-foreground flex items-center">
+                  <span>Select a region to showcase this item under Virasat-e-Hind on the homepage.</span>
+                </div>
+              )}
             </div>
           </div>
 

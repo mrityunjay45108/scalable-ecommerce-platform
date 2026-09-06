@@ -121,6 +121,47 @@ export function FilterSidebar({ categories }: FilterSidebarProps) {
         </div>
       </div>
 
+      {/* 🏛️ Virasat-e-Hind Heritage Crafts */}
+      <div className="space-y-2.5 pt-3 border-t">
+        <div className="flex items-center justify-between">
+          <h4 className="text-xs font-black uppercase tracking-wider text-amber-700 dark:text-amber-300 flex items-center gap-1">
+            <span>🏛️</span>
+            <span>Virasat-e-Hind</span>
+          </h4>
+          <span className="text-[9px] font-bold text-muted-foreground uppercase">Crafts</span>
+        </div>
+        <div className="grid grid-cols-2 gap-1.5 text-xs">
+          {[
+            { label: 'North India', query: 'North' },
+            { label: 'West India', query: 'West' },
+            { label: 'South India', query: 'South' },
+            { label: 'East India', query: 'East' },
+          ].map((reg) => {
+            const isSelected = searchParams.get('search')?.toLowerCase().includes(reg.query.toLowerCase());
+            return (
+              <button
+                key={reg.query}
+                type="button"
+                onClick={() => {
+                  if (isSelected) {
+                    updateFilter('search', null);
+                  } else {
+                    updateFilter('search', reg.query);
+                  }
+                }}
+                className={`px-2 py-1.5 rounded-xl border text-[11px] font-bold transition-all text-center ${
+                  isSelected
+                    ? 'bg-amber-500 text-slate-950 border-amber-500 shadow-sm'
+                    : 'bg-background hover:bg-muted text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {reg.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Price Presets & Range */}
       <div className="space-y-2.5 pt-3 border-t">
         <h4 className="text-xs font-black uppercase tracking-wider text-muted-foreground">

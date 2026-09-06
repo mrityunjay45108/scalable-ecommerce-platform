@@ -189,7 +189,7 @@ export class PaymentsService {
   // 3. CONFIRM ONLINE PAYMENT & COMMIT INVENTORY
   // =========================================================================
 
-  async confirmPayment(dto: ConfirmPaymentDto) {
+  async confirmPayment(dto: ConfirmPaymentDto, userId?: string, userRole?: Role) {
     const order = await this.prisma.order.findUnique({
       where: { id: dto.orderId },
       include: { items: true, payment: true },
@@ -197,6 +197,12 @@ export class PaymentsService {
 
     if (!order) {
       throw new NotFoundException('Order not found');
+    }
+
+    if (userRole && userRole !== Role.ADMIN && userRole !== Role.STAFF) {
+      if (order.userId !== userId) {
+        throw new ForbiddenException('You are not authorized to confirm payment for this order');
+      }
     }
 
     if (order.payment?.provider === PaymentProvider.COD) {
