@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, Suspense } from 'react';
+import Link from 'next/link';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { ProductDto, CategoryDto, PaginationMeta } from '@ecommerce/types';
 import { apiClient } from '@/lib/api-client';
@@ -132,27 +133,46 @@ function ProductsContent() {
   );
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-6">
-      {/* Header, Search & Sort */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-wider text-foreground">
-            Product Catalog
+    <div className="container mx-auto px-2 sm:px-4 py-6 space-y-5">
+      {/* Myntra Breadcrumb & Category Title */}
+      <div className="space-y-1.5 pb-1">
+        <nav className="flex items-center gap-1.5 text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+          <Link href="/" className="hover:text-foreground">Home</Link>
+          <span>/</span>
+          <Link href="/products" className="hover:text-foreground">Clothing & Lifestyle</Link>
+          {currentCategory && (
+            <>
+              <span>/</span>
+              <span className="text-foreground">{currentCategory.replace(/-/g, ' ')}</span>
+            </>
+          )}
+        </nav>
+        <div className="flex items-baseline gap-2.5 flex-wrap">
+          <h1 className="text-lg sm:text-2xl font-black uppercase tracking-wide text-foreground">
+            {currentCategory ? `${currentCategory.replace(/-/g, ' ')} Collection` : 'All Products & Indian Fashion'}
           </h1>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {meta?.total !== undefined ? `Showing ${products.length} of ${meta.total} styles` : 'Browse all styles'}
-          </p>
+          <span className="text-xs text-muted-foreground font-semibold">
+            - {meta?.total !== undefined ? `${meta.total} items` : `${products.length} items`}
+          </span>
+        </div>
+      </div>
+
+      {/* Filter & Sort Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b">
+        <div className="text-xs font-bold text-muted-foreground flex items-center gap-2">
+          <span className="font-black text-foreground uppercase tracking-wider">FILTERS:</span>
+          <span>{categories.length} Categories available</span>
         </div>
 
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           {/* Debounced Search Bar */}
-          <div className="relative min-w-[260px]">
+          <div className="relative min-w-[240px]">
             <input
               type="text"
-              placeholder="Search by brand, style, color..."
+              placeholder="Search brand, craft, color..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full h-9 pl-9 pr-8 text-xs rounded-xl border bg-card focus:ring-1 focus:ring-primary shadow-xs"
+              className="w-full h-9 pl-9 pr-8 text-xs rounded-lg border bg-card focus:ring-1 focus:ring-primary shadow-xs"
             />
             <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-2.5" />
             {searchTerm && (
@@ -165,9 +185,9 @@ function ProductsContent() {
             )}
           </div>
 
-          {/* Sort Selector */}
+          {/* Myntra Sort Selector */}
           <div className="flex items-center gap-2">
-            <ArrowUpDown className="w-4 h-4 text-muted-foreground shrink-0" />
+            <span className="text-xs text-muted-foreground font-bold whitespace-nowrap">Sort by:</span>
             <select
               value={
                 currentSort === 'price'
@@ -182,13 +202,13 @@ function ProductsContent() {
               }
               onChange={(e) => handleSortChange(e.target.value)}
               aria-label="Sort products"
-              className="h-9 px-3 rounded-xl border bg-card text-xs font-bold focus:ring-1 focus:ring-primary cursor-pointer shadow-xs"
+              className="h-9 px-3 rounded-lg border bg-card text-xs font-bold focus:ring-1 focus:ring-primary cursor-pointer shadow-xs"
             >
-              <option value="newest">Sort by: Recommended</option>
-              <option value="popularity">Sort by: Popularity</option>
-              <option value="price_asc">Sort by: Price (Low to High)</option>
-              <option value="price_desc">Sort by: Price (High to Low)</option>
-              <option value="rating">Sort by: Customer Rating</option>
+              <option value="newest">Recommended</option>
+              <option value="popularity">Popularity</option>
+              <option value="price_asc">Price: Low to High</option>
+              <option value="price_desc">Price: High to Low</option>
+              <option value="rating">Customer Rating</option>
             </select>
           </div>
         </div>
@@ -245,9 +265,9 @@ function ProductsContent() {
         {/* Product Grid & Pagination */}
         <div className="flex-1 w-full space-y-8">
           {isLoading ? (
-            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-4 lg:gap-5">
               {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="aspect-[3/4] rounded-2xl border bg-card p-4 animate-pulse bg-muted/40" />
+                <div key={i} className="aspect-[3/4] rounded-md border bg-card p-4 animate-pulse bg-muted/30" />
               ))}
             </div>
           ) : hasError ? (
@@ -263,7 +283,7 @@ function ProductsContent() {
             </div>
           ) : products.length > 0 ? (
             <>
-              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-4 lg:gap-5">
                 {products.map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}

@@ -3,12 +3,11 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Heart, Star, ShoppingBag, Share2, Check, Zap } from 'lucide-react';
+import { Heart, Star, Share2, Check } from 'lucide-react';
 import { ProductDto } from '@ecommerce/types';
 import { formatPrice } from '@/lib/utils';
 import { useCart } from '@/lib/cart-context';
 import { parseProductSpecs } from '@/lib/product-specs';
-import { Badge } from '../ui/badge';
 
 interface ProductCardProps {
   product: ProductDto;
@@ -20,19 +19,21 @@ export function ProductCard({ product }: ProductCardProps) {
   const [isCopied, setIsCopied] = useState(false);
   const [addingVariantId, setAddingVariantId] = useState<string | null>(null);
   const [addedSuccessId, setAddedSuccessId] = useState<string | null>(null);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
 
   const specs = parseProductSpecs(product.description || '', product.category?.name);
-  const brandName = specs.brand || product.category?.name || 'NovaStore';
+  const brandName = specs.brand || product.category?.name || 'SWADESH LUXE';
 
-  const primaryImage =
-    product.images?.find((img) => img.isPrimary)?.url ||
-    product.images?.[0]?.url ||
-    'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600';
+  // Extract all valid image URLs (excluding dedicated videos)
+  const imageList = (product.images || [])
+    .filter((img) => img.altText !== 'video' && !img.url.includes('.mp4'))
+    .map((img) => img.url);
 
-  const secondaryImage =
-    product.images && product.images.length > 1
-      ? product.images.find((img) => !img.isPrimary && img.altText !== 'video')?.url || product.images[1]?.url
-      : null;
+  const images = imageList.length > 0
+    ? imageList
+    : ['https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600'];
+
+  const currentImage = images[activeImageIndex % images.length];
 
   const hasVideo = product.images?.some(
     (img) =>
@@ -47,14 +48,30 @@ export function ProductCard({ product }: ProductCardProps) {
     ? Math.round(((product.comparePrice! - product.basePrice) / product.comparePrice!) * 100)
     : 0;
 
-  const ratingScore = Number(product.avgRating || 4.5).toFixed(1);
-  const ratingCount = product.reviewCount || 128;
+  const ratingScore = Number(product.avgRating || 4.3).toFixed(1);
+  const ratingCount = product.reviewCount || 142;
+
+  // Segmented mouse-move preview (Myntra desktop hover slider)
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (images.length <= 1) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const segmentWidth = rect.width / images.length;
+    const index = Math.min(Math.floor(x / segmentWidth), images.length - 1);
+    if (index !== activeImageIndex) {
+      setActiveImageIndex(index);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    setActiveImageIndex(0);
+  };
 
   const handleShareClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     const url = typeof window !== 'undefined' ? `${window.location.origin}/products/${product.slug}` : `/products/${product.slug}`;
-    const text = `Check out ${product.title} on NovaStore for ${formatPrice(product.basePrice)}!`;
+    const text = `Check out ${product.title} on SWADESH Luxe for ${formatPrice(product.basePrice)}!`;
 
     if (typeof navigator !== 'undefined' && navigator.share) {
       try {
@@ -92,141 +109,177 @@ export function ProductCard({ product }: ProductCardProps) {
   };
 
   return (
-    <div className="group relative rounded-2xl border border-border/60 bg-card overflow-hidden transition-all duration-300 hover:shadow-xl hover:border-primary/40 flex flex-col justify-between">
+    <div
+      onMouseLeave={handleMouseLeave}
+      className="group relative rounded-md sm:rounded-lg border border-border/50 hover:border-transparent bg-card overflow-hidden transition-all duration-200 hover:shadow-2xl flex flex-col justify-between"
+    >
       <div>
-        {/* Aspect 3:4 Fashion Image Container */}
-        <div className="relative aspect-[3/4] w-full overflow-hidden bg-muted/30">
+        {/* ======================================================= */}
+        {/* 1. ASPECT 3:4 MYNTRA FASHION IMAGE CONTAINER */}
+        {/* ======================================================= */}
+        <div
+          onMouseMove={handleMouseMove}
+          className="relative aspect-[3/4] w-full overflow-hidden bg-muted/20 cursor-pointer"
+        >
           <Link href={`/products/${product.slug}`} className="relative block w-full h-full">
-            {/* Primary Image */}
             <Image
-              src={primaryImage}
+              src={currentImage}
               alt={product.title}
               fill
-              sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
-              className={`object-cover transition-all duration-500 ${
-                secondaryImage ? 'group-hover:opacity-0 group-hover:scale-105' : 'group-hover:scale-105'
-              }`}
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              className="object-cover object-center group-hover:scale-105 transition-transform duration-500 ease-out"
             />
-            {/* Secondary Image on Hover */}
-            {secondaryImage && (
-              <Image
-                src={secondaryImage}
-                alt={`${product.title} alternate`}
-                fill
-                sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
-                className="object-cover opacity-0 group-hover:opacity-100 transition-all duration-500 group-hover:scale-105"
-              />
-            )}
           </Link>
 
-          {/* MYNTRA RATING BADGE (Bottom-Left of Image) */}
-          <div className="absolute bottom-2.5 left-2.5 z-10">
-            <div className="flex items-center gap-1 bg-background/90 dark:bg-black/80 backdrop-blur-md px-2 py-0.5 rounded-md shadow-xs border border-border/40 text-[11px] font-extrabold text-foreground">
-              <span className="font-black">{ratingScore}</span>
-              <Star className="w-3 h-3 fill-emerald-500 text-emerald-500" />
-              <span className="text-muted-foreground font-semibold text-[10px] pl-0.5 border-l border-border/80">
-                {ratingCount > 999 ? `${(ratingCount / 1000).toFixed(1)}k` : ratingCount}
-              </span>
-            </div>
-          </div>
-
-          {/* Top Badges */}
-          <div className="absolute top-2.5 left-2.5 flex flex-col gap-1 z-10">
-            {hasDiscount && (
-              <span className="bg-rose-600 text-white text-[10px] font-black px-2 py-0.5 rounded-md shadow-sm">
+          {/* Top Badges (Discount, Video, Heritage) */}
+          <div className="absolute top-2 left-2 flex flex-col gap-1 z-10 pointer-events-none">
+            {hasDiscount && discountPercent >= 10 && (
+              <span className="bg-orange-600 text-white text-[10px] font-black px-1.5 py-0.5 rounded-xs uppercase tracking-wider shadow-xs">
                 {discountPercent}% OFF
               </span>
             )}
             {hasVideo && (
-              <span className="bg-black/70 backdrop-blur-xs text-amber-400 font-extrabold text-[9px] px-1.5 py-0.5 rounded-md flex items-center gap-1 shadow-sm">
+              <span className="bg-black/80 backdrop-blur-xs text-amber-300 font-extrabold text-[9px] px-1.5 py-0.5 rounded-xs flex items-center gap-1 shadow-xs">
                 🎥 Video
+              </span>
+            )}
+            {specs.region && (
+              <span className="bg-amber-500/95 text-slate-950 font-black text-[9px] px-1.5 py-0.5 rounded-xs shadow-xs uppercase tracking-tight">
+                🏛️ {specs.region.split(' ')[0]}
               </span>
             )}
           </div>
 
-          {/* Action Icons: Share & Wishlist */}
-          <div className="absolute top-2.5 right-2.5 flex flex-col gap-1.5 z-10">
+          {/* Top Right Actions: Floating Heart & Share */}
+          <div className="absolute top-2 right-2 flex flex-col gap-1.5 z-10">
             <button
               onClick={handleWishlistClick}
-              className={`h-8 w-8 rounded-full flex items-center justify-center transition-all shadow-md backdrop-blur-md ${
+              className={`h-7 w-7 sm:h-8 sm:w-8 rounded-full flex items-center justify-center transition-all shadow-md backdrop-blur-md ${
                 isWishlisted
-                  ? 'bg-rose-500 text-white shadow-rose-500/30 scale-110'
-                  : 'bg-background/80 hover:bg-background text-muted-foreground hover:text-rose-500 hover:scale-105'
+                  ? 'bg-rose-500 text-white scale-105'
+                  : 'bg-white/80 dark:bg-black/70 text-slate-700 dark:text-zinc-200 hover:text-rose-500 hover:scale-105'
               }`}
               aria-label="Wishlist"
-              title="Add to Wishlist"
+              title={isWishlisted ? 'Remove from Wishlist' : 'Save to Wishlist'}
             >
-              <Heart className={`w-4 h-4 ${isWishlisted ? 'fill-current' : ''}`} />
+              <Heart className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${isWishlisted ? 'fill-current' : ''}`} />
             </button>
 
             <button
               onClick={handleShareClick}
-              className="h-8 w-8 rounded-full flex items-center justify-center transition-all shadow-md bg-background/80 hover:bg-background text-muted-foreground hover:text-primary backdrop-blur-md hover:scale-105"
-              title={isCopied ? 'Link Copied!' : 'Share Product'}
+              className="h-7 w-7 sm:h-8 sm:w-8 rounded-full flex items-center justify-center transition-all shadow-md bg-white/80 dark:bg-black/70 text-slate-700 dark:text-zinc-200 hover:text-primary backdrop-blur-md hover:scale-105 opacity-0 group-hover:opacity-100 hidden sm:flex"
+              title={isCopied ? 'Link Copied!' : 'Share'}
             >
               {isCopied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Share2 className="w-3.5 h-3.5" />}
             </button>
           </div>
 
-          {/* MYNTRA QUICK-ADD SIZE SELECTOR OVERLAY (Slides Up on Desktop Hover) */}
-          {product.variants && product.variants.length > 0 && (
-            <div className="absolute inset-x-0 bottom-0 p-2.5 bg-background/95 dark:bg-card/95 backdrop-blur-md border-t transform translate-y-full opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 hidden sm:flex flex-col gap-1.5 z-20 shadow-lg">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                  Select Size to Add:
-                </span>
-                {addedSuccessId && (
-                  <span className="text-[10px] font-extrabold text-emerald-600 flex items-center gap-0.5">
-                    <Check className="w-3 h-3" /> Added to Bag
-                  </span>
-                )}
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {product.variants.slice(0, 6).map((v) => {
-                  const isOut = v.availableStock <= 0;
-                  const isAdding = addingVariantId === v.id;
-                  const isSuccess = addedSuccessId === v.id;
-
-                  return (
-                    <button
-                      key={v.id}
-                      disabled={isOut || isAdding}
-                      onClick={(e) => handleSelectSize(e, v.id)}
-                      className={`h-7 px-2 min-w-[28px] rounded-lg text-[11px] font-bold border transition-all flex items-center justify-center ${
-                        isSuccess
-                          ? 'border-emerald-600 bg-emerald-600 text-white'
-                          : isOut
-                          ? 'border-border/40 opacity-40 line-through cursor-not-allowed bg-muted'
-                          : 'border-border bg-card hover:border-primary hover:bg-primary hover:text-primary-foreground shadow-xs'
-                      }`}
-                      title={isOut ? 'Out of Stock' : `Quick Add Size ${v.title}`}
-                    >
-                      {isAdding ? '...' : v.title}
-                    </button>
-                  );
-                })}
-              </div>
+          {/* Multi-Image Pagination Dots (Myntra Hover Slider) */}
+          {images.length > 1 && (
+            <div className="absolute bottom-2.5 inset-x-0 flex items-center justify-center gap-1 z-10 pointer-events-none transition-opacity duration-200 opacity-0 group-hover:opacity-100">
+              {images.map((_, idx) => (
+                <span
+                  key={idx}
+                  className={`h-1 rounded-full transition-all duration-200 ${
+                    activeImageIndex === idx ? 'w-4 bg-orange-500 shadow-sm' : 'w-1.5 bg-white/70 dark:bg-zinc-400/70'
+                  }`}
+                />
+              ))}
             </div>
           )}
+
+          {/* MYNTRA RATING BADGE (Bottom-Left of Image) */}
+          {/* Fades out on desktop hover to make room for Wishlist & Size strip */}
+          <div className="absolute bottom-2 left-2 z-10 group-hover:opacity-0 transition-opacity duration-200 pointer-events-none">
+            <div className="flex items-center gap-1 bg-white/95 dark:bg-zinc-900/90 backdrop-blur-md px-1.5 py-0.5 rounded shadow-xs border border-border/40 text-[11px] font-extrabold text-slate-800 dark:text-zinc-200">
+              <span className="font-black">{ratingScore}</span>
+              <Star className="w-3 h-3 fill-emerald-600 text-emerald-600" />
+              <span className="text-muted-foreground font-semibold text-[10px] pl-0.5 border-l border-border/60">
+                {ratingCount > 999 ? `${(ratingCount / 1000).toFixed(1)}k` : ratingCount}
+              </span>
+            </div>
+          </div>
+
+          {/* ======================================================= */}
+          {/* 2. MYNTRA DESKTOP HOVER DRAWER (Sizes + Direct Wishlist) */}
+          {/* ======================================================= */}
+          <div className="absolute inset-x-0 bottom-0 p-2.5 bg-background/95 dark:bg-zinc-950/95 backdrop-blur-md border-t transform translate-y-full opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 hidden sm:flex flex-col gap-2 z-20 shadow-xl">
+            {/* Myntra Wishlist Button */}
+            <button
+              onClick={handleWishlistClick}
+              className={`w-full py-1.5 px-3 rounded text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all shadow-xs ${
+                isWishlisted
+                  ? 'bg-rose-500 hover:bg-rose-600 text-white border border-rose-500'
+                  : 'bg-card hover:bg-muted text-foreground border border-border hover:border-foreground'
+              }`}
+            >
+              <Heart className={`w-3.5 h-3.5 ${isWishlisted ? 'fill-current' : ''}`} />
+              <span>{isWishlisted ? 'Wishlisted' : 'Wishlist'}</span>
+            </button>
+
+            {/* Myntra Sizes Bar */}
+            {product.variants && product.variants.length > 0 && (
+              <div className="space-y-1">
+                <div className="flex items-center justify-between text-[10px]">
+                  <span className="font-bold uppercase tracking-wider text-muted-foreground">
+                    Sizes:
+                  </span>
+                  {addedSuccessId && (
+                    <span className="font-extrabold text-emerald-600 flex items-center gap-0.5">
+                      <Check className="w-3 h-3" /> Added!
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap gap-1">
+                  {product.variants.slice(0, 6).map((v) => {
+                    const isOut = v.availableStock <= 0;
+                    const isAdding = addingVariantId === v.id;
+                    const isSuccess = addedSuccessId === v.id;
+
+                    return (
+                      <button
+                        key={v.id}
+                        disabled={isOut || isAdding}
+                        onClick={(e) => handleSelectSize(e, v.id)}
+                        className={`h-6 px-1.5 min-w-[24px] rounded text-[10px] font-bold border transition-all flex items-center justify-center ${
+                          isSuccess
+                            ? 'border-emerald-600 bg-emerald-600 text-white'
+                            : isOut
+                            ? 'border-border/40 opacity-40 line-through cursor-not-allowed bg-muted'
+                            : 'border-border bg-card hover:border-primary hover:bg-primary hover:text-primary-foreground'
+                        }`}
+                        title={isOut ? 'Out of Stock' : `Add Size ${v.title}`}
+                      >
+                        {isAdding ? '...' : v.title}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* MYNTRA PRODUCT METADATA */}
-        <div className="p-3.5 space-y-1">
-          {/* Brand Name */}
-          <h3 className="text-xs font-black uppercase tracking-wider text-foreground truncate">
+        {/* ======================================================= */}
+        {/* 3. MYNTRA PRODUCT METADATA (Brand, Subtitle, Price Row) */}
+        {/* ======================================================= */}
+        <div className="p-3 space-y-0.5">
+          {/* Brand Name (Bold Uppercase) */}
+          <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-foreground truncate">
             {brandName}
           </h3>
 
-          {/* Product Title / Subtitle */}
+          {/* Product Subtitle / Short Description */}
           <Link href={`/products/${product.slug}`} className="block">
-            <p className="text-xs text-muted-foreground truncate hover:text-foreground transition-colors font-medium">
+            <p className="text-xs text-muted-foreground truncate font-normal hover:text-foreground transition-colors">
               {product.title}
             </p>
           </Link>
 
-          {/* Myntra Price Row: Rs. 899 Rs. 1,999 (55% OFF) */}
-          <div className="flex items-baseline gap-1.5 pt-1">
-            <span className="text-sm font-black text-foreground">
+          {/* Pricing Row: Rs. 899  Rs. 1,999  (55% OFF) */}
+          <div className="flex items-baseline gap-1.5 pt-0.5 flex-wrap">
+            <span className="text-sm font-extrabold text-foreground">
               {formatPrice(product.basePrice)}
             </span>
             {hasDiscount && (
@@ -235,7 +288,7 @@ export function ProductCard({ product }: ProductCardProps) {
               </span>
             )}
             {hasDiscount && (
-              <span className="text-xs font-black text-orange-600 dark:text-orange-400">
+              <span className="text-xs font-bold text-[#ff905a] dark:text-orange-400">
                 ({discountPercent}% OFF)
               </span>
             )}
