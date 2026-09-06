@@ -281,14 +281,25 @@ export function InvoiceModal({ order, isOpen, onClose }: InvoiceModalProps) {
               </div>
 
               {/* Authorized Signatory Block */}
-              <div className="p-3 rounded-2xl border border-border text-center space-y-1 bg-muted/10">
+              <div className="p-3.5 rounded-2xl border border-border text-center space-y-1.5 bg-muted/10 relative">
                 <p className="font-extrabold text-[10px] text-muted-foreground uppercase tracking-wider">
                   For NovaStore Retail Technologies Pvt Ltd
                 </p>
-                <div className="h-10 flex items-center justify-center font-serif italic text-primary font-bold text-sm">
-                  Authorized Signatory
+                <div className="h-14 flex items-center justify-center py-1 bg-white/95 rounded-xl px-3 border border-border/40 shadow-2xs">
+                  <img
+                    src="/signature.png"
+                    alt="Signature of Mrityunjay Kumar"
+                    className="h-11 w-auto max-w-[190px] object-contain mx-auto select-none"
+                  />
                 </div>
-                <p className="text-[9px] text-muted-foreground">Authorized Signatory (Finance & Compliance)</p>
+                <div className="border-t border-border/60 pt-1">
+                  <p className="text-xs font-black text-foreground font-sans tracking-wide">
+                    Mrityunjay Kumar
+                  </p>
+                  <p className="text-[9px] text-muted-foreground font-semibold">
+                    Authorized Signatory (Finance & Compliance)
+                  </p>
+                </div>
               </div>
             </div>
           </div>
