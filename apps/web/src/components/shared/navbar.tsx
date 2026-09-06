@@ -212,6 +212,7 @@ export function Navbar() {
               placeholder="Search for products, brands and more..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              suppressHydrationWarning
               className="w-full h-10 pl-10 pr-4 rounded-xl bg-muted/50 border border-border/80 focus:bg-background focus:border-rose-500 focus:outline-none text-xs font-medium placeholder:text-muted-foreground/70 transition-all shadow-2xs"
             />
           </form>
@@ -234,6 +235,7 @@ export function Navbar() {
               {isAuthenticated ? (
                 <button
                   onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                  suppressHydrationWarning
                   className="flex flex-col items-center justify-center text-foreground hover:text-rose-600 transition-colors px-1.5 py-1"
                 >
                   <User className="w-5 h-5" />
@@ -249,6 +251,7 @@ export function Navbar() {
                 >
                   <button
                     onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                    suppressHydrationWarning
                     className="flex flex-col items-center justify-center text-foreground hover:text-rose-600 transition-colors px-1.5 py-1"
                   >
                     <User className="w-5 h-5" />
@@ -375,6 +378,7 @@ export function Navbar() {
             {/* Bag Stack */}
             <button
               onClick={openCart}
+              suppressHydrationWarning
               className="flex flex-col items-center justify-center text-foreground hover:text-rose-600 transition-colors px-1.5 py-1 relative"
               aria-label="Shopping Bag"
             >
