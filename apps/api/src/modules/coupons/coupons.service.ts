@@ -16,7 +16,7 @@ export class CouponsService {
   // 1. PUBLIC OFFERS & ACTIVE COUPONS FOR CUSTOMERS
   // =========================================================================
 
-  async getActiveCoupons() {
+  async getActiveCoupons(userId?: string) {
     const now = new Date();
     const coupons = await this.prisma.coupon.findMany({
       where: {
@@ -28,18 +28,39 @@ export class CouponsService {
       orderBy: { createdAt: 'desc' },
     });
 
+    let userUsages: Record<string, number> = {};
+    if (userId) {
+      const usages = await this.prisma.couponUsage.groupBy({
+        by: ['couponId'],
+        where: { userId },
+        _count: { couponId: true },
+      });
+      userUsages = usages.reduce((acc, u) => {
+        acc[u.couponId] = u._count.couponId;
+        return acc;
+      }, {} as Record<string, number>);
+    }
+
     return coupons
       .filter((c) => !c.usageLimit || c.usedCount < c.usageLimit)
-      .map((c) => ({
-        id: c.id,
-        code: c.code,
-        discountType: c.discountType,
-        discountValue: Number(c.discountValue),
-        minOrderValue: c.minOrderValue ? Number(c.minOrderValue) : null,
-        maxDiscount: c.maxDiscount ? Number(c.maxDiscount) : null,
-        startDate: c.startDate,
-        endDate: c.endDate,
-      }));
+      .map((c) => {
+        const perUserLimit = c.perUserLimit ?? 1;
+        const usedByUser = userUsages[c.id] || 0;
+        const isUsed = usedByUser >= perUserLimit;
+
+        return {
+          id: c.id,
+          code: c.code,
+          discountType: c.discountType,
+          discountValue: Number(c.discountValue),
+          minOrderValue: c.minOrderValue ? Number(c.minOrderValue) : null,
+          maxDiscount: c.maxDiscount ? Number(c.maxDiscount) : null,
+          startDate: c.startDate,
+          endDate: c.endDate,
+          perUserLimit,
+          isUsed,
+        };
+      });
   }
 
   // =========================================================================
