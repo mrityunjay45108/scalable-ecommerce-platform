@@ -1,3 +1,4 @@
+/** HTTP Request Logging Interceptor for execution profiling and latency tracking */
 import {
   Injectable,
   NestInterceptor,
