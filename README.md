@@ -135,3 +135,9 @@ pnpm dev
 ## License
 
 This project is private and proprietary.
+
+## Architecture & Platform Features
+- **Monorepo Structure**: Powered by TurboRepo, pnpm workspaces, NestJS backend, and Next.js 15 frontend.
+- **Strict One-Time Coupon Limits**: Enforces 1-time redemption per customer across cart, checkout, and transaction commits.
+- **Variant Preservation**: Safe SKU & variant updates during admin product editing with collision-free slug generation.
+- **Tax Invoice & Executive Signature**: Authentic royal blue cursive signature pad with GST-compliant tax calculations.
