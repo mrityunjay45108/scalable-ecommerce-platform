@@ -661,3 +661,19 @@ export interface KafkaEventEnvelope<T = any> {
   data: T;
 }
 
+
+// --- Iteration 24: Payment Domain Types ---
+export type TransactionGatewayStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'REFUNDED' | 'CANCELLED';
+export type PaymentGatewayMethod = 'CARD' | 'UPI' | 'NET_BANKING' | 'WALLET' | 'COD' | 'RAZORPAY';
+
+export interface PaymentTransactionRecord {
+  id: string;
+  orderId: string;
+  amount: number;
+  currency: string;
+  method: PaymentGatewayMethod;
+  status: TransactionGatewayStatus;
+  gatewayTransactionId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
