@@ -690,3 +690,15 @@ export interface IndianPostalAddress {
   postalCode: string; // 6-digit Indian PIN code
   isDefault?: boolean;
 }
+
+// --- Iteration 26: Cart Pricing Breakdown Types ---
+export interface CartFinancialSummary {
+  itemsSubtotal: number;
+  taxAmount: number;
+  taxRatePercent: number;
+  discountAmount: number;
+  shippingFee: number;
+  netPayableAmount: number;
+  isFreeShippingApplied: boolean;
+  freeShippingGap: number;
+}
