@@ -21,8 +21,8 @@ export class CouponsController {
 
   @Public()
   @Get('active')
-  getActiveOffers() {
-    return this.couponsService.getActiveCoupons();
+  getActiveOffers(@CurrentUser('id') userId?: string) {
+    return this.couponsService.getActiveCoupons(userId);
   }
 
   @Post('apply')
