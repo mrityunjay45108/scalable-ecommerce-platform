@@ -89,7 +89,7 @@ export default function OrdersPage() {
         </div>
         <div className="flex items-center gap-2">
           <a
-            href={`https://wa.me/917898501472?text=${encodeURIComponent('Namaste SWADESH Luxe! I need assistance with my recent orders.')}`}
+            href={`https://wa.me/917324882119?text=${encodeURIComponent('Namaste SWADESH Luxe! I need assistance with my recent orders.')}`}
             target="_blank"
             rel="noopener noreferrer"
           >
@@ -216,7 +216,7 @@ export default function OrdersPage() {
                   
                   <div className="flex items-center gap-2">
                     <a
-                      href={`https://wa.me/917898501472?text=${encodedOrderMsg}`}
+                      href={`https://wa.me/917324882119?text=${encodedOrderMsg}`}
                       target="_blank"
                       rel="noopener noreferrer"
                     >

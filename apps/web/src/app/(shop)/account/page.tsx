@@ -279,7 +279,7 @@ export default function AccountPage() {
 
         <div
           onClick={() => {
-            const phone = '917898501472';
+            const phone = '917324882119';
             const text = encodeURIComponent('Namaste! I would like to connect with SWADESH customer concierge.');
             window.open(`https://wa.me/${phone}?text=${text}`, '_blank');
           }}

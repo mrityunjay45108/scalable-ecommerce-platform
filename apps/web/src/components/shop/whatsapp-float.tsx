@@ -14,7 +14,7 @@ export function WhatsAppFloat() {
   ];
 
   const handleOpenWhatsApp = (messageText: string) => {
-    const phone = '917898501472';
+    const phone = '917324882119';
     const encoded = encodeURIComponent(messageText);
     window.open(`https://wa.me/${phone}?text=${encoded}`, '_blank');
     setIsOpen(false);

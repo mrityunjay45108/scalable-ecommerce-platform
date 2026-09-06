@@ -19,9 +19,15 @@ import {
   MessageCircle,
   Heart,
   ExternalLink,
+  Package,
+  TrendingUp,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatPrice } from '@/lib/utils';
+import { apiClient } from '@/lib/api-client';
+
+const CONCIERGE_PHONE = '917324882119';
+const DISPLAY_PHONE = '+91 7324882119';
 
 interface ProductSuggestion {
   title: string;
@@ -40,51 +46,13 @@ interface Message {
   products?: ProductSuggestion[];
 }
 
-const FEATURED_PRODUCTS_KNOWLEDGE: ProductSuggestion[] = [
-  {
-    title: 'Apex Velocity Carbon Running Shoes',
-    price: 2999,
-    slug: 'apex-velocity-carbon-running-shoes',
-    image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600',
-    brand: 'Nike / Apex Athletics',
-  },
-  {
-    title: 'Aura Pro Wireless Noise-Cancelling Headphones',
-    price: 4999,
-    slug: 'aura-pro-wireless-headphones',
-    image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600',
-    brand: 'Sony / Aura Studio',
-  },
-  {
-    title: '450 GSM Heavyweight Oversized Hoodie',
-    price: 1899,
-    slug: '450-gsm-heavyweight-oversized-hoodie',
-    image: 'https://images.unsplash.com/photo-1556905055-8f358a7a47b2?w=600',
-    brand: 'SWADESH Streetwear',
-  },
-  {
-    title: 'Slim Fit Denim Jeans',
-    price: 999,
-    slug: 'jeans',
-    image: 'https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=600',
-    brand: 'Roadster',
-  },
-  {
-    title: 'Lumina Ergonomic Smart Desk Lamp',
-    price: 2299,
-    slug: 'lumina-ergonomic-smart-desk-lamp',
-    image: 'https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=600',
-    brand: 'Lumina Craft',
-  },
-];
-
 const INITIAL_SUGGESTIONS = [
-  { label: '🔥 Offers & Discount Coupon', query: 'offers and discount coupons' },
-  { label: '👟 Best Footwear & Running Shoes', query: 'show running shoes' },
-  { label: '🚚 Delivery & Shipping Time', query: 'delivery time and shipping charges' },
-  { label: '💳 Cash on Delivery (COD)', query: 'is COD available' },
-  { label: '🔄 Return & Replacement Policy', query: 'how to return product' },
-  { label: '📦 Track My Order', query: 'track my order' },
+  { label: '🔥 Live Active Coupons', query: 'live coupons and discount offers' },
+  { label: '👟 Trending Footwear & Shoes', query: 'shoes' },
+  { label: '🏛️ Virasat-e-Hind Crafts & Sarees', query: 'sarees' },
+  { label: '📦 Track My Recent Order', query: 'track my order' },
+  { label: '💵 Cash on Delivery (COD)', query: 'is COD available' },
+  { label: '🔄 7-Day Easy Return Policy', query: 'return and refund policy' },
 ];
 
 const WHATSAPP_HELP_OPTIONS = [
@@ -94,16 +62,35 @@ const WHATSAPP_HELP_OPTIONS = [
   { label: '🏷️ Today’s Best Swadeshi Coupons (डिस्काउंट कूपन)', message: 'Namaste! What are the best active coupon codes and festive offers on SWADESH today?' },
 ];
 
+// Helper to convert backend product DTO into suggestion card format
+const formatApiProduct = (p: any): ProductSuggestion => {
+  let img = 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600';
+  if (p.images && p.images.length > 0) {
+    if (typeof p.images[0] === 'string') {
+      img = p.images[0];
+    } else if (p.images[0]?.url) {
+      img = p.images[0].url;
+    }
+  }
+  return {
+    title: p.title || 'Product',
+    price: Number(p.basePrice || p.price || 0),
+    slug: p.slug || '',
+    image: img,
+    brand: p.category?.name || p.brand || 'SWADESH Luxe',
+  };
+};
+
 export function StoreConciergeHub() {
   const [activeModal, setActiveModal] = useState<'none' | 'chat' | 'whatsapp'>('none');
   const [inputText, setInputText] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
   const [customWhatsAppMsg, setCustomWhatsAppMsg] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 'msg-1',
       sender: 'bot',
-      text: 'Namaste! 🙏 Welcome to SWADESH Luxe (॥ अतिथिदेवो भवः ॥). Main aapka personal shopping concierge hoon. Main aapki kya madad kar sakta hoon?\n\nAap festive offers, verified products, delivery timeline, COD payment, ya order tracking ke bare me pooch sakte hain!',
+      text: 'Namaste! 🙏 Welcome to SWADESH Luxe (॥ अतिथिदेवो भवः ॥).\n\nMain aapka **Nova AI Store Assistant** hoon, direct live backend database se connected. Main real-time inventory se verified products khoj sakta hoon, live discount coupons de sakta hoon, aur aapke orders track karne me madad kar sakta hoon!\n\nAap kya dhundh rahe hain?',
       timestamp: 'Just now',
       quickActions: INITIAL_SUGGESTIONS.slice(0, 4),
     },
@@ -122,134 +109,229 @@ export function StoreConciergeHub() {
   }, [activeModal, messages, isTyping]);
 
   const handleOpenWhatsApp = (messageText?: string) => {
-    const phone = '917898501472';
     const finalMsg = messageText || customWhatsAppMsg.trim() || 'Namaste! I would like to connect with SWADESH customer concierge.';
     const encoded = encodeURIComponent(finalMsg);
-    window.open(`https://wa.me/${phone}?text=${encoded}`, '_blank');
+    window.open(`https://wa.me/${CONCIERGE_PHONE}?text=${encoded}`, '_blank');
     setCustomWhatsAppMsg('');
     setActiveModal('none');
   };
 
-  const generateBotReply = (
-    query: string,
-  ): { text: string; quickActions?: { label: string; query: string }[]; products?: ProductSuggestion[] } => {
-    const q = query.toLowerCase().trim();
+  // Live Backend Data Fetching for Nova AI
+  const fetchLiveBotReply = async (
+    rawQuery: string,
+  ): Promise<{ text: string; quickActions?: { label: string; query: string }[]; products?: ProductSuggestion[] }> => {
+    const q = rawQuery.toLowerCase().trim();
 
     // 1. GREETINGS
-    if (/^(hi|hello|hey|namaste|pranam|hola|kaisa|kaise)/i.test(q)) {
+    if (/^(hi|hello|hey|namaste|pranam|hola|kaisa|kaise|kaise ho)/i.test(q)) {
       return {
-        text: 'Namaste ji! 🙏 Welcome to SWADESH. Main aapko best offers batane aur right product choose karne me help kar sakta hoon. Aap kya dhundh rahe hain?',
+        text: 'Namaste ji! 🙏 SWADESH Luxe par aapka swagat hai.\n\nMain live store catalog se direct connected hoon. Aap kisi bhi product (jaise **sarees**, **shoes**, **kurtas**, **lamp**, **jeans**), live discount coupons, COD availability ya delivery status ke bare me pooch sakte hain!',
         quickActions: [
-          { label: '🔥 Aaj ke Offers', query: 'offers and discount coupons' },
-          { label: '👟 Best Footwear', query: 'show running shoes' },
+          { label: '🔥 Live Active Coupons', query: 'live coupons and offers' },
+          { label: '👟 Trending Footwear', query: 'shoes' },
+          { label: '🏛️ Virasat Sarees', query: 'sarees' },
           { label: '🚚 Delivery Timelines', query: 'delivery time' },
         ],
       };
     }
 
-    // 2. TRACK ORDER / SHIPPING
-    if (q.includes('track') || q.includes('kaha') || q.includes('where is my order') || q.includes('order status')) {
+    // 2. LIVE COUPONS & FESTIVE OFFERS (Fetched from Backend DB)
+    if (q.includes('coupon') || q.includes('offer') || q.includes('discount') || q.includes('code') || q.includes('festive') || q.includes('chhut')) {
+      try {
+        const couponsRes: any = await apiClient.get('/coupons/active').catch(() => null);
+        const couponsList = Array.isArray(couponsRes) ? couponsRes : (couponsRes?.data || []);
+        
+        if (couponsList && couponsList.length > 0) {
+          const couponDetails = couponsList.map((c: any) => {
+            const discText = c.discountType === 'PERCENTAGE' ? `${c.discountValue}% OFF` : `Flat ₹${c.discountValue} OFF`;
+            const minSpend = c.minOrderValue ? ` (Min. order: ₹${c.minOrderValue})` : '';
+            return `• **${c.code}**: ${discText}${minSpend}`;
+          }).join('\n');
+
+          return {
+            text: `🎉 **Live Active Coupons (Direct from Store Database):**\n\n${couponDetails}\n\nYeh codes checkout ke samay 'Apply Coupon' box me daal kar instant discount paayein!`,
+            quickActions: [
+              { label: '🛍️ Shop Trending Items', query: 'shoes' },
+              { label: '💵 Check Doorstep COD', query: 'is COD available' },
+            ],
+          };
+        }
+      } catch (err) {
+        console.warn('Failed to fetch live coupons', err);
+      }
+
+      // Fallback if coupons API call fails or returns empty
       return {
-        text: 'Aap apne order ka real-time GPS live tracking **Orders Dashboard** par dekh sakte hain! Log in karke "My Orders" me jayein ya humare 24x7 WhatsApp concierge se turant status lein.',
+        text: '🎉 **Aaj ke Live Festive Discounts:**\n• **SWADESH10:** Flat 10% OFF on your first purchase!\n• **FESTIVE20:** Flat 20% OFF on orders above ₹1,999\n• **FREESHIP:** Free doorstep express delivery across India!\n\nCheckout page par code enter karke instant discount claim karein.',
         quickActions: [
-          { label: '📋 Go to My Orders', query: 'open orders' },
-          { label: '💬 WhatsApp Tracking Support', query: 'whatsapp support' },
+          { label: '🛍️ Shop Now', query: 'shoes' },
+          { label: '💵 Check COD', query: 'is COD available' },
         ],
       };
     }
 
-    // 3. DELIVERY TIME & PIN CODE
+    // 3. LIVE ORDER TRACKING (Fetched from Backend DB)
+    if (q.includes('track') || q.includes('order') || q.includes('mera order') || q.includes('kaha hai') || q.includes('status')) {
+      try {
+        const ordersRes: any = await apiClient.get('/orders').catch(() => null);
+        const ordersList = Array.isArray(ordersRes) ? ordersRes : (ordersRes?.data || []);
+
+        if (ordersList && ordersList.length > 0) {
+          const recentOrders = ordersList.slice(0, 3);
+          const orderSummaries = recentOrders.map((o: any) => {
+            const num = o.orderNumber || (o.id ? o.id.slice(0, 8).toUpperCase() : 'N/A');
+            const total = o.totalAmount || o.total || 0;
+            return `• **Order #${num}**: Status: **${o.status}** | Total: ₹${Number(total).toLocaleString('en-IN')}`;
+          }).join('\n');
+
+          return {
+            text: `📦 **Aapke Recent Orders (Live Database Record):**\n\n${orderSummaries}\n\nLive GPS tracking aur GST invoice download ke liye **[My Orders](/orders)** page par visit karein ya WhatsApp support se status lein!`,
+            quickActions: [
+              { label: '📋 Open Orders Page', query: 'open orders' },
+              { label: '💬 WhatsApp Concierge', query: 'whatsapp support' },
+            ],
+          };
+        }
+      } catch (err) {
+        console.warn('Orders lookup not logged in or error', err);
+      }
+
+      return {
+        text: `📦 **Live Order Tracking:**\nAap apne order ka real-time GPS tracking dekhne ke liye **[My Orders](/orders)** page par visit kar sakte hain.\n\nAap humare 24x7 Customer Concierge (${DISPLAY_PHONE}) se WhatsApp par bhi apna Order ID bhejkar turant live status jaan sakte hain!`,
+        quickActions: [
+          { label: '💬 WhatsApp Live Tracking', query: 'open_whatsapp_action' },
+          { label: '📋 Go to My Orders', query: 'open orders' },
+        ],
+      };
+    }
+
+    // 4. DELIVERY TIME & PIN CODE INQUIRIES
     if (q.includes('delivery') || q.includes('shipping') || q.includes('time') || q.includes('charges') || q.includes('pin code')) {
       return {
-        text: '🚚 **Delivery Timelines:**\n• **Metro Cities (Delhi, Mumbai, Bengaluru, etc.):** 2 se 3 working days\n• **Rest of India:** 3 se 5 working days\n• **Free Shipping:** ₹999 se upar ke sabhi orders par FREE delivery di jaati hai!',
+        text: '🚚 **Live Delivery Timelines (Pan-India 29,000+ Pin Codes):**\n• **Metro Cities (Delhi, Mumbai, Bengaluru, etc.):** 2 se 3 working days\n• **Rest of India & Remote Hubs:** 3 se 5 working days\n• **Free Express Shipping:** ₹999 se upar ke sabhi orders par FREE delivery di jaati hai!\n• **Real-Time GPS Tracking:** Har order ke dispatch hote hi tracking link provide kiya jata hai.',
         quickActions: [
-          { label: '💵 COD Available?', query: 'is COD available' },
-          { label: '📦 Track existing shipment', query: 'track my order' },
+          { label: '💵 COD Doorstep Payment', query: 'is COD available' },
+          { label: '🔄 7-Day Return Policy', query: 'return policy' },
         ],
       };
     }
 
-    // 4. OFFERS / DISCOUNTS / COUPONS
-    if (q.includes('offer') || q.includes('coupon') || q.includes('discount') || q.includes('code') || q.includes('festive')) {
+    // 5. CASH ON DELIVERY (COD)
+    if (q.includes('cod') || q.includes('cash on delivery') || q.includes('cash') || q.includes('delivery payment')) {
       return {
-        text: '🎉 **Aaj ke Live Festive Discounts:**\n• **SWADESH10:** Flat 10% OFF on first order!\n• **FESTIVE20:** Flat 20% OFF on orders above ₹1,999\n• **FREESHIP:** Free delivery on all artisanal craft items\n\nCheckout page par coupon code enter karke instant discount claim karein!',
+        text: '💵 **Cash on Delivery (COD) 100% Available Hai!**\n\n98% Indian PIN codes par verified doorstep Cash on Delivery active hai. Checkout ke samay payment method me **Cash on Delivery** select karein aur parcel receive karte waqt payment karein.',
         quickActions: [
-          { label: '🛍️ Shop Now', query: 'show running shoes' },
-          { label: '💳 Check COD', query: 'is COD available' },
+          { label: '🔥 Active Coupons', query: 'live coupons and discount offers' },
+          { label: '🛍️ Browse Store Catalog', query: 'shoes' },
         ],
       };
     }
 
-    // 5. FOOTWEAR / SHOES / SNEAKERS
-    if (q.includes('shoe') || q.includes('footwear') || q.includes('sneaker') || q.includes('running') || q.includes('apex')) {
+    // 6. RETURN & REFUND POLICY
+    if (q.includes('return') || q.includes('refund') || q.includes('wapsi') || q.includes('exchange') || q.includes('replace')) {
       return {
-        text: 'Yeh rahe humare highest-rated carbon plated running shoes aur artisanal footwear jo customers sabse zyada pasand kar rahe hain:',
-        products: FEATURED_PRODUCTS_KNOWLEDGE.filter((p) => p.slug.includes('shoes') || p.slug.includes('jeans')),
+        text: '🔄 **7-Day Hassle-Free Sahaj Wapsi (वापसी नीति):**\n• Delivery ke 7 din ke andar aap **[My Orders](/orders)** se 1-click me return ya exchange request daal sakte hain.\n• Courier pickup boy aapke doorstep se parcel collect karega.\n• Parcel inspect hote hi 24 se 48 ghante me aapke original UPI/Bank account me 100% refund credit ho jata hai.',
         quickActions: [
-          { label: '🔥 Apply Coupon Code', query: 'offers and discount coupons' },
-          { label: '👟 View All Catalog', query: 'show all products' },
-        ],
-      };
-    }
-
-    // 6. COD (CASH ON DELIVERY)
-    if (q.includes('cod') || q.includes('cash on delivery') || q.includes('cash')) {
-      return {
-        text: '💵 **Cash on Delivery (COD) Bilkul Available Hai!**\n\n98% Indian PIN codes par verified doorstep COD service active hai. Bas checkout ke dauran "Cash on Delivery" option choose karein aur delivery ke waqt payment karein.',
-        quickActions: [
-          { label: '🔄 7-Day Return Policy', query: 'how to return product' },
-          { label: '📦 View Cart', query: 'open cart' },
-        ],
-      };
-    }
-
-    // 7. RETURN & REFUND POLICY
-    if (q.includes('return') || q.includes('refund') || q.includes('replace') || q.includes('exchange')) {
-      return {
-        text: '🔄 **7-Day Hassle-Free Returns & Refunds:**\n• Delivery ke 7 din ke andar aap replacement ya 100% refund request initiate kar sakte hain.\n• Reverse pickup agent aapke ghar se parcel collect karega.\n• Refund 24-48 ghante me aapke original payment mode ya UPI/Bank account me credit ho jayega.',
-        quickActions: [
-          { label: '💬 Talk to Concierge', query: 'whatsapp support' },
+          { label: '💬 Talk to Concierge on WhatsApp', query: 'open_whatsapp_action' },
           { label: '📦 Track My Order', query: 'track my order' },
         ],
       };
     }
 
-    // 8. ATITHI DEVO BHAVA / HERITAGE
-    if (q.includes('atithi') || q.includes('bharat') || q.includes('swadesh') || q.includes('heritage') || q.includes('craft')) {
+    // 7. ATITHI DEVO BHAVA & INDIAN HERITAGE CRAFTS
+    if (q.includes('atithi') || q.includes('swadesh') || q.includes('bharat') || q.includes('heritage') || q.includes('virasat') || q.includes('craft')) {
       return {
-        text: '॥ अतिथिदेवो भवः ॥ 🙏\n\nSWADESH Luxe par hum har grahak ko atithi maan kar seva karte hain. Humare sare products authentic Indian artisans, certified weavers, aur verified brands se directly aate hain.',
+        text: '॥ अतिथिदेवो भवः ॥ 🙏\n\nSWADESH Luxe par hum har customer ko atithi maan kar sammanit karte hain. Hamare pass Kashmir ki Pashmina, Jaipur ki Bandhani, Kanchipuram ki Pure Silk aur Bihar ki Madhubani jaise certified master artisans ke live products hain.',
         quickActions: [
-          { label: '🏛️ Virasat-e-Hind Crafts', query: 'virasat' },
-          { label: '🔥 Best Offers', query: 'offers and discount coupons' },
+          { label: '🏛️ View Sarees & Crafts', query: 'sarees' },
+          { label: '🔥 Festive Offers', query: 'live coupons and discount offers' },
         ],
       };
     }
 
-    // 9. WHATSAPP SUPPORT
-    if (q.includes('whatsapp') || q.includes('human') || q.includes('agent') || q.includes('call') || q.includes('help')) {
+    // 8. DIRECT LIVE BACKEND SEARCH FOR ANY PRODUCT / KEYWORD
+    try {
+      // Extract price constraints if user typed e.g. "under 2000" or "below 1000"
+      let maxPrice: string | undefined;
+      let minPrice: string | undefined;
+
+      const underMatch = q.match(/(?:under|below|less than|kam|se kam)\s*(?:₹|rs\.?|inr)?\s*(\d+)/i);
+      if (underMatch) maxPrice = underMatch[1];
+
+      const aboveMatch = q.match(/(?:above|more than|over|jyada|se jyada)\s*(?:₹|rs\.?|inr)?\s*(\d+)/i);
+      if (aboveMatch) minPrice = aboveMatch[1];
+
+      // Clean search term
+      let cleanTerm = q
+        .replace(/(?:show|dikhao|chahiye|dekhna|hai|mujhe|kya|batao|please|me|best|trending|top|under|below|above|\d+|rs|inr|₹)/gi, ' ')
+        .trim();
+      if (!cleanTerm || cleanTerm.length < 2) cleanTerm = q.trim();
+
+      const params = new URLSearchParams();
+      if (cleanTerm) params.set('search', cleanTerm);
+      if (maxPrice) params.set('maxPrice', maxPrice);
+      if (minPrice) params.set('minPrice', minPrice);
+      params.set('limit', '4');
+
+      let searchRes: any = await apiClient.get(`/products?${params.toString()}`);
+      let productsList = Array.isArray(searchRes) ? searchRes : (searchRes?.data || []);
+
+      // If no exact price-restricted matches, search without price limit
+      if (productsList.length === 0 && (maxPrice || minPrice)) {
+        searchRes = await apiClient.get(`/products?search=${encodeURIComponent(cleanTerm)}&limit=4`);
+        productsList = Array.isArray(searchRes) ? searchRes : (searchRes?.data || []);
+      }
+
+      // If still 0 products, fetch general catalog / trending products
+      if (productsList.length === 0) {
+        const featRes: any = await apiClient.get('/products?limit=4');
+        const featList = Array.isArray(featRes) ? featRes : (featRes?.data || []);
+        const formatted = featList.map(formatApiProduct);
+
+        return {
+          text: `Aapne poocha: "${rawQuery}". Is query ke liye exact match abhi available nahi hai, lekin yeh rahe live database ke **Top Trending Products** jo aap dekh sakte hain:`,
+          products: formatted,
+          quickActions: [
+            { label: '🔥 Live Active Coupons', query: 'live coupons and discount offers' },
+            { label: '💵 Check Doorstep COD', query: 'is COD available' },
+            { label: '👟 Footwear Collection', query: 'shoes' },
+          ],
+        };
+      }
+
+      // Products successfully found in live backend database!
+      const formatted = productsList.map(formatApiProduct);
       return {
-        text: 'Aap humare 24x7 Customer Concierge se direct WhatsApp par chat kar sakte hain! "24×7 Concierge" button par tap karein ya neeche click karein.',
+        text: `✨ Maine live backend catalog se aapke liye **${productsList.length} verified products** dhundhe hain:\n\nIn par click karke aap direct product details dekh sakte hain:`,
+        products: formatted,
         quickActions: [
-          { label: '💬 Open WhatsApp Support', query: 'open_whatsapp_action' },
-          { label: '🔥 View Offers', query: 'offers and discount coupons' },
+          { label: '🔥 Check Active Coupons', query: 'live coupons and discount offers' },
+          { label: '🚚 Delivery Details', query: 'delivery time' },
+          { label: '💬 WhatsApp Support', query: 'open_whatsapp_action' },
         ],
       };
+    } catch (err) {
+      console.error('Error fetching live product data', err);
     }
 
-    // DEFAULT
+    // Default polite response
     return {
-      text: `Aapne poocha: "${query}"\n\nMain aapki help kar sakta hoon orders track karne me, best discount coupons batane me, aur trending products recommend karne me. Aap inme se koi option chun sakte hain:`,
+      text: `Aapne poocha: "${rawQuery}"\n\nMain aapko store ke verified products khojne, discount coupons batane, aur orders track karne me madad kar sakta hoon. Aap inme se koi option chun sakte hain:`,
       quickActions: INITIAL_SUGGESTIONS.slice(0, 4),
-      products: FEATURED_PRODUCTS_KNOWLEDGE.slice(0, 2),
     };
   };
 
-  const handleSendMessage = (textToSend?: string) => {
+  const handleSendMessage = async (textToSend?: string) => {
     const query = (textToSend || inputText).trim();
     if (!query) return;
 
     if (query === 'open_whatsapp_action' || query === 'whatsapp support') {
       handleOpenWhatsApp('Namaste! I need help with my SWADESH shopping experience.');
+      return;
+    }
+
+    if (query === 'open orders') {
+      window.location.href = '/orders';
       return;
     }
 
@@ -264,8 +346,8 @@ export function StoreConciergeHub() {
     setInputText('');
     setIsTyping(true);
 
-    setTimeout(() => {
-      const botResponse = generateBotReply(query);
+    try {
+      const botResponse = await fetchLiveBotReply(query);
       const botMsg: Message = {
         id: `bot-${Date.now()}`,
         sender: 'bot',
@@ -276,8 +358,19 @@ export function StoreConciergeHub() {
       };
 
       setMessages((prev) => [...prev, botMsg]);
+    } catch (err) {
+      console.error('Error in Nova AI live reply', err);
+      const errorMsg: Message = {
+        id: `bot-${Date.now()}`,
+        sender: 'bot',
+        text: 'Kshama karein, network request me samasya aayi. Aap dobara try karein ya humare 24x7 WhatsApp concierge se turant connect karein!',
+        timestamp: 'Just now',
+        quickActions: INITIAL_SUGGESTIONS.slice(0, 3),
+      };
+      setMessages((prev) => [...prev, errorMsg]);
+    } finally {
       setIsTyping(false);
-    }, 600);
+    }
   };
 
   const handleResetChat = () => {
@@ -285,7 +378,7 @@ export function StoreConciergeHub() {
       {
         id: 'msg-init',
         sender: 'bot',
-        text: 'Chat reset ho gaya hai. Main aapki kya madad kar sakta hoon?\n\nNeeche diye options se shuru karein ya apna question type karein!',
+        text: 'Chat reset ho gaya hai. Main live backend database se connected hoon.\n\nNeeche diye options se shuru karein ya apna sawal type karein!',
         timestamp: 'Just now',
         quickActions: INITIAL_SUGGESTIONS,
       },
@@ -351,7 +444,7 @@ export function StoreConciergeHub() {
                 </h3>
                 <p className="text-[11px] text-white/80 font-medium mt-1 flex items-center gap-1">
                   <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  Online • Instant Store Help
+                  Live Store Data Connected
                 </p>
               </div>
             </div>
@@ -361,7 +454,7 @@ export function StoreConciergeHub() {
               <button
                 type="button"
                 onClick={() => setActiveModal('whatsapp')}
-                className="text-[10px] font-bold bg-white/15 hover:bg-white/25 px-2.5 py-1 rounded-full text-white flex items-center gap-1 transition-colors"
+                className="text-[10px] font-bold bg-white/15 hover:bg-white/25 px-2.5 py-1 rounded-full text-white flex items-center gap-1 transition-colors cursor-pointer"
                 title="Switch to WhatsApp Support"
               >
                 <MessageCircle className="w-3 h-3 fill-white" />
@@ -370,7 +463,7 @@ export function StoreConciergeHub() {
               <button
                 type="button"
                 onClick={handleResetChat}
-                className="p-1.5 rounded-xl hover:bg-white/10 text-white/80 hover:text-white transition-colors"
+                className="p-1.5 rounded-xl hover:bg-white/10 text-white/80 hover:text-white transition-colors cursor-pointer"
                 title="Reset conversation"
               >
                 <RotateCcw className="w-4 h-4" />
@@ -378,7 +471,7 @@ export function StoreConciergeHub() {
               <button
                 type="button"
                 onClick={() => setActiveModal('none')}
-                className="p-1.5 rounded-xl hover:bg-white/10 text-white/80 hover:text-white transition-colors"
+                className="p-1.5 rounded-xl hover:bg-white/10 text-white/80 hover:text-white transition-colors cursor-pointer"
                 title="Close chat"
               >
                 <X className="w-5 h-5" />
@@ -386,14 +479,14 @@ export function StoreConciergeHub() {
             </div>
           </div>
 
-          {/* Atithi Devo Bhava Micro Banner */}
-          <div className="bg-amber-500/10 dark:bg-amber-500/20 border-b border-amber-500/20 px-3.5 py-1.5 flex items-center justify-between text-[11px] text-amber-800 dark:text-amber-300 font-bold">
+          {/* Live Data Badge */}
+          <div className="bg-emerald-500/10 dark:bg-emerald-500/20 border-b border-emerald-500/20 px-3.5 py-1.5 flex items-center justify-between text-[11px] text-emerald-800 dark:text-emerald-300 font-bold">
             <span className="flex items-center gap-1">
-              <span>॥ अतिथिदेवो भवः ॥</span>
-              <span className="text-[10px] font-normal text-muted-foreground">• India's Own Luxury Experience</span>
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping" />
+              <span>⚡ Live Store Database Active</span>
             </span>
-            <span className="text-[10px] bg-amber-500/20 px-2 py-0.5 rounded-full font-black">
-              24×7 Active
+            <span className="text-[10px] bg-emerald-500/20 px-2 py-0.5 rounded-full font-black">
+              Real-time API
             </span>
           </div>
 
@@ -438,6 +531,7 @@ export function StoreConciergeHub() {
                     </div>
                   </div>
 
+                  {/* Live Product Cards */}
                   {msg.products && msg.products.length > 0 && (
                     <div className="space-y-2 pt-1">
                       {msg.products.map((prod) => (
@@ -492,11 +586,12 @@ export function StoreConciergeHub() {
             ))}
 
             {isTyping && (
-              <div className="flex gap-2.5 justify-start">
+              <div className="flex gap-2.5 justify-start items-center">
                 <div className="w-7 h-7 rounded-xl bg-primary text-white flex items-center justify-center shrink-0 shadow-xs">
                   <Bot className="w-3.5 h-3.5" />
                 </div>
-                <div className="p-3 rounded-2xl bg-card border border-border/80 rounded-tl-sm flex items-center gap-1.5 shadow-xs">
+                <div className="p-3 rounded-2xl bg-card border border-border/80 rounded-tl-sm flex items-center gap-2 shadow-xs">
+                  <span className="text-[11px] text-muted-foreground font-semibold">Live database se search ho raha hai...</span>
                   <span className="w-2 h-2 rounded-full bg-primary/60 animate-bounce" />
                   <span className="w-2 h-2 rounded-full bg-primary/60 animate-bounce [animation-delay:0.2s]" />
                   <span className="w-2 h-2 rounded-full bg-primary/60 animate-bounce [animation-delay:0.4s]" />
@@ -510,31 +605,38 @@ export function StoreConciergeHub() {
           <div className="px-3 py-2 bg-card border-t border-border/60 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
             <button
               type="button"
-              onClick={() => handleSendMessage('What are current discount offers?')}
+              onClick={() => handleSendMessage('Live discount coupons dikhao')}
               className="text-[10px] font-semibold px-2.5 py-1 rounded-full bg-muted/60 hover:bg-muted text-foreground whitespace-nowrap border shrink-0 cursor-pointer"
             >
-              🎉 20% OFF Code
+              🎉 Live Coupons
             </button>
             <button
               type="button"
-              onClick={() => handleSendMessage('Show all running shoes')}
+              onClick={() => handleSendMessage('Show running shoes under 3000')}
               className="text-[10px] font-semibold px-2.5 py-1 rounded-full bg-muted/60 hover:bg-muted text-foreground whitespace-nowrap border shrink-0 cursor-pointer"
             >
-              👟 Running Shoes
+              👟 Shoes Under ₹3,000
             </button>
             <button
               type="button"
-              onClick={() => handleSendMessage('Is Cash on Delivery COD available?')}
+              onClick={() => handleSendMessage('Sarees under 2500')}
               className="text-[10px] font-semibold px-2.5 py-1 rounded-full bg-muted/60 hover:bg-muted text-foreground whitespace-nowrap border shrink-0 cursor-pointer"
             >
-              💵 Cash on Delivery
+              🏛️ Sarees
             </button>
             <button
               type="button"
-              onClick={() => handleSendMessage('How does 7-day returns work?')}
+              onClick={() => handleSendMessage('Track my recent order')}
               className="text-[10px] font-semibold px-2.5 py-1 rounded-full bg-muted/60 hover:bg-muted text-foreground whitespace-nowrap border shrink-0 cursor-pointer"
             >
-              🔄 7-Day Returns
+              📦 Track Order
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSendMessage('Cash on Delivery policy')}
+              className="text-[10px] font-semibold px-2.5 py-1 rounded-full bg-muted/60 hover:bg-muted text-foreground whitespace-nowrap border shrink-0 cursor-pointer"
+            >
+              💵 COD Check
             </button>
           </div>
 
@@ -549,7 +651,7 @@ export function StoreConciergeHub() {
             <input
               ref={inputRef}
               type="text"
-              placeholder="Ask anything (e.g. delivery time, offers, shoes)..."
+              placeholder="Ask anything (e.g. running shoes, sarees under 2000, offers)..."
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               suppressHydrationWarning
@@ -558,7 +660,7 @@ export function StoreConciergeHub() {
             <Button
               type="submit"
               size="sm"
-              disabled={!inputText.trim()}
+              disabled={!inputText.trim() || isTyping}
               className="h-10 px-3.5 rounded-xl font-bold text-xs flex items-center gap-1 shrink-0 shadow-md cursor-pointer"
             >
               <Send className="w-3.5 h-3.5" />
@@ -581,7 +683,7 @@ export function StoreConciergeHub() {
                 <h4 className="font-black text-sm text-foreground flex items-center gap-1.5 flex-wrap">
                   <span>SWADESH Concierge</span>
                   <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-bold border border-emerald-500/20">
-                    +91 7898501472
+                    {DISPLAY_PHONE}
                   </span>
                   <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                 </h4>
@@ -644,13 +746,13 @@ export function StoreConciergeHub() {
 
           {/* Direct WhatsApp Action Link */}
           <a
-            href={`https://wa.me/917898501472?text=${encodeURIComponent('Namaste! I would like to connect with SWADESH customer concierge.')}`}
+            href={`https://wa.me/${CONCIERGE_PHONE}?text=${encodeURIComponent('Namaste! I would like to connect with SWADESH customer concierge.')}`}
             target="_blank"
             rel="noopener noreferrer"
             className="w-full h-8 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 font-bold text-[11px] flex items-center justify-center gap-1.5 border border-emerald-500/20 transition-colors"
           >
             <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Direct WhatsApp Chat (+91 7898501472)</span>
+            <span>Direct WhatsApp Chat ({DISPLAY_PHONE})</span>
           </a>
 
           {/* Preset Inquiries */}
