@@ -98,6 +98,7 @@ export function StoreConciergeHub() {
   const [activeModal, setActiveModal] = useState<'none' | 'chat' | 'whatsapp'>('none');
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [customWhatsAppMsg, setCustomWhatsAppMsg] = useState('');
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 'msg-1',
@@ -120,10 +121,12 @@ export function StoreConciergeHub() {
     }
   }, [activeModal, messages, isTyping]);
 
-  const handleOpenWhatsApp = (messageText: string) => {
-    const phone = '919876543210';
-    const encoded = encodeURIComponent(messageText);
+  const handleOpenWhatsApp = (messageText?: string) => {
+    const phone = '917898501472';
+    const finalMsg = messageText || customWhatsAppMsg.trim() || 'Namaste! I would like to connect with SWADESH customer concierge.';
+    const encoded = encodeURIComponent(finalMsg);
     window.open(`https://wa.me/${phone}?text=${encoded}`, '_blank');
+    setCustomWhatsAppMsg('');
     setActiveModal('none');
   };
 
@@ -568,20 +571,23 @@ export function StoreConciergeHub() {
       {/* 3. WHATSAPP CONCIERGE MODAL WINDOW */}
       {/* ======================================================== */}
       {activeModal === 'whatsapp' && (
-        <div className="w-[calc(100vw-32px)] sm:w-[380px] rounded-3xl border border-amber-500/30 bg-card p-5 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+        <div className="w-[calc(100vw-32px)] sm:w-[390px] rounded-3xl border border-amber-500/30 bg-card p-5 shadow-2xl animate-in fade-in zoom-in-95 duration-200 space-y-3">
           <div className="flex items-start justify-between pb-3 border-b border-border/60">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-600 text-white flex items-center justify-center font-black text-xl shadow-md">
                 🇮🇳
               </div>
               <div>
-                <h4 className="font-black text-sm text-foreground flex items-center gap-1.5">
-                  <span>SWADESH Concierge (24×7)</span>
+                <h4 className="font-black text-sm text-foreground flex items-center gap-1.5 flex-wrap">
+                  <span>SWADESH Concierge</span>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-bold border border-emerald-500/20">
+                    +91 7898501472
+                  </span>
                   <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                 </h4>
                 <p className="text-[11px] text-amber-600 dark:text-amber-400 font-bold flex items-center gap-1">
                   <span>॥ अतिथिदेवो भवः ॥</span>
-                  <span className="text-muted-foreground font-normal">• Namaste! How may we serve you?</span>
+                  <span className="text-muted-foreground font-normal">• 24×7 Direct Customer Care</span>
                 </p>
               </div>
             </div>
@@ -607,7 +613,48 @@ export function StoreConciergeHub() {
             </div>
           </div>
 
-          <div className="py-3 space-y-2">
+          {/* Custom Message Input Bar */}
+          <div className="space-y-1.5 pt-1">
+            <label className="text-[11px] font-bold text-foreground block">
+              💬 Type your message (अपना संदेश लिखें):
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={customWhatsAppMsg}
+                onChange={(e) => setCustomWhatsAppMsg(e.target.value)}
+                placeholder="Type your message here for support..."
+                className="flex-1 h-9 px-3 text-xs rounded-xl border bg-background font-medium focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleOpenWhatsApp();
+                  }
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => handleOpenWhatsApp()}
+                className="h-9 px-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs flex items-center gap-1 shrink-0 shadow-md cursor-pointer transition-all active:scale-95"
+              >
+                <Send className="w-3.5 h-3.5" /> Send
+              </button>
+            </div>
+          </div>
+
+          {/* Direct WhatsApp Action Link */}
+          <a
+            href={`https://wa.me/917898501472?text=${encodeURIComponent('Namaste! I would like to connect with SWADESH customer concierge.')}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full h-8 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 font-bold text-[11px] flex items-center justify-center gap-1.5 border border-emerald-500/20 transition-colors"
+          >
+            <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Direct WhatsApp Chat (+91 7898501472)</span>
+          </a>
+
+          {/* Preset Inquiries */}
+          <div className="space-y-1.5">
             <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
               Quick Inquiries (तुरंत सहायता चुनें):
             </p>

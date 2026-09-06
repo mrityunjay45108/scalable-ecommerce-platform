@@ -588,7 +588,7 @@ export default function OrderDetailPage() {
                 ✓ 100% असली व प्रामाणिक
               </span>
               <a
-                href={`https://wa.me/919876543210?text=${encodeURIComponent(`नमस्ते भारत बाजार! मुझे मेरे ऑर्डर #${order.orderNumber} के बारे में सहायता चाहिए।`)}`}
+                href={`https://wa.me/917898501472?text=${encodeURIComponent(`Namaste SWADESH Luxe! I need assistance with my order #${order.orderNumber}.`)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-primary font-bold hover:underline"
