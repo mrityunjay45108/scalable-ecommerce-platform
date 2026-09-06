@@ -677,3 +677,16 @@ export interface PaymentTransactionRecord {
   createdAt: string;
   updatedAt: string;
 }
+
+// --- Iteration 25: Shipping & Address Validation Types ---
+export interface IndianPostalAddress {
+  fullName: string;
+  phoneNumber: string;
+  addressLine1: string;
+  addressLine2?: string;
+  landmark?: string;
+  city: string;
+  state: string;
+  postalCode: string; // 6-digit Indian PIN code
+  isDefault?: boolean;
+}
