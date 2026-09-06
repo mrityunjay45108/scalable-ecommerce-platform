@@ -168,7 +168,6 @@ export default function AdminProductsPage() {
 
       const existingImgs = editingProduct?.images || [];
       const cleanExisting = existingImgs.map((img, idx) => ({
-        id: img.id,
         url: img.url,
         publicId: img.publicId || `novastore/photo-${idx}`,
         altText: img.altText || title,
@@ -195,7 +194,6 @@ export default function AdminProductsPage() {
       const finalVariants =
         editingProduct?.variants && editingProduct.variants.length > 0
           ? editingProduct.variants.map((v, i) => ({
-              id: v.id,
               sku: (i === 0 ? (sku.trim() || v.sku) : v.sku) || `SKU-${i}`,
               title: v.title || 'Standard',
               price: Number(v.price) || parseFloat(basePrice) || 0,

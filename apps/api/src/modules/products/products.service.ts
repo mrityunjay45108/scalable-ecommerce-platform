@@ -292,92 +292,136 @@ export class ProductsService {
 
         const updatedVariantIds = new Set<string>();
 
+        const matchMap = new Map<any, any>();
+        let allMatched = true;
+
         for (const v of dto.variants) {
           const match = existingVariants.find(
             (ev) => (v.id && ev.id === v.id) || ev.sku === v.sku,
           );
-
           if (match) {
+            matchMap.set(v, match);
             updatedVariantIds.add(match.id);
-            await tx.productVariant.update({
-              where: { id: match.id },
-              data: {
-                sku: v.sku,
-                title: v.title,
-                price: v.price,
-                stockQuantity: v.stockQuantity,
-                attributes: v.attributes || {},
-                deletedAt: null,
-              },
-            });
-
-            await tx.inventory.upsert({
-              where: { variantId: match.id },
-              update: { quantity: v.stockQuantity },
-              create: {
-                variantId: match.id,
-                quantity: v.stockQuantity,
-                reserved: 0,
-                lowStockAlert: 10,
-              },
-            });
           } else {
-            // Check if another variant with this SKU exists in DB
-            const existingSkuConflict = await tx.productVariant.findUnique({
-              where: { sku: v.sku },
-            });
-            if (existingSkuConflict) {
-              if (existingSkuConflict.deletedAt) {
-                await tx.productVariant.update({
-                  where: { id: existingSkuConflict.id },
-                  data: { sku: `${existingSkuConflict.sku}-deleted-${Date.now()}` },
-                });
-              } else if (existingSkuConflict.productId === id) {
-                await tx.productVariant.update({
-                  where: { id: existingSkuConflict.id },
+            allMatched = false;
+          }
+        }
+
+        if (allMatched) {
+          // Fast parallelized execution for existing variants
+          await Promise.all(
+            dto.variants.map((v) => {
+              const match = matchMap.get(v);
+              return Promise.all([
+                tx.productVariant.update({
+                  where: { id: match.id },
                   data: {
+                    sku: v.sku,
                     title: v.title,
                     price: v.price,
                     stockQuantity: v.stockQuantity,
                     attributes: v.attributes || {},
                     deletedAt: null,
                   },
-                });
-                await tx.inventory.upsert({
-                  where: { variantId: existingSkuConflict.id },
+                }),
+                tx.inventory.upsert({
+                  where: { variantId: match.id },
                   update: { quantity: v.stockQuantity },
                   create: {
-                    variantId: existingSkuConflict.id,
+                    variantId: match.id,
                     quantity: v.stockQuantity,
                     reserved: 0,
                     lowStockAlert: 10,
                   },
-                });
-                updatedVariantIds.add(existingSkuConflict.id);
-                continue;
-              } else {
-                throw new ConflictException(`Variant SKU "${v.sku}" already belongs to another product`);
-              }
-            }
+                }),
+              ]);
+            }),
+          );
+        } else {
+          for (const v of dto.variants) {
+            const match = matchMap.get(v);
 
-            const createdVariant = await tx.productVariant.create({
-              data: {
-                productId: id,
-                sku: v.sku,
-                title: v.title,
-                price: v.price,
-                stockQuantity: v.stockQuantity,
-                attributes: v.attributes || {},
-                inventory: {
-                  create: {
-                    quantity: v.stockQuantity,
-                    reserved: 0,
-                    lowStockAlert: 10,
+            if (match) {
+              await tx.productVariant.update({
+                where: { id: match.id },
+                data: {
+                  sku: v.sku,
+                  title: v.title,
+                  price: v.price,
+                  stockQuantity: v.stockQuantity,
+                  attributes: v.attributes || {},
+                  deletedAt: null,
+                },
+              });
+
+              await tx.inventory.upsert({
+                where: { variantId: match.id },
+                update: { quantity: v.stockQuantity },
+                create: {
+                  variantId: match.id,
+                  quantity: v.stockQuantity,
+                  reserved: 0,
+                  lowStockAlert: 10,
+                },
+              });
+            } else {
+              // Check if another variant with this SKU exists in DB
+              const existingSkuConflict = await tx.productVariant.findUnique({
+                where: { sku: v.sku },
+              });
+              if (existingSkuConflict) {
+                if (existingSkuConflict.deletedAt) {
+                  await tx.productVariant.update({
+                    where: { id: existingSkuConflict.id },
+                    data: { sku: `${existingSkuConflict.sku}-deleted-${Date.now()}` },
+                  });
+                } else if (existingSkuConflict.productId === id) {
+                  await tx.productVariant.update({
+                    where: { id: existingSkuConflict.id },
+                    data: {
+                      title: v.title,
+                      price: v.price,
+                      stockQuantity: v.stockQuantity,
+                      attributes: v.attributes || {},
+                      deletedAt: null,
+                    },
+                  });
+                  await tx.inventory.upsert({
+                    where: { variantId: existingSkuConflict.id },
+                    update: { quantity: v.stockQuantity },
+                    create: {
+                      variantId: existingSkuConflict.id,
+                      quantity: v.stockQuantity,
+                      reserved: 0,
+                      lowStockAlert: 10,
+                    },
+                  });
+                  updatedVariantIds.add(existingSkuConflict.id);
+                  continue;
+                } else {
+                  throw new ConflictException(`Variant SKU "${v.sku}" already belongs to another product`);
+                }
+              }
+
+              const createdVariant = await tx.productVariant.create({
+                data: {
+                  productId: id,
+                  sku: v.sku,
+                  title: v.title,
+                  price: v.price,
+                  stockQuantity: v.stockQuantity,
+                  attributes: v.attributes || {},
+                  inventory: {
+                    create: {
+                      quantity: v.stockQuantity,
+                      reserved: 0,
+                      lowStockAlert: 10,
+                    },
                   },
                 },
-              },
-            });
-            updatedVariantIds.add(createdVariant.id);
+              });
+              updatedVariantIds.add(createdVariant.id);
+            }
           }
         }
 

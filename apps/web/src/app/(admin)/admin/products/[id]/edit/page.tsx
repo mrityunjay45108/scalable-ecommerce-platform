@@ -461,7 +461,6 @@ export default function EditProductPage() {
       const finalVariants =
         variants.length > 0
           ? variants.map((v) => ({
-              id: v.id || undefined,
               sku: v.sku || `${code}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`,
               title: v.title || 'Standard',
               price: Number(v.price) > 0 ? Number(v.price) : numericBasePrice,
@@ -473,7 +472,6 @@ export default function EditProductPage() {
             }))
           : [
               {
-                id: singleVariantId || undefined,
                 sku: singleSku.trim() || `${code}-STD`,
                 title: 'Standard',
                 price: numericBasePrice,
