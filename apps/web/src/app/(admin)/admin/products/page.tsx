@@ -109,7 +109,7 @@ export default function AdminProductsPage() {
     setComparePrice('');
     setIsPublished(true);
     setIsFeatured(false);
-    setImageUrl('https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800');
+    setImageUrl('');
     setBrand('');
     setMaterial('');
     setCountryOfOrigin('');
@@ -399,15 +399,14 @@ export default function AdminProductsPage() {
                           <ExternalLink className="w-3.5 h-3.5" />
                         </Link>
 
-                        {/* Edit Modal */}
-                        <button
-                          type="button"
-                          onClick={() => handleOpenEdit(p)}
+                        {/* Full Edit Studio */}
+                        <Link
+                          href={`/admin/products/${p.id}/edit`}
                           className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground"
-                          title="Edit Product"
+                          title="Full Edit Studio"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
-                        </button>
+                        </Link>
 
                         {/* Delete */}
                         <button
