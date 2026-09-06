@@ -32,6 +32,7 @@ function ProductsContent() {
   const currentMinPrice = searchParams.get('minPrice') || '';
   const currentMaxPrice = searchParams.get('maxPrice') || '';
   const currentRating = searchParams.get('rating') || '';
+  const currentDiscount = searchParams.get('discount') || '';
   const inStockOnly = searchParams.get('inStockOnly') === 'true';
 
   // Synchronize local search with URL param
@@ -129,11 +130,11 @@ function ProductsContent() {
   };
 
   const hasActiveFilters = Boolean(
-    initialSearch || currentCategory || currentMinPrice || currentMaxPrice || currentRating || inStockOnly,
+    initialSearch || currentCategory || currentMinPrice || currentMaxPrice || currentRating || currentDiscount || inStockOnly,
   );
 
   return (
-    <div className="container mx-auto px-2 sm:px-4 py-6 space-y-5">
+    <div className="container mx-auto px-2 sm:px-4 py-6 pb-20 sm:pb-8 space-y-5">
       {/* Myntra Breadcrumb & Category Title */}
       <div className="space-y-1.5 pb-1">
         <nav className="flex items-center gap-1.5 text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
@@ -219,38 +220,44 @@ function ProductsContent() {
         <div className="flex flex-wrap items-center gap-2 pt-1">
           <span className="text-xs font-bold text-muted-foreground">Active Filters:</span>
           {initialSearch && (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-border/80 bg-card text-foreground text-xs font-semibold shadow-2xs">
               Search: "{initialSearch}"
-              <button onClick={() => removeFilter('search')} className="hover:text-primary/70"><X className="w-3.5 h-3.5" /></button>
+              <button onClick={() => removeFilter('search')} className="text-muted-foreground hover:text-foreground cursor-pointer"><X className="w-3.5 h-3.5" /></button>
             </span>
           )}
           {currentCategory && (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-border/80 bg-card text-foreground text-xs font-semibold shadow-2xs">
               Category: {currentCategory}
-              <button onClick={() => removeFilter('categorySlug')} className="hover:text-primary/70"><X className="w-3.5 h-3.5" /></button>
+              <button onClick={() => removeFilter('categorySlug')} className="text-muted-foreground hover:text-foreground cursor-pointer"><X className="w-3.5 h-3.5" /></button>
             </span>
           )}
           {(currentMinPrice || currentMaxPrice) && (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold font-mono">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-border/80 bg-card text-foreground text-xs font-semibold shadow-2xs font-mono">
               Price: ₹{currentMinPrice || '0'} - ₹{currentMaxPrice || '∞'}
-              <button onClick={() => { removeFilter('minPrice'); removeFilter('maxPrice'); }} className="hover:text-primary/70"><X className="w-3.5 h-3.5" /></button>
+              <button onClick={() => { removeFilter('minPrice'); removeFilter('maxPrice'); }} className="text-muted-foreground hover:text-foreground cursor-pointer"><X className="w-3.5 h-3.5" /></button>
+            </span>
+          )}
+          {currentDiscount && (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-border/80 bg-card text-foreground text-xs font-semibold shadow-2xs">
+              Discount: {currentDiscount}%+
+              <button onClick={() => removeFilter('discount')} className="text-muted-foreground hover:text-foreground cursor-pointer"><X className="w-3.5 h-3.5" /></button>
             </span>
           )}
           {currentRating && (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-border/80 bg-card text-foreground text-xs font-semibold shadow-2xs">
               Rating: {currentRating}★+
-              <button onClick={() => removeFilter('rating')} className="hover:text-primary/70"><X className="w-3.5 h-3.5" /></button>
+              <button onClick={() => removeFilter('rating')} className="text-muted-foreground hover:text-foreground cursor-pointer"><X className="w-3.5 h-3.5" /></button>
             </span>
           )}
           {inStockOnly && (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-border/80 bg-card text-foreground text-xs font-semibold shadow-2xs">
               In Stock Only
-              <button onClick={() => removeFilter('inStockOnly')} className="hover:text-primary/70"><X className="w-3.5 h-3.5" /></button>
+              <button onClick={() => removeFilter('inStockOnly')} className="text-muted-foreground hover:text-foreground cursor-pointer"><X className="w-3.5 h-3.5" /></button>
             </span>
           )}
           <button
             onClick={handleClearFilters}
-            className="text-xs text-rose-600 font-black hover:underline ml-2 uppercase tracking-wide"
+            className="text-xs text-rose-600 hover:text-rose-700 font-black uppercase tracking-wider ml-2 cursor-pointer transition-colors"
           >
             Clear All
           </button>
