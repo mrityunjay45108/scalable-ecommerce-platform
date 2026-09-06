@@ -601,7 +601,7 @@ export class CartService {
 
       if (coupon) {
         // If logged-in user has already used this coupon, evict from Redis and skip
-        if (rawCart?.userId) {
+        if (rawCart?.userId && this.prisma.couponUsage?.count) {
           const perUserLimit = coupon.perUserLimit ?? 1;
           const userUsageCount = await this.prisma.couponUsage.count({
             where: {

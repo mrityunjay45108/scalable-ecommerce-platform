@@ -62,6 +62,9 @@ describe('CartService - Calculations & Security', () => {
     coupon: {
       findFirst: jest.fn(),
     },
+    couponUsage: {
+      count: jest.fn().mockResolvedValue(0),
+    },
   };
 
   const mockRedisService = {
@@ -99,7 +102,7 @@ describe('CartService - Calculations & Security', () => {
             id: 'item-1',
             cartId: 'cart-1',
             variantId: 'var-1',
-            quantity: 2, // 2 * $50 = $100
+            quantity: 20, // 20 * $50 = $1000
             variant: mockVariant1,
           },
         ],
@@ -110,18 +113,18 @@ describe('CartService - Calculations & Security', () => {
 
       const result = await service.getOrCreateCart('user-1');
 
-      expect(result.subtotal).toBe(100.0);
-      expect(result.totalItems).toBe(2);
+      expect(result.subtotal).toBe(1000.0);
+      expect(result.totalItems).toBe(20);
       expect(result.discountAmount).toBe(0);
-      // Free shipping for subtotal >= 100
+      // Free shipping for subtotal >= 999
       expect(result.shippingAmount).toBe(0);
-      // 8% of 100 = 8.00
-      expect(result.estimatedTax).toBe(8.0);
-      // 100 + 0 + 8 = 108.00
-      expect(result.totalAmount).toBe(108.0);
+      // Inclusive 18% GST: 1000 - 1000/1.18 = 152.54
+      expect(result.estimatedTax).toBe(152.54);
+      // 1000 + 0 = 1000.00
+      expect(result.totalAmount).toBe(1000.0);
     });
 
-    it('should charge $10 shipping for subtotal under $100', async () => {
+    it('should charge 99 shipping for subtotal under 999', async () => {
       const mockCart = {
         id: 'cart-1',
         userId: 'user-1',
@@ -142,11 +145,11 @@ describe('CartService - Calculations & Security', () => {
       const result = await service.getOrCreateCart('user-1');
 
       expect(result.subtotal).toBe(50.0);
-      expect(result.shippingAmount).toBe(10.0);
-      // 8% of 50 = 4.00
-      expect(result.estimatedTax).toBe(4.0);
-      // 50 + 10 + 4 = 64.00
-      expect(result.totalAmount).toBe(64.0);
+      expect(result.shippingAmount).toBe(99.0);
+      // Inclusive 18% GST: 50 - 50/1.18 = 7.63
+      expect(result.estimatedTax).toBe(7.63);
+      // 50 + 99 = 149.00
+      expect(result.totalAmount).toBe(149.0);
     });
   });
 
@@ -187,9 +190,9 @@ describe('CartService - Calculations & Security', () => {
       expect(result.subtotal).toBe(300.0);
       expect(result.discountAmount).toBe(40.0); // Capped at $40
       expect(result.coupon?.code).toBe('SAVE20');
-      // Taxable = 300 - 40 = 260. Tax (8%) = 20.80. Shipping = 0. Total = 280.80
-      expect(result.estimatedTax).toBe(20.8);
-      expect(result.totalAmount).toBe(280.8);
+      // Taxable = 300 - 40 = 260. Shipping = 99 (< 999). Tax (inclusive 18%) = 39.66. Total = 359.00
+      expect(result.estimatedTax).toBe(39.66);
+      expect(result.totalAmount).toBe(359.0);
     });
 
     it('should correctly calculate fixed amount discount', async () => {
@@ -224,9 +227,9 @@ describe('CartService - Calculations & Security', () => {
       const result = await service.getOrCreateCart('user-1', 'FLAT25');
 
       expect(result.discountAmount).toBe(25.0);
-      // Taxable = 100 - 25 = 75. Shipping = 0 (subtotal is 100). Tax (8%) = 6.00. Total = 81.00
-      expect(result.estimatedTax).toBe(6.0);
-      expect(result.totalAmount).toBe(81.0);
+      // Taxable = 100 - 25 = 75. Shipping = 99 (< 999). Tax (inclusive 18%) = 11.44. Total = 174.00
+      expect(result.estimatedTax).toBe(11.44);
+      expect(result.totalAmount).toBe(174.0);
     });
   });
 

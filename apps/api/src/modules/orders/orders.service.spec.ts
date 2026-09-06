@@ -59,10 +59,10 @@ describe('OrdersService - Complete Order Lifecycle & Snapshot Integrity', () => 
     userId: 'user-1',
     addressId: 'addr-1',
     subtotal: 300.0,
-    tax: 24.0,
-    shippingCost: 0.0,
+    tax: 45.76,
+    shippingCost: 99.0,
     discountAmount: 0.0,
-    totalAmount: 324.0,
+    totalAmount: 399.0,
     status: OrderStatus.PENDING_PAYMENT,
     shippingAddress: mockAddress,
     items: [
@@ -83,8 +83,8 @@ describe('OrdersService - Complete Order Lifecycle & Snapshot Integrity', () => 
       id: 'pay-1',
       orderId: 'ord-123',
       provider: PaymentProvider.STRIPE,
-      amount: 324.0,
-      currency: 'USD',
+      amount: 399.0,
+      currency: 'INR',
       status: PaymentStatus.PENDING,
     },
     createdAt: new Date(),
@@ -174,7 +174,7 @@ describe('OrdersService - Complete Order Lifecycle & Snapshot Integrity', () => 
         expect.objectContaining({
           data: expect.objectContaining({
             userId: 'user-1',
-            totalAmount: 324.0,
+            totalAmount: 399.0,
             items: {
               create: [
                 expect.objectContaining({
@@ -206,7 +206,7 @@ describe('OrdersService - Complete Order Lifecycle & Snapshot Integrity', () => 
       const result = await service.findUserOrders('user-1', { page: 1, limit: 10 });
 
       expect(result.data).toHaveLength(1);
-      expect(result.data[0].totalAmount).toBe(324.0);
+      expect(result.data[0].totalAmount).toBe(399.0);
       expect(result.data[0].items[0].variantTitle).toBe('Space Gray / 256GB');
     });
 
