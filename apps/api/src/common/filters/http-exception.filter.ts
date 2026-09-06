@@ -1,3 +1,4 @@
+/** Global HTTP Exception Filter with structured logging and environment-aware messages */
 import {
   ExceptionFilter,
   Catch,
