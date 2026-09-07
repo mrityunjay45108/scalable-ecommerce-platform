@@ -385,22 +385,22 @@ export function StoreConciergeHub() {
   };
 
   return (
-    <div className="fixed bottom-16 sm:bottom-6 right-4 sm:right-6 z-50 select-none flex flex-col items-end">
+    <div className="fixed bottom-18 sm:bottom-6 right-3 sm:right-6 z-50 select-none flex flex-col items-end">
       {/* ======================================================== */}
       {/* 1. COLLISION-FREE VERTICAL STACK (When both are closed) */}
       {/* ======================================================== */}
       {activeModal === 'none' && (
-        <div className="flex flex-col items-end gap-2.5 animate-in fade-in slide-in-from-bottom-2 duration-200">
+        <div className="flex flex-col items-end gap-2 animate-in fade-in slide-in-from-bottom-2 duration-200">
           {/* Button 1 (Top): Ask Nova AI Store Assistant */}
           <button
             type="button"
             suppressHydrationWarning
             onClick={() => setActiveModal('chat')}
-            className="group relative flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 hover:from-blue-700 hover:to-indigo-700 text-white px-4 py-2.5 shadow-xl hover:shadow-indigo-500/30 hover:scale-105 active:scale-95 transition-all border border-white/20 cursor-pointer"
+            className="group relative flex items-center gap-1.5 sm:gap-2 rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 hover:from-blue-700 hover:to-indigo-700 text-white px-3 sm:px-4 py-1.5 sm:py-2.5 shadow-xl hover:shadow-indigo-500/30 hover:scale-105 active:scale-95 transition-all border border-white/20 cursor-pointer"
             aria-label="Open Nova AI Store Assistant"
           >
-            <Sparkles className="w-4 h-4 text-amber-300 fill-amber-300 animate-pulse" />
-            <span className="text-xs font-black tracking-wide">Ask Nova AI</span>
+            <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-300 fill-amber-300 animate-pulse" />
+            <span className="text-[11px] sm:text-xs font-black tracking-wide">Ask Nova AI</span>
             <span className="flex h-2 w-2 relative">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
@@ -412,11 +412,11 @@ export function StoreConciergeHub() {
             type="button"
             suppressHydrationWarning
             onClick={() => setActiveModal('whatsapp')}
-            className="group relative flex items-center gap-2 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white px-4 py-2.5 shadow-xl hover:shadow-emerald-500/30 hover:scale-105 active:scale-95 transition-all border border-white/20 cursor-pointer"
+            className="group relative flex items-center gap-1.5 sm:gap-2 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white px-3 sm:px-4 py-1.5 sm:py-2.5 shadow-xl hover:shadow-emerald-500/30 hover:scale-105 active:scale-95 transition-all border border-white/20 cursor-pointer"
             aria-label="Open 24x7 WhatsApp Customer Concierge"
           >
-            <MessageCircle className="w-4 h-4 fill-white text-emerald-600" />
-            <span className="text-xs font-black tracking-wide">24×7 Concierge 💬</span>
+            <MessageCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-white text-emerald-600" />
+            <span className="text-[11px] sm:text-xs font-black tracking-wide">24×7 Concierge 💬</span>
             <span className="flex h-2 w-2 relative">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />

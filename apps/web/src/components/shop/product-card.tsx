@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Heart, Star, Share2, Check } from 'lucide-react';
+import { Heart, Star, Share2, Check, ShoppingBag } from 'lucide-react';
 import { ProductDto } from '@ecommerce/types';
 import { formatPrice } from '@/lib/utils';
 import { useCart } from '@/lib/cart-context';
@@ -19,6 +19,7 @@ export function ProductCard({ product }: ProductCardProps) {
   const [isCopied, setIsCopied] = useState(false);
   const [addingVariantId, setAddingVariantId] = useState<string | null>(null);
   const [addedSuccessId, setAddedSuccessId] = useState<string | null>(null);
+  const [showMobileSizes, setShowMobileSizes] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
 
   const specs = parseProductSpecs(product.description || '', product.category?.name);
@@ -217,8 +218,8 @@ export function ProductCard({ product }: ProductCardProps) {
               <span>{isWishlisted ? 'Wishlisted' : 'Wishlist'}</span>
             </button>
 
-            {/* Myntra Sizes Bar */}
-            {product.variants && product.variants.length > 0 && (
+            {/* Myntra Sizes Bar or Direct Add */}
+            {product.variants && product.variants.length > 1 ? (
               <div className="space-y-1">
                 <div className="flex items-center justify-between text-[10px]">
                   <span className="font-bold uppercase tracking-wider text-muted-foreground">
@@ -242,7 +243,7 @@ export function ProductCard({ product }: ProductCardProps) {
                         key={v.id}
                         disabled={isOut || isAdding}
                         onClick={(e) => handleSelectSize(e, v.id)}
-                        className={`h-6 px-1.5 min-w-[24px] rounded text-[10px] font-bold border transition-all flex items-center justify-center ${
+                        className={`h-6 px-1.5 min-w-[24px] rounded text-[10px] font-bold border transition-all flex items-center justify-center cursor-pointer ${
                           isSuccess
                             ? 'border-emerald-600 bg-emerald-600 text-white'
                             : isOut
@@ -257,6 +258,24 @@ export function ProductCard({ product }: ProductCardProps) {
                   })}
                 </div>
               </div>
+            ) : (
+              <button
+                type="button"
+                disabled={addingVariantId !== null || (product.variants?.[0]?.availableStock ?? 1) <= 0}
+                onClick={(e) => {
+                  if (product.variants?.[0]) {
+                    handleSelectSize(e, product.variants[0].id);
+                  }
+                }}
+                className={`w-full py-1.5 px-3 rounded text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer ${
+                  addedSuccessId
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-primary hover:bg-primary/90 text-white'
+                }`}
+              >
+                <ShoppingBag className="w-3.5 h-3.5" />
+                <span>{addedSuccessId ? '✓ Added' : addingVariantId ? 'Adding...' : '+ Add to Bag'}</span>
+              </button>
             )}
           </div>
         </div>
@@ -264,7 +283,7 @@ export function ProductCard({ product }: ProductCardProps) {
         {/* ======================================================= */}
         {/* 3. MYNTRA PRODUCT METADATA (Brand, Subtitle, Price Row) */}
         {/* ======================================================= */}
-        <div className="p-3 space-y-0.5">
+        <div className="p-2.5 sm:p-3 space-y-0.5">
           {/* Brand Name (Bold Uppercase) */}
           <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-foreground truncate">
             {brandName}
@@ -291,6 +310,89 @@ export function ProductCard({ product }: ProductCardProps) {
               <span className="text-xs font-bold text-[#ff905a] dark:text-orange-400">
                 ({discountPercent}% OFF)
               </span>
+            )}
+          </div>
+
+          {/* ======================================================= */}
+          {/* 4. MOBILE DIRECT TOUCH ACTION BAR (ADD TO BAG / SIZES) */}
+          {/* ======================================================= */}
+          <div className="pt-2 sm:hidden">
+            {product.variants && product.variants.length > 1 ? (
+              showMobileSizes ? (
+                <div className="space-y-1.5 p-1.5 rounded-lg bg-muted/50 border border-border/80 animate-in fade-in duration-150">
+                  <div className="flex items-center justify-between text-[10px]">
+                    <span className="font-extrabold uppercase tracking-wider text-muted-foreground">
+                      Select Size:
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setShowMobileSizes(false);
+                      }}
+                      className="text-muted-foreground hover:text-foreground text-[10px] font-black px-1.5 py-0.5 rounded bg-muted cursor-pointer"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {product.variants.slice(0, 6).map((v) => {
+                      const isOut = v.availableStock <= 0;
+                      const isAdding = addingVariantId === v.id;
+                      const isSuccess = addedSuccessId === v.id;
+
+                      return (
+                        <button
+                          key={v.id}
+                          disabled={isOut || isAdding}
+                          onClick={(e) => handleSelectSize(e, v.id)}
+                          className={`h-6 px-2 min-w-[28px] rounded text-[10px] font-bold border transition-all flex items-center justify-center cursor-pointer ${
+                            isSuccess
+                              ? 'border-emerald-600 bg-emerald-600 text-white'
+                              : isOut
+                              ? 'border-border/40 opacity-40 line-through cursor-not-allowed bg-muted'
+                              : 'border-border bg-card hover:border-primary hover:bg-primary hover:text-primary-foreground'
+                          }`}
+                        >
+                          {isAdding ? '...' : isSuccess ? '✓' : v.title}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setShowMobileSizes(true);
+                  }}
+                  className="w-full h-8 rounded-lg bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/30 dark:hover:bg-rose-950/50 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900 font-extrabold text-[11px] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <ShoppingBag className="w-3.5 h-3.5" />
+                  <span>+ ADD TO BAG</span>
+                </button>
+              )
+            ) : (
+              <button
+                type="button"
+                disabled={addingVariantId !== null || (product.variants?.[0]?.availableStock ?? 1) <= 0}
+                onClick={(e) => {
+                  if (product.variants?.[0]) {
+                    handleSelectSize(e, product.variants[0].id);
+                  }
+                }}
+                className={`w-full h-8 rounded-lg font-extrabold text-[11px] flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+                  addedSuccessId
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-gradient-to-r from-rose-600 to-orange-600 hover:from-rose-700 hover:to-orange-700 text-white shadow-2xs'
+                }`}
+              >
+                <ShoppingBag className="w-3.5 h-3.5" />
+                <span>{addedSuccessId ? '✓ ADDED TO BAG' : addingVariantId ? 'ADDING...' : '+ ADD TO BAG'}</span>
+              </button>
             )}
           </div>
         </div>

@@ -420,7 +420,7 @@ const getFallbackProduct = (rawSlug: string): ProductDto => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-12">
+    <div className="container mx-auto px-4 py-6 space-y-12 pb-24 sm:pb-12">
       {/* BREADCRUMB NAVIGATION */}
       <nav className="flex items-center gap-1.5 text-xs text-muted-foreground pb-2 font-medium flex-wrap">
         <Link href="/" className="hover:text-primary transition-colors">Home</Link>
@@ -1351,6 +1351,49 @@ const getFallbackProduct = (rawSlug: string): ProductDto => {
           </div>
         </div>
       )}
+
+      {/* ======================================================= */}
+      {/* 11. MOBILE STICKY BOTTOM ACTION BAR (MYNTRA STYLE)      */}
+      {/* ======================================================= */}
+      <div className="fixed bottom-0 inset-x-0 z-40 bg-background/98 backdrop-blur-md border-t border-border/80 px-3 py-2.5 sm:hidden flex items-center gap-2.5 shadow-2xl safe-area-bottom">
+        {/* Mobile Wishlist Button */}
+        <button
+          type="button"
+          onClick={() => toggleWishlist(product.id)}
+          className={`h-11 w-11 rounded-xl flex items-center justify-center shrink-0 border transition-all shadow-xs cursor-pointer ${
+            isWishlisted
+              ? 'border-rose-500 bg-rose-500 text-white'
+              : 'border-border bg-card text-foreground hover:bg-muted'
+          }`}
+          aria-label="Wishlist"
+          title={isWishlisted ? 'Remove from Wishlist' : 'Add to Wishlist'}
+        >
+          <Heart className={`w-5 h-5 ${isWishlisted ? 'fill-current' : ''}`} />
+        </button>
+
+        {/* Mobile Add to Bag Button */}
+        <Button
+          type="button"
+          variant="outline"
+          disabled={isOutOfStock || isAdding || isBuyingNow}
+          onClick={handleAddToCart}
+          className="flex-1 h-11 rounded-xl gap-1.5 font-black text-xs border-2 border-primary/50 text-primary bg-primary/5 hover:bg-primary/10 active:scale-95 transition-all shadow-xs cursor-pointer"
+        >
+          <ShoppingBag className="w-4 h-4" />
+          <span>{isAdding ? 'ADDING...' : 'ADD TO BAG'}</span>
+        </Button>
+
+        {/* Mobile Buy Now Button */}
+        <Button
+          type="button"
+          disabled={isOutOfStock || isAdding || isBuyingNow}
+          onClick={handleBuyNow}
+          className="flex-1 h-11 rounded-xl gap-1.5 font-black text-xs bg-primary hover:bg-primary/90 text-white active:scale-95 transition-all shadow-md cursor-pointer"
+        >
+          <Zap className="w-4 h-4 fill-current" />
+          <span>{isBuyingNow ? 'PROCEEDING...' : 'BUY NOW'}</span>
+        </Button>
+      </div>
     </div>
   );
 }

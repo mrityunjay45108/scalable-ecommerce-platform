@@ -133,29 +133,29 @@ export function Navbar() {
       {/* 2. MAIN NAVBAR */}
       <header className="sticky top-0 z-40 w-full border-b bg-background/98 backdrop-blur-md shadow-xs">
         {/* Tier 1: Main Bar (Brand, Search Bar, Login/Sign Up, Wishlist, Bag) */}
-        <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 sm:h-18 flex items-center justify-between gap-2 sm:gap-4">
+        <div className="w-full max-w-7xl mx-auto px-2.5 sm:px-6 lg:px-8 h-15 sm:h-18 flex items-center justify-between gap-1 sm:gap-4 overflow-hidden">
           {/* Left: Mobile Menu Toggle & Brand Logo */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0 min-w-0">
             <Button
               variant="ghost"
               size="icon"
-              className="md:hidden h-9 w-9 text-foreground hover:bg-muted shrink-0"
+              className="md:hidden h-8 w-8 text-foreground hover:bg-muted shrink-0"
               onClick={() => {
                 setMobileMenuOpen(!mobileMenuOpen);
                 setMobileSearchOpen(false);
               }}
               aria-label="Toggle Navigation Menu"
             >
-              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
             </Button>
 
-            <Link href="/" className="flex items-center gap-2 sm:gap-2.5 shrink-0 group">
-              <span className="h-9 w-9 sm:h-10 sm:w-10 rounded-2xl bg-gradient-to-tr from-amber-500 via-orange-600 to-rose-600 text-white flex items-center justify-center font-black text-base sm:text-lg shadow-md group-hover:scale-105 transition-transform border border-white/20">
+            <Link href="/" className="flex items-center gap-1.5 sm:gap-2.5 shrink-0 group">
+              <span className="h-8 w-8 sm:h-10 sm:w-10 rounded-xl sm:rounded-2xl bg-gradient-to-tr from-amber-500 via-orange-600 to-rose-600 text-white flex items-center justify-center font-black text-sm sm:text-lg shadow-xs group-hover:scale-105 transition-transform border border-white/20">
                 🇮🇳
               </span>
               <div className="flex flex-col">
-                <span className="font-black text-lg sm:text-2xl tracking-tight text-foreground flex items-center">
-                  SWADESH<span className="text-amber-500 text-[10px] sm:text-xs ml-1 font-extrabold uppercase px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/30">Luxe</span>
+                <span className="font-black text-base sm:text-2xl tracking-tight text-foreground flex items-center">
+                  SWADESH<span className="text-amber-500 text-[9px] sm:text-xs ml-0.5 sm:ml-1 font-extrabold uppercase px-1 sm:px-1.5 py-0.2 sm:py-0.5 rounded bg-amber-500/10 border border-amber-500/30">Luxe</span>
                 </span>
                 <span className="text-[9px] font-bold text-muted-foreground tracking-wider uppercase -mt-0.5 hidden sm:flex items-center gap-1">
                   <span>The Indian Store</span>
@@ -183,12 +183,12 @@ export function Navbar() {
           </form>
 
           {/* Right: Actions Stack (Always 100% visible: Login/Signup, Wishlist, Bag) */}
-          <div className="flex items-center gap-1.5 sm:gap-2.5 lg:gap-3 shrink-0">
+          <div className="flex items-center gap-1 sm:gap-2 lg:gap-3 shrink-0">
             {/* Mobile Search Icon */}
             <Button
               variant="ghost"
               size="icon"
-              className="md:hidden text-muted-foreground hover:text-foreground h-9 w-9"
+              className="md:hidden text-muted-foreground hover:text-foreground h-8 w-8 p-0 shrink-0"
               onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
               aria-label="Toggle Search"
             >
@@ -207,13 +207,13 @@ export function Navbar() {
 
             {/* LOGIN & SIGN UP / USER PROFILE (PROMINENT & ALWAYS VISIBLE!) */}
             {isAuthenticated ? (
-              <div className="relative">
+              <div className="relative shrink-0">
                 <button
                   onClick={() => setUserDropdownOpen(!userDropdownOpen)}
                   suppressHydrationWarning
-                  className="flex items-center gap-2 p-1.5 rounded-xl hover:bg-muted transition-colors text-foreground"
+                  className="flex items-center gap-1 sm:gap-2 p-1 sm:p-1.5 rounded-xl hover:bg-muted transition-colors text-foreground"
                 >
-                  <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-500 to-rose-500 text-white flex items-center justify-center font-black text-xs shadow-xs">
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-gradient-to-tr from-amber-500 to-rose-500 text-white flex items-center justify-center font-black text-xs shadow-xs">
                     {user?.firstName?.[0] || 'U'}
                   </div>
                   <div className="hidden sm:flex flex-col text-left">
@@ -274,7 +274,7 @@ export function Navbar() {
                     <button
                       onClick={handleLogout}
                       suppressHydrationWarning
-                      className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-500/10 rounded-xl transition-colors mt-1"
+                      className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-500/10 rounded-xl transition-colors mt-1 cursor-pointer"
                     >
                       <LogOut className="w-4 h-4" />
                       Sign Out
@@ -283,12 +283,12 @@ export function Navbar() {
                 )}
               </div>
             ) : (
-              <div className="flex items-center gap-1 sm:gap-1.5">
+              <div className="flex items-center gap-1 shrink-0">
                 <Button
                   asChild
                   size="sm"
                   variant="outline"
-                  className="rounded-xl font-bold text-xs h-8 sm:h-9 px-2.5 sm:px-3.5 border-rose-500/40 text-rose-600 hover:bg-rose-500/10 hover:border-rose-500 transition-colors"
+                  className="rounded-xl font-bold text-[11px] sm:text-xs h-7 sm:h-9 px-2 sm:px-3.5 border-rose-500/40 text-rose-600 hover:bg-rose-500/10 hover:border-rose-500 transition-colors"
                 >
                   <Link href="/login">LOGIN</Link>
                 </Button>
@@ -305,13 +305,13 @@ export function Navbar() {
             {/* Wishlist Stack */}
             <Link
               href="/wishlist"
-              className="flex items-center gap-1.5 p-2 rounded-xl text-foreground hover:text-rose-600 hover:bg-muted/60 transition-colors relative"
+              className="flex items-center gap-1.5 p-1.5 sm:p-2 rounded-xl text-foreground hover:text-rose-600 hover:bg-muted/60 transition-colors relative shrink-0"
               aria-label="Wishlist"
             >
               <div className="relative">
-                <Heart className="w-5 h-5" />
+                <Heart className="w-4 h-4 sm:w-5 sm:h-5" />
                 {(wishlist?.items?.length ?? 0) > 0 && (
-                  <span className="absolute -top-1.5 -right-2 bg-rose-500 text-white text-[9px] font-black rounded-full h-4 w-4 flex items-center justify-center shadow-xs">
+                  <span className="absolute -top-1.5 -right-1.5 bg-rose-500 text-white text-[9px] font-black rounded-full h-3.5 w-3.5 sm:h-4 sm:w-4 flex items-center justify-center shadow-xs">
                     {wishlist?.items.length}
                   </span>
                 )}
@@ -319,23 +319,26 @@ export function Navbar() {
               <span className="text-xs font-bold hidden xl:inline">Wishlist</span>
             </Link>
 
-            {/* Shopping Bag (PROMINENT & EYE-CATCHING) */}
+            {/* Shopping Bag (PROMINENT, EYE-CATCHING & ALWAYS VISIBLE ON MOBILE!) */}
             <button
               onClick={openCart}
               suppressHydrationWarning
-              className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-xl bg-gradient-to-r from-rose-600 via-rose-600 to-orange-600 hover:from-rose-700 hover:to-orange-700 text-white font-extrabold text-xs shadow-md hover:shadow-lg transition-all shrink-0"
+              className="flex items-center gap-1.5 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-gradient-to-r from-rose-600 via-rose-600 to-orange-600 hover:from-rose-700 hover:to-orange-700 text-white font-extrabold text-xs shadow-md hover:shadow-lg transition-all shrink-0 cursor-pointer"
               aria-label="Shopping Bag"
             >
               <div className="relative">
                 <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                 {(cart?.totalItems ?? 0) > 0 && (
-                  <span className="absolute -top-2 -right-2.5 bg-amber-400 text-slate-950 text-[9px] font-black rounded-full h-4 w-4 flex items-center justify-center shadow-xs">
+                  <span className="absolute -top-2 -right-2 bg-amber-400 text-slate-950 text-[9px] font-black rounded-full h-3.5 w-3.5 sm:h-4 sm:w-4 flex items-center justify-center shadow-xs ring-1 ring-white">
                     {cart?.totalItems}
                   </span>
                 )}
               </div>
-              <span className="tracking-wide">
+              <span className="tracking-wide hidden sm:inline">
                 {(cart?.totalItems ?? 0) > 0 ? `BAG (${cart?.totalItems})` : 'BAG'}
+              </span>
+              <span className="tracking-wide sm:hidden text-[11px] font-black">
+                {(cart?.totalItems ?? 0) > 0 ? `${cart?.totalItems}` : 'BAG'}
               </span>
             </button>
           </div>
