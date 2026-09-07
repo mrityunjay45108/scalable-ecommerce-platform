@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { usePathname } from 'next/navigation';
 import {
   MessageSquare,
   Bot,
@@ -81,6 +82,9 @@ const formatApiProduct = (p: any): ProductSuggestion => {
 };
 
 export function StoreConciergeHub() {
+  const pathname = usePathname();
+  const isStickyBarPage = pathname?.startsWith('/products/') && pathname !== '/products';
+
   const [activeModal, setActiveModal] = useState<'none' | 'chat' | 'whatsapp'>('none');
   const [inputText, setInputText] = useState('');
   const [customWhatsAppMsg, setCustomWhatsAppMsg] = useState('');
@@ -384,8 +388,15 @@ export function StoreConciergeHub() {
     ]);
   };
 
+  const bottomPositionClass =
+    activeModal !== 'none'
+      ? 'bottom-4 sm:bottom-6'
+      : isStickyBarPage
+      ? 'bottom-20 sm:bottom-6'
+      : 'bottom-6 sm:bottom-6';
+
   return (
-    <div className="fixed bottom-18 sm:bottom-6 right-3 sm:right-6 z-50 select-none flex flex-col items-end">
+    <div className={`fixed z-50 select-none flex flex-col items-end right-3 sm:right-6 ${bottomPositionClass}`}>
       {/* ======================================================== */}
       {/* 1. COLLISION-FREE VERTICAL STACK (When both are closed) */}
       {/* ======================================================== */}

@@ -289,19 +289,8 @@ export default function HomePage() {
   const currentSlide = HERO_SLIDES[heroIndex];
 
   return (
-    <div suppressHydrationWarning className="space-y-10 sm:space-y-16 pb-16 overflow-x-hidden">
-      {/* 1. TOP LIVE TRUST TICKER */}
-      <div className="bg-gradient-to-r from-amber-600 via-orange-600 to-emerald-700 text-white py-2 px-4 text-center text-xs font-black tracking-wide shadow-sm flex items-center justify-center gap-3 overflow-hidden">
-        <span className="inline-block animate-pulse">✨</span>
-        <span className="truncate">
-          ॥ अतिथिदेवो भवः ॥ — Welcome to SWADESH Luxe | 29,000+ Pin Codes Serviced | 100% Authentic Indian Craftsmanship
-        </span>
-        <span className="hidden md:inline bg-black/20 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">
-          Doorstep COD Available
-        </span>
-      </div>
-
-      {/* 2. HERO FESTIVAL SLIDER */}
+    <div suppressHydrationWarning className="space-y-6 sm:space-y-12 pb-16 overflow-x-hidden pt-2 sm:pt-4">
+      {/* 1. HERO FESTIVAL SLIDER */}
       <section
         className="relative overflow-hidden mx-2 sm:mx-6 lg:mx-8 rounded-3xl border border-amber-500/20 shadow-2xl select-none"
         onMouseEnter={() => setIsHeroHovered(true)}
