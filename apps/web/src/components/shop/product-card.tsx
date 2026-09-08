@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Heart, Star, Share2, Check, ShoppingBag } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { ProductDto } from '@ecommerce/types';
 import { formatPrice } from '@/lib/utils';
 import { useCart } from '@/lib/cart-context';
@@ -110,9 +111,11 @@ export function ProductCard({ product }: ProductCardProps) {
   };
 
   return (
-    <div
+    <motion.div
+      whileHover={{ y: -4 }}
+      transition={{ duration: 0.25, ease: 'easeOut' }}
       onMouseLeave={handleMouseLeave}
-      className="group relative rounded-md sm:rounded-lg border border-border/50 hover:border-transparent bg-card overflow-hidden transition-all duration-200 hover:shadow-2xl flex flex-col justify-between"
+      className="group relative rounded-md sm:rounded-lg border border-border/50 hover:border-transparent bg-card overflow-hidden transition-shadow duration-200 hover:shadow-xl flex flex-col justify-between"
     >
       <div>
         {/* ======================================================= */}
@@ -153,18 +156,19 @@ export function ProductCard({ product }: ProductCardProps) {
 
           {/* Top Right Actions: Floating Heart & Share */}
           <div className="absolute top-2 right-2 flex flex-col gap-1.5 z-10">
-            <button
+            <motion.button
+              whileTap={{ scale: 0.82 }}
               onClick={handleWishlistClick}
-              className={`h-7 w-7 sm:h-8 sm:w-8 rounded-full flex items-center justify-center transition-all shadow-md backdrop-blur-md ${
+              className={`h-7 w-7 sm:h-8 sm:w-8 rounded-full flex items-center justify-center transition-colors shadow-md backdrop-blur-md cursor-pointer ${
                 isWishlisted
-                  ? 'bg-rose-500 text-white scale-105'
-                  : 'bg-white/80 dark:bg-black/70 text-slate-700 dark:text-zinc-200 hover:text-rose-500 hover:scale-105'
+                  ? 'bg-rose-500 text-white'
+                  : 'bg-white/85 dark:bg-black/75 text-slate-700 dark:text-zinc-200 hover:text-rose-500 hover:scale-105'
               }`}
               aria-label="Wishlist"
               title={isWishlisted ? 'Remove from Wishlist' : 'Save to Wishlist'}
             >
               <Heart className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${isWishlisted ? 'fill-current' : ''}`} />
-            </button>
+            </motion.button>
 
             <button
               onClick={handleShareClick}
@@ -397,6 +401,6 @@ export function ProductCard({ product }: ProductCardProps) {
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

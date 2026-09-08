@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { useCart } from '@/lib/cart-context';
+import { motion } from 'framer-motion';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 
@@ -91,6 +92,15 @@ export function Navbar() {
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
   const [promoIndex, setPromoIndex] = useState(0);
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 15);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // Auto-cycle promotional ticker every 4 seconds
   useEffect(() => {
@@ -131,7 +141,13 @@ export function Navbar() {
       </div>
 
       {/* 2. MAIN NAVBAR */}
-      <header className="sticky top-0 z-40 w-full border-b bg-background/98 backdrop-blur-md shadow-xs">
+      <header
+        className={`sticky top-0 z-40 w-full transition-all duration-300 ${
+          isScrolled
+            ? 'border-b border-border/80 bg-background/95 backdrop-blur-xl shadow-md'
+            : 'border-b border-border/50 bg-background/90 backdrop-blur-md shadow-2xs'
+        }`}
+      >
         {/* Tier 1: Main Bar (Brand, Search Bar, Login/Sign Up, Wishlist, Bag) */}
         <div className="w-full max-w-7xl mx-auto px-2.5 sm:px-6 lg:px-8 h-15 sm:h-18 flex items-center justify-between gap-1 sm:gap-4 overflow-hidden">
           {/* Left: Mobile Menu Toggle & Brand Logo */}
@@ -305,11 +321,11 @@ export function Navbar() {
             {/* Wishlist Stack */}
             <Link
               href="/wishlist"
-              className="flex items-center gap-1.5 p-1.5 sm:p-2 rounded-xl text-foreground hover:text-rose-600 hover:bg-muted/60 transition-colors relative shrink-0"
+              className="flex items-center gap-1.5 p-1.5 sm:p-2 rounded-xl text-foreground hover:text-rose-600 hover:bg-muted/60 transition-colors relative shrink-0 active:scale-95"
               aria-label="Wishlist"
             >
               <div className="relative">
-                <Heart className="w-4 h-4 sm:w-5 sm:h-5" />
+                <Heart className="w-4 h-4 sm:w-5 sm:h-5 transition-transform group-hover:scale-110" />
                 {(wishlist?.items?.length ?? 0) > 0 && (
                   <span className="absolute -top-1.5 -right-1.5 bg-rose-500 text-white text-[9px] font-black rounded-full h-3.5 w-3.5 sm:h-4 sm:w-4 flex items-center justify-center shadow-xs">
                     {wishlist?.items.length}
@@ -320,10 +336,12 @@ export function Navbar() {
             </Link>
 
             {/* Shopping Bag (PROMINENT, EYE-CATCHING & ALWAYS VISIBLE ON MOBILE!) */}
-            <button
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.96 }}
               onClick={openCart}
               suppressHydrationWarning
-              className="flex items-center gap-1.5 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-gradient-to-r from-rose-600 via-rose-600 to-orange-600 hover:from-rose-700 hover:to-orange-700 text-white font-extrabold text-xs shadow-md hover:shadow-lg transition-all shrink-0 cursor-pointer"
+              className="flex items-center gap-1.5 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-gradient-to-r from-rose-600 via-rose-600 to-orange-600 hover:from-rose-700 hover:to-orange-700 text-white font-extrabold text-xs shadow-md hover:shadow-lg transition-shadow shrink-0 cursor-pointer"
               aria-label="Shopping Bag"
             >
               <div className="relative">
@@ -340,7 +358,7 @@ export function Navbar() {
               <span className="tracking-wide sm:hidden text-[11px] font-black">
                 {(cart?.totalItems ?? 0) > 0 ? `${cart?.totalItems}` : 'BAG'}
               </span>
-            </button>
+            </motion.button>
           </div>
         </div>
 
