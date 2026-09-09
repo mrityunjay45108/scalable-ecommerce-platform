@@ -31,31 +31,31 @@ jobs:
         language: ['javascript-typescript']
 
     steps:
-      - name: ?? Checkout Repository
+      - name: 📥 Checkout Repository
         uses: actions/checkout@v4
 
-      - name: ?? Initialize CodeQL
+      - name: 🔍 Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:
           languages: ${{ matrix.language }}
           queries: security-extended,security-and-quality
 
-      - name: ?? Setup pnpm & Dependencies
+      - name: 📦 Setup pnpm & Dependencies
         uses: pnpm/action-setup@v4
 
-      - name: ?? Setup Node.js
+      - name: 🟢 Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: 'pnpm'
 
-      - name: ?? Install Dependencies
+      - name: 📥 Install Dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: ?? Generate Database Client (Prisma)
+      - name: ⚙️ Generate Database Client (Prisma)
         run: pnpm --filter=@ecommerce/database db:generate
 
-      - name: ?? Perform CodeQL Analysis
+      - name: 🛡️ Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
         with:
           category: '/language:${{ matrix.language }}'
@@ -69,18 +69,18 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - name: ?? Checkout Repository
+      - name: 📥 Checkout Repository
         uses: actions/checkout@v4
 
-      - name: ?? Setup pnpm
+      - name: 📦 Setup pnpm
         uses: pnpm/action-setup@v4
 
-      - name: ?? Setup Node.js
+      - name: 🟢 Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: 'pnpm'
 
-      - name: ?? Run PNPM Audit
+      - name: 🛡️ Run PNPM Audit
         run: |
           pnpm audit --audit-level=high || true
+
