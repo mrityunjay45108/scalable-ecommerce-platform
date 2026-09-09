@@ -86,7 +86,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: 🔨 Build API Docker Image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: infra/docker/Dockerfile.api
@@ -96,7 +96,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: 🔨 Build Web Frontend Docker Image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: infra/docker/Dockerfile.web
