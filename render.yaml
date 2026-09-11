@@ -54,3 +54,15 @@ services:
         value: "NovaStore Staging <onboarding@resend.dev>"
       - key: APP_URL
         sync: false
+      - key: WHATSAPP_ENABLED
+        value: "false"
+      - key: WHATSAPP_PHONE_NUMBER_ID
+        sync: false
+      - key: WHATSAPP_BUSINESS_ACCOUNT_ID
+        sync: false
+      - key: WHATSAPP_ACCESS_TOKEN
+        sync: false
+      - key: WHATSAPP_AUTH_TEMPLATE_NAME
+        value: "auth_otp_verification"
+      - key: WHATSAPP_TEMPLATE_LANGUAGE
+        value: "en_US"
