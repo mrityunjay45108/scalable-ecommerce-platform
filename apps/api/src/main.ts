@@ -12,6 +12,14 @@ async function bootstrap() {
   // Security & Middlewares
   app.use(helmet());
   app.use(cookieParser());
+
+  // URL rewrite to support both /api/auth and /api/v1/auth
+  app.use((req: any, res: any, next: any) => {
+    if (req.url.startsWith('/api/auth/')) {
+      req.url = req.url.replace('/api/auth/', '/api/v1/auth/');
+    }
+    next();
+  });
   app.enableCors({
     origin: (requestOrigin, callback) => {
       // Allow requests with no origin (like mobile apps, curl, or server-to-server)

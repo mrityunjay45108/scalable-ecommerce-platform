@@ -24,12 +24,12 @@ interface AuthContextType {
     resendAfter: number;
     phone: string;
   }>;
-  verifyWhatsAppOtp: (data: {
+  verifyWhatsAppOtp?: (data: {
     verificationId: string;
     phone: string;
     otp: string;
   }) => Promise<UserDto>;
-  resendWhatsAppOtp: (data: {
+  resendWhatsAppOtp?: (data: {
     verificationId: string;
     phone: string;
   }) => Promise<{
@@ -38,6 +38,17 @@ interface AuthContextType {
     resendAfter: number;
     phone: string;
   }>;
+  sendEmailOtp: (email: string) => Promise<{
+    success: boolean;
+    message: string;
+    state_id: string;
+    expiresIn: number;
+  }>;
+  verifyEmailOtp: (data: {
+    email: string;
+    otp: string;
+    state_id: string;
+  }) => Promise<UserDto>;
   signInWithGoogle: () => Promise<UserDto>;
   logout: () => Promise<void>;
   updateUser: (user: UserDto) => void;
@@ -147,6 +158,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return res;
   };
 
+  const sendEmailOtp = async (email: string) => {
+    const res = await apiClient.post<{
+      success: boolean;
+      message: string;
+      state_id: string;
+      expiresIn: number;
+    }>('/auth/send-otp', { email });
+    return res;
+  };
+
+  const verifyEmailOtp = async (data: { email: string; otp: string; state_id: string }) => {
+    const res = await apiClient.post<{
+      user: UserDto;
+      accessToken: string;
+      refreshToken?: string;
+      isNewUser?: boolean;
+    }>('/auth/verify-otp', data);
+    const { user: userData, accessToken, refreshToken } = res;
+    localStorage.setItem('access_token', accessToken);
+    if (refreshToken) {
+      localStorage.setItem('refresh_token', refreshToken);
+    }
+    localStorage.setItem('current_user', JSON.stringify(userData));
+    setUser(userData);
+    return userData;
+  };
 
   // Firebase Google OAuth Sign In
   const signInWithGoogle = async (): Promise<UserDto> => {
@@ -226,6 +263,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         register,
         verifyWhatsAppOtp,
         resendWhatsAppOtp,
+        sendEmailOtp,
+        verifyEmailOtp,
         signInWithGoogle,
         logout,
         updateUser,

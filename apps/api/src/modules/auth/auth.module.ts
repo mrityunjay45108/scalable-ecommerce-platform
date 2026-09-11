@@ -6,6 +6,7 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './jwt.strategy';
 import { OtpService } from './otp.service';
+import { MojoAuthService } from './mojoauth.service';
 import { OTP_PROVIDER } from './providers/otp-provider.interface';
 import { WhatsAppOtpProvider } from './providers/whatsapp-otp.provider';
 import { FakeWhatsAppOtpProvider } from './providers/fake-whatsapp-otp.provider';
@@ -21,6 +22,7 @@ import { FakeWhatsAppOtpProvider } from './providers/fake-whatsapp-otp.provider'
     AuthService,
     JwtStrategy,
     OtpService,
+    MojoAuthService,
     {
       provide: OTP_PROVIDER,
       useFactory: (configService: ConfigService) => {
@@ -36,7 +38,7 @@ import { FakeWhatsAppOtpProvider } from './providers/fake-whatsapp-otp.provider'
       inject: [ConfigService],
     },
   ],
-  exports: [AuthService, OtpService, JwtStrategy, PassportModule],
+  exports: [AuthService, OtpService, MojoAuthService, JwtStrategy, PassportModule],
 })
 export class AuthModule {}
 

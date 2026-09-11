@@ -99,5 +99,10 @@ export default () => ({
     templateLanguage: process.env.WHATSAPP_TEMPLATE_LANGUAGE || 'en_US',
     timeoutMs: parseInt(process.env.WHATSAPP_TIMEOUT_MS || '10000', 10),
   },
+  mojoauth: {
+    apiKey: process.env.MOJOAUTH_API_KEY || '',
+    apiUrl: process.env.MOJOAUTH_API_URL || 'https://api.mojoauth.com',
+    timeoutMs: parseInt(process.env.MOJOAUTH_TIMEOUT_MS || '10000', 10),
+  },
 });
 

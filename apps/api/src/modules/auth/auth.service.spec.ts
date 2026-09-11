@@ -5,7 +5,8 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { RedisService } from '../redis/redis.service';
 import { OtpService } from './otp.service';
-import { ConflictException, UnauthorizedException } from '@nestjs/common';
+import { MojoAuthService } from './mojoauth.service';
+import { ConflictException, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { UserStatus } from '@ecommerce/database';
 
@@ -15,6 +16,7 @@ describe('AuthService', () => {
   let jwtService: any;
   let redisService: any;
   let otpService: any;
+  let mojoAuthService: any;
 
   const mockUser = {
     id: 'user-uuid-123',
@@ -94,6 +96,19 @@ describe('AuthService', () => {
       }),
     };
 
+    mojoAuthService = {
+      sendEmailOtp: jest.fn().mockResolvedValue({
+        success: true,
+        message: 'Verification code sent to your email successfully.',
+        state_id: 'mock-mojo-state-id',
+        expiresIn: 300,
+      }),
+      verifyEmailOtp: jest.fn().mockResolvedValue({
+        authenticated: true,
+        email: 'test@novastore.com',
+      }),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
@@ -107,6 +122,7 @@ describe('AuthService', () => {
         },
         { provide: RedisService, useValue: redisService },
         { provide: OtpService, useValue: otpService },
+        { provide: MojoAuthService, useValue: mojoAuthService },
       ],
     }).compile();
 
@@ -115,6 +131,124 @@ describe('AuthService', () => {
 
   it('should be defined', () => {
     expect(service).toBeDefined();
+  });
+
+  describe('sendEmailOtp (MojoAuth)', () => {
+    it('should delegate to MojoAuthService and return state_id and expiresIn', async () => {
+      const result = await service.sendEmailOtp({ email: 'test@novastore.com' });
+
+      expect(mojoAuthService.sendEmailOtp).toHaveBeenCalledWith('test@novastore.com');
+      expect(result.state_id).toBe('mock-mojo-state-id');
+      expect(result.expiresIn).toBe(300);
+    });
+  });
+
+  describe('verifyEmailOtp (MojoAuth)', () => {
+    it('should throw BadRequestException if MojoAuth reports unauthenticated', async () => {
+      mojoAuthService.verifyEmailOtp.mockResolvedValueOnce({
+        authenticated: false,
+        email: 'test@novastore.com',
+      });
+
+      await expect(
+        service.verifyEmailOtp({
+          email: 'test@novastore.com',
+          otp: '999999',
+          state_id: 'mock-mojo-state-id',
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should log in existing user, set isEmailVerified true, status ACTIVE, and issue JWT tokens', async () => {
+      prisma.user.findUnique.mockResolvedValue({
+        ...mockUser,
+        isEmailVerified: false,
+        status: UserStatus.PENDING_VERIFICATION,
+      });
+      prisma.user.update.mockResolvedValue({
+        ...mockUser,
+        isEmailVerified: true,
+        status: UserStatus.ACTIVE,
+      });
+
+      const result = await service.verifyEmailOtp({
+        email: 'test@novastore.com',
+        otp: '123456',
+        state_id: 'mock-mojo-state-id',
+      });
+
+      expect(prisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            isEmailVerified: true,
+            status: UserStatus.ACTIVE,
+          }),
+        }),
+      );
+      expect(result.isNewUser).toBe(false);
+      expect(result.tokens.accessToken).toBe('mock_jwt_access_token');
+      expect(result.user.email).toBe('test@novastore.com');
+    });
+
+    it('should throw UnauthorizedException if existing user is suspended or blocked', async () => {
+      prisma.user.findUnique.mockResolvedValue({
+        ...mockUser,
+        status: UserStatus.SUSPENDED,
+      });
+
+      await expect(
+        service.verifyEmailOtp({
+          email: 'test@novastore.com',
+          otp: '123456',
+          state_id: 'mock-mojo-state-id',
+        }),
+      ).rejects.toThrow(UnauthorizedException);
+    });
+
+    it('should auto-provision new user, create cart and wishlist, and issue JWT tokens', async () => {
+      prisma.user.findUnique.mockResolvedValue(null);
+      const newlyCreatedUser = {
+        ...mockUser,
+        id: 'new-user-uuid-999',
+        email: 'newuser@novastore.com',
+        isEmailVerified: true,
+        status: UserStatus.ACTIVE,
+      };
+      prisma.user.create.mockResolvedValue(newlyCreatedUser);
+
+      mojoAuthService.verifyEmailOtp.mockResolvedValueOnce({
+        authenticated: true,
+        email: 'newuser@novastore.com',
+      });
+
+      const result = await service.verifyEmailOtp({
+        email: 'newuser@novastore.com',
+        otp: '123456',
+        state_id: 'mock-mojo-state-id',
+      });
+
+      expect(prisma.user.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            email: 'newuser@novastore.com',
+            isEmailVerified: true,
+            status: UserStatus.ACTIVE,
+          }),
+        }),
+      );
+      expect(prisma.cart.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { userId: 'new-user-uuid-999' },
+        }),
+      );
+      expect(prisma.wishlist.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { userId: 'new-user-uuid-999' },
+        }),
+      );
+      expect(result.isNewUser).toBe(true);
+      expect(result.tokens.accessToken).toBe('mock_jwt_access_token');
+    });
   });
 
   describe('register', () => {
@@ -217,6 +351,7 @@ describe('AuthService', () => {
         ...mockUser,
         status: UserStatus.PENDING_VERIFICATION,
         phoneVerified: false,
+        isEmailVerified: false,
       });
 
       await expect(

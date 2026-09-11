@@ -66,3 +66,5 @@ services:
         value: "auth_otp_verification"
       - key: WHATSAPP_TEMPLATE_LANGUAGE
         value: "en_US"
+      - key: MOJOAUTH_API_KEY
+        sync: false

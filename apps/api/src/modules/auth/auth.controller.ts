@@ -26,6 +26,8 @@ import {
   FirebaseLoginDto,
   VerifyWhatsAppOtpDto,
   ResendOtpDto,
+  SendEmailOtpDto,
+  VerifyEmailOtpDto,
 } from './auth.dto';
 import { Public } from '../../common/decorators/public.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -34,6 +36,49 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
+
+  @Public()
+  @Post('send-otp')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @ApiOperation({ summary: 'Send Email OTP via MojoAuth for passwordless login / signup' })
+  @ApiResponse({ status: 200, description: 'OTP sent to email successfully' })
+  @ApiResponse({ status: 429, description: 'Rate limit exceeded' })
+  async sendEmailOtp(@Body() dto: SendEmailOtpDto) {
+    const result = await this.authService.sendEmailOtp(dto);
+    return {
+      success: true,
+      message: result.message,
+      state_id: result.state_id,
+      expiresIn: result.expiresIn,
+    };
+  }
+
+  @Public()
+  @Post('verify-otp')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @ApiOperation({ summary: 'Verify Email OTP via MojoAuth and return JWT tokens' })
+  @ApiResponse({ status: 200, description: 'OTP verified successfully and user logged in' })
+  @ApiResponse({ status: 400, description: 'Invalid or expired OTP' })
+  async verifyEmailOtp(
+    @Body() dto: VerifyEmailOtpDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.authService.verifyEmailOtp(dto);
+    this.setRefreshTokenCookie(res, result.tokens.refreshToken);
+    return {
+      success: true,
+      message: result.message,
+      user: result.user,
+      accessToken: result.tokens.accessToken,
+      refreshToken: result.tokens.refreshToken,
+      expiresIn: result.tokens.expiresIn,
+      isNewUser: result.isNewUser,
+    };
+  }
 
   @Public()
   @Post('register')

@@ -22,10 +22,13 @@ import {
   FirebaseLoginDto,
   VerifyWhatsAppOtpDto,
   ResendOtpDto,
+  SendEmailOtpDto,
+  VerifyEmailOtpDto,
 } from './auth.dto';
 import { Role } from '@ecommerce/types';
 import { UserRole, UserStatus } from '@ecommerce/database';
 import { OtpService } from './otp.service';
+import { MojoAuthService } from './mojoauth.service';
 import { normalizePhone, isValidE164, maskPhone } from './utils/phone.util';
 
 @Injectable()
@@ -39,6 +42,7 @@ export class AuthService {
     private configService: ConfigService,
     private redisService: RedisService,
     private otpService: OtpService,
+    private mojoAuthService: MojoAuthService,
   ) {}
 
   // 1. REGISTRATION (WITH WHATSAPP OTP)
@@ -216,6 +220,124 @@ export class AuthService {
     };
   }
 
+  // -------------------------------------------------------------------------
+  // MOJOAUTH EMAIL OTP (PASSWORDLESS LOGIN & SIGNUP)
+  // -------------------------------------------------------------------------
+
+  async sendEmailOtp(dto: SendEmailOtpDto) {
+    return this.mojoAuthService.sendEmailOtp(dto.email);
+  }
+
+  async verifyEmailOtp(dto: VerifyEmailOtpDto) {
+    const { authenticated, email } = await this.mojoAuthService.verifyEmailOtp(
+      dto.email,
+      dto.otp,
+      dto.state_id,
+    );
+
+    if (!authenticated) {
+      throw new BadRequestException('Invalid OTP. Please check the code sent to your email.');
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Check if user exists
+    let user = await this.prisma.user.findUnique({
+      where: { email: normalizedEmail },
+    });
+
+    let isNewUser = false;
+
+    if (user) {
+      if (user.status === UserStatus.SUSPENDED || user.status === UserStatus.BLOCKED || !user.isActive) {
+        throw new UnauthorizedException('This account has been disabled or suspended. Please contact support.');
+      }
+
+      if (user.deletedAt) {
+        throw new UnauthorizedException('This account has been deleted.');
+      }
+
+      // Existing user: ensure email is verified and status is ACTIVE
+      if (!user.isEmailVerified || user.status === UserStatus.PENDING_VERIFICATION) {
+        user = await this.prisma.user.update({
+          where: { id: user.id },
+          data: {
+            isEmailVerified: true,
+            status: UserStatus.ACTIVE,
+          },
+        });
+      }
+
+      try {
+        await this.prisma.auditLog?.create({
+          data: {
+            userId: user.id,
+            action: 'AUTH_EMAIL_OTP_LOGIN',
+            entity: 'User',
+            entityId: user.id,
+          },
+        });
+      } catch {}
+    } else {
+      // New user: auto-provision via Email OTP
+      isNewUser = true;
+      const dummyPasswordHash = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), this.saltRounds);
+      const namePart = normalizedEmail.split('@')[0];
+      const firstName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
+
+      user = await this.prisma.$transaction(async (tx) => {
+        const created = await tx.user.create({
+          data: {
+            email: normalizedEmail,
+            passwordHash: dummyPasswordHash,
+            firstName,
+            lastName: '',
+            role: UserRole.CUSTOMER,
+            isEmailVerified: true,
+            status: UserStatus.ACTIVE,
+            isActive: true,
+          },
+        });
+
+        // Initialize empty Cart & Wishlist
+        await tx.cart.upsert({
+          where: { userId: created.id },
+          create: { userId: created.id },
+          update: {},
+        });
+
+        await tx.wishlist.upsert({
+          where: { userId: created.id },
+          create: { userId: created.id },
+          update: {},
+        });
+
+        try {
+          await tx.auditLog?.create({
+            data: {
+              userId: created.id,
+              action: 'AUTH_EMAIL_OTP_SIGNUP',
+              entity: 'User',
+              entityId: created.id,
+            },
+          });
+        } catch {}
+
+        return created;
+      });
+    }
+
+    // Issue JWT tokens with rotation
+    const tokens = await this.generateTokens(user.id, user.email, user.role);
+
+    return {
+      user: this.formatUser(user),
+      tokens,
+      isNewUser,
+      message: isNewUser ? 'Account created and verified successfully' : 'Logged in successfully',
+    };
+  }
+
   // 4. LOGIN (PASSWORD-BASED WITH VERIFICATION CHECK)
   async login(dto: LoginDto) {
     const normalizedEmail = dto.email.toLowerCase().trim();
@@ -228,8 +350,8 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    if (user.status === UserStatus.PENDING_VERIFICATION || !user.phoneVerified) {
-      throw new UnauthorizedException('Please verify your phone number via WhatsApp OTP to complete registration.');
+    if (user.status === UserStatus.PENDING_VERIFICATION && !user.isEmailVerified && !user.phoneVerified) {
+      throw new UnauthorizedException('Please verify your account OTP to complete registration.');
     }
 
     const isPasswordValid = await bcrypt.compare(dto.password, user.passwordHash);
