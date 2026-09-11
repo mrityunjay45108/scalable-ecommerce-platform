@@ -38,7 +38,7 @@
   "devDependencies": {
     "@ecommerce/eslint-config": "workspace:*",
     "@ecommerce/tsconfig": "workspace:*",
-    "eslint": "^8.57.1",
+    "eslint": "^10.9.1",
     "prettier": "^3.4.2"
   },
   "overrides": {
