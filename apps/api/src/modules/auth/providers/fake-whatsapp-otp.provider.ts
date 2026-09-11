@@ -17,8 +17,8 @@ export class FakeWhatsAppOtpProvider implements OtpProvider {
       timestamp: Date.now(),
     });
 
-    this.logger.log(
-      `[DEV / TEST WHATSAPP] Dispatched OTP to ${maskPhone(input.phone)} (Purpose: ${input.purpose}, MsgId: ${fakeMessageId})`,
+    this.logger.warn(
+      `🔑 [DEV MOCK OTP] WhatsApp Message to ${input.phone} -> OTP CODE: [ ${input.otp} ] (Use this 6-digit code in the UI to complete verification)`,
     );
 
     return {
