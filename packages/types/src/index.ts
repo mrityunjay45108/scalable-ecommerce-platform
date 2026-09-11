@@ -11,6 +11,29 @@ export const Role = {
 } as const;
 export type Role = (typeof Role)[keyof typeof Role];
 
+export const UserStatus = {
+  PENDING_VERIFICATION: 'PENDING_VERIFICATION',
+  ACTIVE: 'ACTIVE',
+  SUSPENDED: 'SUSPENDED',
+  BLOCKED: 'BLOCKED',
+} as const;
+export type UserStatus = (typeof UserStatus)[keyof typeof UserStatus];
+
+export const OtpPurpose = {
+  REGISTRATION: 'REGISTRATION',
+  LOGIN: 'LOGIN',
+  PASSWORD_RESET: 'PASSWORD_RESET',
+} as const;
+export type OtpPurpose = (typeof OtpPurpose)[keyof typeof OtpPurpose];
+
+export const OtpChannel = {
+  WHATSAPP: 'WHATSAPP',
+  SMS: 'SMS',
+  EMAIL: 'EMAIL',
+} as const;
+export type OtpChannel = (typeof OtpChannel)[keyof typeof OtpChannel];
+
+
 export const OrderStatus = {
   PENDING_PAYMENT: 'PENDING_PAYMENT',
   PAID: 'PAID',
@@ -181,6 +204,8 @@ export interface UserDto {
   firstName: string;
   lastName: string;
   phone?: string | null;
+  phoneVerified?: boolean;
+  status?: UserStatus;
   avatarUrl?: string | null;
   role: Role;
   isActive: boolean;
@@ -192,12 +217,32 @@ export interface UserDto {
 export interface AuthTokens {
   accessToken: string;
   expiresIn: number; // in seconds
+  refreshToken?: string;
 }
 
 export interface AuthResponse {
   user: UserDto;
   tokens: AuthTokens;
 }
+
+export interface RegisterOtpResponseData {
+  verificationId: string;
+  expiresIn: number; // in seconds (300)
+  resendAfter: number; // in seconds (60)
+  phone: string; // masked, e.g. "+9198******10"
+}
+
+export interface VerifyWhatsAppOtpPayload {
+  verificationId: string;
+  phone: string;
+  otp: string;
+}
+
+export interface ResendOtpPayload {
+  verificationId: string;
+  phone: string;
+}
+
 
 export interface AddressDto {
   id: string;

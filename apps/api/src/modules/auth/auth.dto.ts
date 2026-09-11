@@ -27,10 +27,35 @@ export class RegisterDto {
   @IsNotEmpty({ message: 'Last name is required' })
   lastName!: string;
 
-  @IsOptional()
   @IsString()
-  phone?: string;
+  @IsNotEmpty({ message: 'Phone number is required' })
+  phone!: string;
 }
+
+export class VerifyWhatsAppOtpDto {
+  @IsString()
+  @IsNotEmpty({ message: 'Verification ID is required' })
+  verificationId!: string;
+
+  @IsString()
+  @IsNotEmpty({ message: 'Phone number is required' })
+  phone!: string;
+
+  @IsString()
+  @Matches(/^\d{6}$/, { message: 'Verification code must be exactly 6 digits' })
+  otp!: string;
+}
+
+export class ResendOtpDto {
+  @IsString()
+  @IsNotEmpty({ message: 'Verification ID is required' })
+  verificationId!: string;
+
+  @IsString()
+  @IsNotEmpty({ message: 'Phone number is required' })
+  phone!: string;
+}
+
 
 export class LoginDto {
   @IsEmail({}, { message: 'Invalid email address' })

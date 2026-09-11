@@ -13,8 +13,9 @@ import { PaymentProviderFactory } from './payments/providers/payment-provider.fa
 import { NotificationsService } from './notifications/notifications.service';
 import { RedisService } from './redis/redis.service';
 import { CouponsService } from './coupons/coupons.service';
-import { OrderStatus, PaymentProvider, PaymentStatus, Role } from '@ecommerce/types';
+import { OrderStatus, PaymentProvider, PaymentStatus, Role, UserStatus } from '@ecommerce/types';
 import { InventoryLogType, UserRole } from '@ecommerce/database';
+import { OtpService } from './auth/otp.service';
 import * as bcrypt from 'bcrypt';
 
 describe('E2E Critical Flows - 10-Step E-Commerce Workflow Verification', () => {
@@ -33,9 +34,28 @@ describe('E2E Critical Flows - 10-Step E-Commerce Workflow Verification', () => 
     passwordHash: '$2b$10$e2eHashedPassword',
     firstName: 'Jane',
     lastName: 'Doe',
+    phone: '+919876543210',
     role: UserRole.CUSTOMER,
+    status: UserStatus.ACTIVE,
     isActive: true,
+    phoneVerified: true,
     isEmailVerified: true,
+  };
+
+  const mockOtpService = {
+    sendOtp: jest.fn().mockResolvedValue({
+      verificationId: 'mock-verif-uuid-cf-1',
+      phone: '+919876543210',
+      expiresIn: 300,
+      resendAfter: 60,
+      maskedPhone: '+9198******10',
+    }),
+    verifyOtp: jest.fn().mockResolvedValue({
+      verificationId: 'mock-verif-uuid-cf-1',
+      phone: '+919876543210',
+      purpose: 'REGISTRATION',
+      userId: 'user-flow-1',
+    }),
   };
 
   const mockAdmin = {
@@ -110,6 +130,7 @@ describe('E2E Critical Flows - 10-Step E-Commerce Workflow Verification', () => 
     $transaction: jest.fn((cb) => cb(mockPrisma)),
     user: {
       findUnique: jest.fn(),
+      findFirst: jest.fn().mockResolvedValue(null),
       create: jest.fn(),
       update: jest.fn(),
       count: jest.fn(),
@@ -131,9 +152,11 @@ describe('E2E Critical Flows - 10-Step E-Commerce Workflow Verification', () => 
       findFirst: jest.fn(),
       create: jest.fn().mockResolvedValue({ id: 'cart-1' }),
       update: jest.fn(),
+      upsert: jest.fn().mockResolvedValue({ id: 'cart-1' }),
     },
     wishlist: {
       create: jest.fn().mockResolvedValue({ id: 'wishlist-1' }),
+      upsert: jest.fn().mockResolvedValue({ id: 'wishlist-1' }),
     },
     cartItem: {
       findUnique: jest.fn(),
@@ -166,7 +189,7 @@ describe('E2E Critical Flows - 10-Step E-Commerce Workflow Verification', () => 
       create: jest.fn(),
     },
     auditLog: {
-      create: jest.fn(),
+      create: jest.fn().mockResolvedValue({ id: 'audit-1' }),
     },
     refreshToken: {
       create: jest.fn(),
@@ -232,6 +255,7 @@ describe('E2E Critical Flows - 10-Step E-Commerce Workflow Verification', () => 
         { provide: NotificationsService, useValue: mockNotifications },
         { provide: CouponsService, useValue: mockCoupons },
         { provide: PaymentProviderFactory, useValue: mockPaymentFactory },
+        { provide: OtpService, useValue: mockOtpService },
       ],
     }).compile();
 
@@ -249,8 +273,9 @@ describe('E2E Critical Flows - 10-Step E-Commerce Workflow Verification', () => 
   // 10-STEP E2E CRITICAL JOURNEY
   // =========================================================================
 
-  it('Step 1: User Registration creates user account with hashed password', async () => {
+  it('Step 1: User Registration creates user account with hashed password and verifies via WhatsApp OTP', async () => {
     mockPrisma.user.findUnique.mockResolvedValue(null);
+    mockPrisma.user.findFirst.mockResolvedValue(null);
     mockPrisma.user.create.mockResolvedValue(mockUser);
 
     const result = await authService.register({
@@ -258,10 +283,26 @@ describe('E2E Critical Flows - 10-Step E-Commerce Workflow Verification', () => 
       password: 'StrongPassword123!',
       firstName: 'Jane',
       lastName: 'Doe',
+      phone: '+919876543210',
     });
 
-    expect(result.user.email).toBe('customer@novastore.com');
-    expect(result.tokens.accessToken).toBe('mock-jwt-token');
+    expect(result.verificationId).toBeDefined();
+    expect(result.phone).toBe('+919876543210');
+
+    // Verify WhatsApp OTP & Account Activation
+    mockPrisma.user.findUnique.mockResolvedValue(mockUser);
+    mockPrisma.user.update.mockResolvedValue(mockUser);
+    mockPrisma.cart.upsert.mockResolvedValue({ id: 'cart-1' });
+    mockPrisma.wishlist.upsert.mockResolvedValue({ id: 'wishlist-1' });
+
+    const verified = await authService.verifyWhatsAppOtp({
+      phone: '+919876543210',
+      verificationId: result.verificationId,
+      otp: '123456',
+    });
+
+    expect(verified.user.email).toBe('customer@novastore.com');
+    expect(verified.tokens.accessToken).toBe('mock-jwt-token');
   });
 
   it('Step 2: User Login returns session tokens and profile', async () => {

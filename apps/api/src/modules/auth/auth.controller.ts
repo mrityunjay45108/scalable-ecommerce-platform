@@ -24,6 +24,8 @@ import {
   ChangePasswordDto,
   RefreshTokenDto,
   FirebaseLoginDto,
+  VerifyWhatsAppOtpDto,
+  ResendOtpDto,
 } from './auth.dto';
 import { Public } from '../../common/decorators/public.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -37,14 +39,36 @@ export class AuthController {
   @Post('register')
   @UseGuards(ThrottlerGuard)
   @Throttle({ default: { limit: 10, ttl: 60000 } })
-  @ApiOperation({ summary: 'Register a new customer account' })
-  @ApiResponse({ status: 201, description: 'User successfully registered' })
-  @ApiResponse({ status: 409, description: 'Email already exists' })
-  async register(
-    @Body() dto: RegisterDto,
+  @ApiOperation({ summary: 'Register a new customer account and request WhatsApp OTP' })
+  @ApiResponse({ status: 201, description: 'Verification code sent to WhatsApp' })
+  @ApiResponse({ status: 409, description: 'Email or phone already exists' })
+  async register(@Body() dto: RegisterDto) {
+    const result = await this.authService.register(dto);
+    return {
+      success: true,
+      message: result.message,
+      data: {
+        verificationId: result.verificationId,
+        expiresIn: result.expiresIn,
+        resendAfter: result.resendAfter,
+        phone: result.phone,
+      },
+    };
+  }
+
+  @Public()
+  @Post('verify-whatsapp-otp')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @ApiOperation({ summary: 'Verify WhatsApp OTP and activate account' })
+  @ApiResponse({ status: 200, description: 'Account successfully activated and authenticated' })
+  @ApiResponse({ status: 400, description: 'Invalid or expired OTP code' })
+  async verifyWhatsAppOtp(
+    @Body() dto: VerifyWhatsAppOtpDto,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const result = await this.authService.register(dto);
+    const result = await this.authService.verifyWhatsAppOtp(dto);
     this.setRefreshTokenCookie(res, result.tokens.refreshToken);
     return {
       user: result.user,
@@ -53,6 +77,29 @@ export class AuthController {
       expiresIn: result.tokens.expiresIn,
     };
   }
+
+  @Public()
+  @Post('otp/resend')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @ApiOperation({ summary: 'Resend WhatsApp OTP code with 60s cooldown' })
+  @ApiResponse({ status: 200, description: 'New verification code sent to WhatsApp' })
+  @ApiResponse({ status: 429, description: 'Cooldown period active' })
+  async resendOtp(@Body() dto: ResendOtpDto) {
+    const result = await this.authService.resendOtp(dto);
+    return {
+      success: true,
+      message: result.message,
+      data: {
+        verificationId: result.verificationId,
+        expiresIn: result.expiresIn,
+        resendAfter: result.resendAfter,
+        phone: result.phone,
+      },
+    };
+  }
+
 
   @Public()
   @Post('login')

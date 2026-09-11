@@ -35,8 +35,10 @@ import {
   RefundStatus,
   CODStatus,
   Role,
+  UserStatus,
 } from '@ecommerce/types';
 import { UserRole } from '@ecommerce/database';
+import { OtpService } from './auth/otp.service';
 import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 
@@ -61,9 +63,28 @@ describe('Phase 13 — Complete E2E Testing of All 14 Mission-Critical Workflows
     passwordHash: '$2b$10$hashedCustomerPass',
     firstName: 'Alice',
     lastName: 'Smith',
+    phone: '+919876543210',
     role: UserRole.CUSTOMER,
+    status: UserStatus.ACTIVE,
     isActive: true,
+    phoneVerified: true,
     isEmailVerified: true,
+  };
+
+  const mockOtpService = {
+    sendOtp: jest.fn().mockResolvedValue({
+      verificationId: 'mock-verif-uuid-1',
+      phone: '+919876543210',
+      expiresIn: 300,
+      resendAfter: 60,
+      maskedPhone: '+9198******10',
+    }),
+    verifyOtp: jest.fn().mockResolvedValue({
+      verificationId: 'mock-verif-uuid-1',
+      phone: '+919876543210',
+      purpose: 'REGISTRATION',
+      userId: 'cust-101',
+    }),
   };
 
   const mockOtherCustomer = {
@@ -148,6 +169,7 @@ describe('Phase 13 — Complete E2E Testing of All 14 Mission-Critical Workflows
     ),
     user: {
       findUnique: jest.fn(),
+      findFirst: jest.fn().mockResolvedValue(null),
       create: jest.fn(),
       update: jest.fn(),
     },
@@ -169,9 +191,11 @@ describe('Phase 13 — Complete E2E Testing of All 14 Mission-Critical Workflows
       findFirst: jest.fn(),
       findUnique: jest.fn(),
       create: jest.fn().mockResolvedValue({ id: 'cart-1' }),
+      upsert: jest.fn().mockResolvedValue({ id: 'cart-1' }),
     },
     wishlist: {
       create: jest.fn().mockResolvedValue({ id: 'wishlist-1' }),
+      upsert: jest.fn().mockResolvedValue({ id: 'wishlist-1' }),
     },
     cartItem: {
       findFirst: jest.fn(),
@@ -238,7 +262,7 @@ describe('Phase 13 — Complete E2E Testing of All 14 Mission-Critical Workflows
       create: jest.fn(),
     },
     auditLog: {
-      create: jest.fn(),
+      create: jest.fn().mockResolvedValue({ id: 'audit-1' }),
     },
   };
 
@@ -293,6 +317,7 @@ describe('Phase 13 — Complete E2E Testing of All 14 Mission-Critical Workflows
           },
         },
         { provide: CouponsService, useValue: { validateAndCalculateDiscount: jest.fn().mockResolvedValue({ isValid: true, discountAmount: 0 }) } },
+        { provide: OtpService, useValue: mockOtpService },
       ],
     }).compile();
 
@@ -324,14 +349,29 @@ describe('Phase 13 — Complete E2E Testing of All 14 Mission-Critical Workflows
   it('TEST 1: Customer Registration → Login → Product → Cart → Checkout → Payment → Shipment → Delivery', async () => {
     // 1. Registration
     mockPrismaService.user.findUnique.mockResolvedValueOnce(null);
+    mockPrismaService.user.findFirst.mockResolvedValueOnce(null);
     mockPrismaService.user.create.mockResolvedValueOnce(mockCustomer);
     const regResult = await authService.register({
       email: 'buyer@test.com',
       password: 'Password123!',
       firstName: 'Alice',
       lastName: 'Smith',
+      phone: '+919876543210',
     });
-    expect(regResult.user.email).toBe('buyer@test.com');
+    expect(regResult.verificationId).toBeDefined();
+    expect(regResult.phone).toBe('+919876543210');
+
+    // 1b. WhatsApp OTP Verification & Activation
+    mockPrismaService.user.findUnique.mockResolvedValueOnce(mockCustomer);
+    mockPrismaService.user.update.mockResolvedValueOnce(mockCustomer);
+    mockPrismaService.cart.upsert.mockResolvedValueOnce({ id: 'cart-1' });
+    mockPrismaService.wishlist.upsert.mockResolvedValueOnce({ id: 'wishlist-1' });
+    const verifyResult = await authService.verifyWhatsAppOtp({
+      phone: '+919876543210',
+      verificationId: regResult.verificationId,
+      otp: '123456',
+    });
+    expect(verifyResult.user.email).toBe('buyer@test.com');
 
     // 2. Login
     mockPrismaService.user.findUnique.mockResolvedValueOnce(mockCustomer);

@@ -87,4 +87,17 @@ export default () => ({
       maxRetries: parseInt(process.env.KAFKA_OUTBOX_MAX_RETRIES || '5', 10),
     },
   },
+  whatsapp: {
+    enabled:
+      process.env.WHATSAPP_ENABLED === 'true' ||
+      process.env.WHATSAPP_OTP_ENABLED === 'true',
+    apiVersion: process.env.WHATSAPP_API_VERSION || 'v21.0',
+    phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID || undefined,
+    businessAccountId: process.env.WHATSAPP_BUSINESS_ACCOUNT_ID || undefined,
+    accessToken: process.env.WHATSAPP_ACCESS_TOKEN || undefined,
+    authTemplateName: process.env.WHATSAPP_AUTH_TEMPLATE_NAME || 'authentication_otp',
+    templateLanguage: process.env.WHATSAPP_TEMPLATE_LANGUAGE || 'en_US',
+    timeoutMs: parseInt(process.env.WHATSAPP_TIMEOUT_MS || '10000', 10),
+  },
 });
+

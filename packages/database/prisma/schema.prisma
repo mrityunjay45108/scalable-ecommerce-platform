@@ -20,6 +20,26 @@ enum UserRole {
   SELLER
 }
 
+enum UserStatus {
+  PENDING_VERIFICATION
+  ACTIVE
+  SUSPENDED
+  BLOCKED
+}
+
+enum OtpPurpose {
+  REGISTRATION
+  LOGIN
+  PASSWORD_RESET
+}
+
+enum OtpChannel {
+  WHATSAPP
+  SMS
+  EMAIL
+}
+
+
 enum OrderStatus {
   PENDING_PAYMENT
   PAID
@@ -157,6 +177,8 @@ model User {
   roleModel               Role?          @relation(fields: [roleId], references: [id], onDelete: SetNull)
   isActive                Boolean        @default(true)
   isEmailVerified         Boolean        @default(false)
+  phoneVerified           Boolean        @default(false)
+  status                  UserStatus     @default(ACTIVE)
   notificationPreferences Json?          @default("{\"email\":true,\"orderUpdates\":true,\"promotions\":false}")
   deletedAt               DateTime?
   
@@ -168,6 +190,7 @@ model User {
   cart             Cart?
   wishlist         Wishlist?
   refreshTokens    RefreshToken[]
+  otpVerifications OtpVerification[]
   couponUsages     CouponUsage[]
   notifications    Notification[]
   auditLogs        AuditLog[]
@@ -176,9 +199,11 @@ model User {
   updatedAt        DateTime       @updatedAt
 
   @@index([email])
+  @@index([phone])
   @@index([role])
   @@index([roleId])
   @@index([isActive])
+  @@index([status])
   @@index([deletedAt])
   @@index([createdAt])
 }
@@ -220,6 +245,27 @@ model RefreshToken {
 
   @@index([userId])
   @@index([expiresAt])
+}
+
+model OtpVerification {
+  id                String       @id @default(uuid())
+  userId            String?
+  user              User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phone             String
+  purpose           OtpPurpose   @default(REGISTRATION)
+  channel           OtpChannel   @default(WHATSAPP)
+  otpHash           String
+  expiresAt         DateTime
+  verifiedAt        DateTime?
+  attempts          Int          @default(0)
+  maxAttempts       Int          @default(5)
+  providerMessageId String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  @@index([phone, purpose])
+  @@index([expiresAt])
+  @@index([userId])
 }
 
 model Address {

@@ -157,4 +157,69 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
     this.memoryFallback.delete(key);
   }
+
+  async incr(key: string, ttlSeconds?: number): Promise<number> {
+    if (this.upstashClient) {
+      try {
+        const val = await this.upstashClient.incr(key);
+        if (val === 1 && ttlSeconds) {
+          await this.upstashClient.expire(key, ttlSeconds);
+        }
+        return val;
+      } catch (e: any) {
+        this.logger.warn(`Upstash incr error: ${e.message}`);
+      }
+    }
+
+    if (this.ioClient) {
+      try {
+        const val = await this.ioClient.incr(key);
+        if (val === 1 && ttlSeconds) {
+          await this.ioClient.expire(key, ttlSeconds);
+        }
+        return val;
+      } catch {
+        // fallback
+      }
+    }
+
+    const item = this.memoryFallback.get(key);
+    let currentVal = 0;
+    let expiresAt = item?.expiresAt;
+
+    if (item && (!item.expiresAt || Date.now() <= item.expiresAt)) {
+      currentVal = parseInt(item.val, 10) || 0;
+    } else if (ttlSeconds) {
+      expiresAt = Date.now() + ttlSeconds * 1000;
+    }
+
+    const nextVal = currentVal + 1;
+    this.memoryFallback.set(key, { val: String(nextVal), expiresAt });
+    return nextVal;
+  }
+
+  async ttl(key: string): Promise<number> {
+    if (this.upstashClient) {
+      try {
+        return await this.upstashClient.ttl(key);
+      } catch (e: any) {
+        this.logger.warn(`Upstash ttl error: ${e.message}`);
+      }
+    }
+
+    if (this.ioClient) {
+      try {
+        return await this.ioClient.ttl(key);
+      } catch {
+        // fallback
+      }
+    }
+
+    const item = this.memoryFallback.get(key);
+    if (!item) return -2;
+    if (!item.expiresAt) return -1;
+    const remaining = Math.floor((item.expiresAt - Date.now()) / 1000);
+    return remaining > 0 ? remaining : -2;
+  }
 }
+

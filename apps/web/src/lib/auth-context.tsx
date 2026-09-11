@@ -17,8 +17,27 @@ interface AuthContextType {
     password: string;
     firstName: string;
     lastName: string;
-    phone?: string;
+    phone: string;
+  }) => Promise<{
+    verificationId: string;
+    expiresIn: number;
+    resendAfter: number;
+    phone: string;
+  }>;
+  verifyWhatsAppOtp: (data: {
+    verificationId: string;
+    phone: string;
+    otp: string;
   }) => Promise<UserDto>;
+  resendWhatsAppOtp: (data: {
+    verificationId: string;
+    phone: string;
+  }) => Promise<{
+    verificationId: string;
+    expiresIn: number;
+    resendAfter: number;
+    phone: string;
+  }>;
   signInWithGoogle: () => Promise<UserDto>;
   logout: () => Promise<void>;
   updateUser: (user: UserDto) => void;
@@ -85,9 +104,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     password: string;
     firstName: string;
     lastName: string;
-    phone?: string;
+    phone: string;
+  }) => {
+    const res = await apiClient.post<{
+      verificationId: string;
+      expiresIn: number;
+      resendAfter: number;
+      phone: string;
+    }>('/auth/register', data);
+    return res;
+  };
+
+  const verifyWhatsAppOtp = async (data: {
+    verificationId: string;
+    phone: string;
+    otp: string;
   }): Promise<UserDto> => {
-    const res = await apiClient.post<{ user: UserDto; accessToken: string; refreshToken?: string }>('/auth/register', data);
+    const res = await apiClient.post<{ user: UserDto; accessToken: string; refreshToken?: string }>(
+      '/auth/verify-whatsapp-otp',
+      data,
+    );
     const { user: userData, accessToken, refreshToken } = res;
     localStorage.setItem('access_token', accessToken);
     if (refreshToken) {
@@ -97,6 +133,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(userData);
     return userData;
   };
+
+  const resendWhatsAppOtp = async (data: {
+    verificationId: string;
+    phone: string;
+  }) => {
+    const res = await apiClient.post<{
+      verificationId: string;
+      expiresIn: number;
+      resendAfter: number;
+      phone: string;
+    }>('/auth/otp/resend', data);
+    return res;
+  };
+
 
   // Firebase Google OAuth Sign In
   const signInWithGoogle = async (): Promise<UserDto> => {
@@ -174,6 +224,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isStaff,
         login,
         register,
+        verifyWhatsAppOtp,
+        resendWhatsAppOtp,
         signInWithGoogle,
         logout,
         updateUser,
