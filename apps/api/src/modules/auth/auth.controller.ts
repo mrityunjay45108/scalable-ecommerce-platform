@@ -84,20 +84,20 @@ export class AuthController {
   @Post('register')
   @UseGuards(ThrottlerGuard)
   @Throttle({ default: { limit: 10, ttl: 60000 } })
-  @ApiOperation({ summary: 'Register a new customer account and request WhatsApp OTP' })
-  @ApiResponse({ status: 201, description: 'Verification code sent to WhatsApp' })
-  @ApiResponse({ status: 409, description: 'Email or phone already exists' })
-  async register(@Body() dto: RegisterDto) {
+  @ApiOperation({ summary: 'Register a new customer account' })
+  @ApiResponse({ status: 201, description: 'User successfully registered' })
+  @ApiResponse({ status: 409, description: 'Email already exists' })
+  async register(
+    @Body() dto: RegisterDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const result = await this.authService.register(dto);
+    this.setRefreshTokenCookie(res, result.tokens.refreshToken);
     return {
-      success: true,
-      message: result.message,
-      data: {
-        verificationId: result.verificationId,
-        expiresIn: result.expiresIn,
-        resendAfter: result.resendAfter,
-        phone: result.phone,
-      },
+      user: result.user,
+      accessToken: result.tokens.accessToken,
+      refreshToken: result.tokens.refreshToken,
+      expiresIn: result.tokens.expiresIn,
     };
   }
 

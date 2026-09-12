@@ -29,7 +29,7 @@ describe('AuthService', () => {
     status: UserStatus.ACTIVE,
     role: 'CUSTOMER',
     isActive: true,
-    isEmailVerified: false,
+    isEmailVerified: true,
     deletedAt: null,
   };
 
@@ -133,132 +133,14 @@ describe('AuthService', () => {
     expect(service).toBeDefined();
   });
 
-  describe('sendEmailOtp (MojoAuth)', () => {
-    it('should delegate to MojoAuthService and return state_id and expiresIn', async () => {
-      const result = await service.sendEmailOtp({ email: 'test@novastore.com' });
-
-      expect(mojoAuthService.sendEmailOtp).toHaveBeenCalledWith('test@novastore.com');
-      expect(result.state_id).toBe('mock-mojo-state-id');
-      expect(result.expiresIn).toBe(300);
-    });
-  });
-
-  describe('verifyEmailOtp (MojoAuth)', () => {
-    it('should throw BadRequestException if MojoAuth reports unauthenticated', async () => {
-      mojoAuthService.verifyEmailOtp.mockResolvedValueOnce({
-        authenticated: false,
-        email: 'test@novastore.com',
-      });
-
-      await expect(
-        service.verifyEmailOtp({
-          email: 'test@novastore.com',
-          otp: '999999',
-          state_id: 'mock-mojo-state-id',
-        }),
-      ).rejects.toThrow(BadRequestException);
-    });
-
-    it('should log in existing user, set isEmailVerified true, status ACTIVE, and issue JWT tokens', async () => {
-      prisma.user.findUnique.mockResolvedValue({
-        ...mockUser,
-        isEmailVerified: false,
-        status: UserStatus.PENDING_VERIFICATION,
-      });
-      prisma.user.update.mockResolvedValue({
-        ...mockUser,
-        isEmailVerified: true,
-        status: UserStatus.ACTIVE,
-      });
-
-      const result = await service.verifyEmailOtp({
-        email: 'test@novastore.com',
-        otp: '123456',
-        state_id: 'mock-mojo-state-id',
-      });
-
-      expect(prisma.user.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            isEmailVerified: true,
-            status: UserStatus.ACTIVE,
-          }),
-        }),
-      );
-      expect(result.isNewUser).toBe(false);
-      expect(result.tokens.accessToken).toBe('mock_jwt_access_token');
-      expect(result.user.email).toBe('test@novastore.com');
-    });
-
-    it('should throw UnauthorizedException if existing user is suspended or blocked', async () => {
-      prisma.user.findUnique.mockResolvedValue({
-        ...mockUser,
-        status: UserStatus.SUSPENDED,
-      });
-
-      await expect(
-        service.verifyEmailOtp({
-          email: 'test@novastore.com',
-          otp: '123456',
-          state_id: 'mock-mojo-state-id',
-        }),
-      ).rejects.toThrow(UnauthorizedException);
-    });
-
-    it('should auto-provision new user, create cart and wishlist, and issue JWT tokens', async () => {
+  describe('register (Direct Password Authentication)', () => {
+    it('should create an active user, create cart and wishlist, and issue JWT tokens', async () => {
       prisma.user.findUnique.mockResolvedValue(null);
-      const newlyCreatedUser = {
-        ...mockUser,
-        id: 'new-user-uuid-999',
-        email: 'newuser@novastore.com',
-        isEmailVerified: true,
-        status: UserStatus.ACTIVE,
-      };
-      prisma.user.create.mockResolvedValue(newlyCreatedUser);
-
-      mojoAuthService.verifyEmailOtp.mockResolvedValueOnce({
-        authenticated: true,
-        email: 'newuser@novastore.com',
-      });
-
-      const result = await service.verifyEmailOtp({
-        email: 'newuser@novastore.com',
-        otp: '123456',
-        state_id: 'mock-mojo-state-id',
-      });
-
-      expect(prisma.user.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            email: 'newuser@novastore.com',
-            isEmailVerified: true,
-            status: UserStatus.ACTIVE,
-          }),
-        }),
-      );
-      expect(prisma.cart.upsert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { userId: 'new-user-uuid-999' },
-        }),
-      );
-      expect(prisma.wishlist.upsert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { userId: 'new-user-uuid-999' },
-        }),
-      );
-      expect(result.isNewUser).toBe(true);
-      expect(result.tokens.accessToken).toBe('mock_jwt_access_token');
-    });
-  });
-
-  describe('register', () => {
-    it('should create a pending verification user and dispatch WhatsApp OTP', async () => {
-      prisma.user.findUnique.mockResolvedValue(null);
-      prisma.user.findFirst.mockResolvedValue(null);
       prisma.user.create.mockResolvedValue({
         ...mockUser,
-        status: UserStatus.PENDING_VERIFICATION,
-        phoneVerified: false,
+        status: UserStatus.ACTIVE,
+        phoneVerified: true,
+        isEmailVerified: true,
       });
 
       const result = await service.register({
@@ -269,13 +151,24 @@ describe('AuthService', () => {
         phone: '+919876543210',
       });
 
-      expect(result).toHaveProperty('verificationId', 'mock-verification-id-uuid');
-      expect(result).toHaveProperty('expiresIn', 300);
-      expect(result).toHaveProperty('resendAfter', 60);
-      expect(otpService.sendOtp).toHaveBeenCalledWith('+919876543210', 'REGISTRATION', 'user-uuid-123');
+      expect(prisma.user.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            email: 'test@novastore.com',
+            status: UserStatus.ACTIVE,
+            isEmailVerified: true,
+          }),
+        }),
+      );
+      expect(prisma.cart.upsert).toHaveBeenCalled();
+      expect(prisma.wishlist.upsert).toHaveBeenCalled();
+      expect(result).toHaveProperty('user');
+      expect(result).toHaveProperty('tokens');
+      expect(result.tokens.accessToken).toBe('mock_jwt_access_token');
+      expect(result.user.email).toBe('test@novastore.com');
     });
 
-    it('should throw ConflictException if email is already registered and active', async () => {
+    it('should throw ConflictException if email is already registered', async () => {
       prisma.user.findUnique.mockResolvedValue(mockUser);
 
       await expect(
@@ -288,52 +181,9 @@ describe('AuthService', () => {
         }),
       ).rejects.toThrow(ConflictException);
     });
-
-    it('should throw ConflictException if phone number is already registered and active', async () => {
-      prisma.user.findUnique.mockResolvedValue(null);
-      prisma.user.findFirst.mockResolvedValue(mockUser);
-
-      await expect(
-        service.register({
-          email: 'newemail@novastore.com',
-          password: 'Password123!',
-          firstName: 'John',
-          lastName: 'Doe',
-          phone: '+919876543210',
-        }),
-      ).rejects.toThrow(ConflictException);
-    });
   });
 
-  describe('verifyWhatsAppOtp', () => {
-    it('should activate user account, create session, and issue JWT tokens', async () => {
-      prisma.user.findUnique.mockResolvedValue({
-        ...mockUser,
-        status: UserStatus.PENDING_VERIFICATION,
-        phoneVerified: false,
-      });
-      prisma.user.update.mockResolvedValue({
-        ...mockUser,
-        status: UserStatus.ACTIVE,
-        phoneVerified: true,
-      });
-
-      const result = await service.verifyWhatsAppOtp({
-        verificationId: 'mock-verification-id-uuid',
-        phone: '+919876543210',
-        otp: '482931',
-      });
-
-      expect(otpService.verifyOtp).toHaveBeenCalledWith('mock-verification-id-uuid', '+919876543210', '482931');
-      expect(result).toHaveProperty('user');
-      expect(result).toHaveProperty('tokens');
-      expect(result.tokens.accessToken).toBe('mock_jwt_access_token');
-      expect(result.user.status).toBe(UserStatus.ACTIVE);
-      expect(result.user.phoneVerified).toBe(true);
-    });
-  });
-
-  describe('login', () => {
+  describe('login (Password Authentication)', () => {
     it('should successfully login user with correct credentials and active status', async () => {
       prisma.user.findUnique.mockResolvedValue(mockUser);
 
@@ -346,20 +196,33 @@ describe('AuthService', () => {
       expect(result.user.email).toBe(mockUser.email);
     });
 
-    it('should reject login with PHONE_NOT_VERIFIED if status is PENDING_VERIFICATION', async () => {
+    it('should auto-activate user to ACTIVE if previously in PENDING_VERIFICATION', async () => {
       prisma.user.findUnique.mockResolvedValue({
         ...mockUser,
         status: UserStatus.PENDING_VERIFICATION,
-        phoneVerified: false,
         isEmailVerified: false,
       });
+      prisma.user.update.mockResolvedValue({
+        ...mockUser,
+        status: UserStatus.ACTIVE,
+        isEmailVerified: true,
+      });
 
-      await expect(
-        service.login({
-          email: 'test@novastore.com',
-          password: 'Password123!',
+      const result = await service.login({
+        email: 'test@novastore.com',
+        password: 'Password123!',
+      });
+
+      expect(prisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: mockUser.id },
+          data: expect.objectContaining({
+            status: UserStatus.ACTIVE,
+            isEmailVerified: true,
+          }),
         }),
-      ).rejects.toThrow(UnauthorizedException);
+      );
+      expect(result.tokens.accessToken).toBe('mock_jwt_access_token');
     });
 
     it('should throw UnauthorizedException on invalid password', async () => {

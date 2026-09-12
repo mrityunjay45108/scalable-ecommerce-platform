@@ -107,14 +107,7 @@ function LoginContent() {
           <span>{isGoogleLoading ? 'Connecting Google...' : 'Continue with Google'}</span>
         </Button>
 
-        {/* Passwordless Email OTP Option */}
-        <Link
-          href="/register"
-          className="w-full h-11 rounded-xl font-bold border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 flex items-center justify-center gap-2 text-xs sm:text-sm transition-all shadow-sm"
-        >
-          <Sparkles className="w-4 h-4 text-amber-600" />
-          <span>Sign in with Email OTP (Passwordless)</span>
-        </Link>
+
 
         <div className="relative flex items-center justify-center">
           <div className="border-t w-full border-muted" />

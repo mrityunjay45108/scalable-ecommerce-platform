@@ -17,13 +17,8 @@ interface AuthContextType {
     password: string;
     firstName: string;
     lastName: string;
-    phone: string;
-  }) => Promise<{
-    verificationId: string;
-    expiresIn: number;
-    resendAfter: number;
-    phone: string;
-  }>;
+    phone?: string;
+  }) => Promise<UserDto>;
   verifyWhatsAppOtp?: (data: {
     verificationId: string;
     phone: string;
@@ -115,15 +110,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     password: string;
     firstName: string;
     lastName: string;
-    phone: string;
-  }) => {
-    const res = await apiClient.post<{
-      verificationId: string;
-      expiresIn: number;
-      resendAfter: number;
-      phone: string;
-    }>('/auth/register', data);
-    return res;
+    phone?: string;
+  }): Promise<UserDto> => {
+    const res = await apiClient.post<{ user: UserDto; accessToken: string; refreshToken?: string }>('/auth/register', data);
+    const { user: userData, accessToken, refreshToken } = res;
+    localStorage.setItem('access_token', accessToken);
+    if (refreshToken) {
+      localStorage.setItem('refresh_token', refreshToken);
+    }
+    localStorage.setItem('current_user', JSON.stringify(userData));
+    setUser(userData);
+    return userData;
   };
 
   const verifyWhatsAppOtp = async (data: {

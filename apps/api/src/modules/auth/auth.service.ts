@@ -45,8 +45,75 @@ export class AuthService {
     private mojoAuthService: MojoAuthService,
   ) {}
 
-  // 1. REGISTRATION (WITH WHATSAPP OTP)
+  // 1. REGISTRATION (DIRECT PASSWORD-BASED)
   async register(dto: RegisterDto) {
+    const normalizedEmail = dto.email.toLowerCase().trim();
+
+    const existingEmailUser = await this.prisma.user.findUnique({
+      where: { email: normalizedEmail },
+    });
+
+    if (existingEmailUser) {
+      throw new ConflictException('An account with this email already exists');
+    }
+
+    const passwordHash = await bcrypt.hash(dto.password, this.saltRounds);
+
+    let phoneVal: string | null = null;
+    if (dto.phone && dto.phone.trim().length > 0) {
+      phoneVal = dto.phone.trim();
+    }
+
+    const user = await this.prisma.user.create({
+      data: {
+        email: normalizedEmail,
+        passwordHash,
+        firstName: dto.firstName.trim(),
+        lastName: dto.lastName.trim(),
+        phone: phoneVal,
+        phoneVerified: true,
+        isEmailVerified: true,
+        status: UserStatus.ACTIVE,
+        role: UserRole.CUSTOMER,
+      },
+    });
+
+    // Auto-create empty cart and wishlist
+    await this.prisma.cart.upsert({
+      where: { userId: user.id },
+      create: { userId: user.id },
+      update: {},
+    }).catch(() => {});
+
+    await this.prisma.wishlist.upsert({
+      where: { userId: user.id },
+      create: { userId: user.id },
+      update: {},
+    }).catch(() => {});
+
+    // Generate tokens
+    const tokens = await this.generateTokens(user.id, user.email, user.role);
+
+    try {
+      await this.prisma.auditLog?.create({
+        data: {
+          userId: user.id,
+          action: 'AUTH_REGISTER_SUCCESS',
+          entity: 'User',
+          entityId: user.id,
+          details: { email: normalizedEmail },
+        },
+      });
+    } catch {}
+
+    return {
+      user: this.formatUser(user),
+      tokens,
+    };
+  }
+
+  // 1.b WhatsApp Registration (preserved for backward compatibility)
+  async registerWithWhatsAppOtp(dto: RegisterDto) {
     const normalizedEmail = dto.email.toLowerCase().trim();
     const normalizedPhone = normalizePhone(dto.phone);
 
@@ -342,7 +409,7 @@ export class AuthService {
   async login(dto: LoginDto) {
     const normalizedEmail = dto.email.toLowerCase().trim();
 
-    const user = await this.prisma.user.findUnique({
+    let user = await this.prisma.user.findUnique({
       where: { email: normalizedEmail },
     });
 
@@ -350,8 +417,15 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    if (user.status === UserStatus.PENDING_VERIFICATION && !user.isEmailVerified && !user.phoneVerified) {
-      throw new UnauthorizedException('Please verify your account OTP to complete registration.');
+    // Auto-activate any user if previously in PENDING_VERIFICATION
+    if (user.status === UserStatus.PENDING_VERIFICATION) {
+      user = await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          status: UserStatus.ACTIVE,
+          isEmailVerified: true,
+        },
+      });
     }
 
     const isPasswordValid = await bcrypt.compare(dto.password, user.passwordHash);
