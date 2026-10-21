@@ -105,7 +105,7 @@ jobs:
       # -----------------------------------------------------------------------
       - name: 🚀 Build and Push Backend API to ECR
         if: ${{ inputs.deploy_api == true }}
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: apps/api/Dockerfile
@@ -122,7 +122,7 @@ jobs:
       # -----------------------------------------------------------------------
       - name: 🚀 Build and Push Frontend Web to ECR
         if: ${{ inputs.deploy_web == true }}
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: apps/web/Dockerfile
